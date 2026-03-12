@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Digital Loom</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <header class="sidebar-header">
+                <h1>The Digital Loom</h1>
+                <p class="subtitle">Generative Weaving Patterns</p>
+            </header>
+
+            <!-- Preset Selection -->
+            <fieldset class="control-group">
+                <legend>Preset</legend>
+                <select id="preset">
+                    <option value="plain">Plain</option>
+                    <option value="moire">Moire</option>
+                    <option value="ikat">Ikat</option>
+                    <option value="basket">Basket</option>
+                </select>
+            </fieldset>
+
+            <!-- Grid Controls -->
+            <fieldset class="control-group">
+                <legend>Grid</legend>
+                <div class="control">
+                    <label for="margins">Margins (mm)</label>
+                    <div class="input-row">
+                        <input type="range" id="margins" min="5" max="100" value="15" step="1">
+                        <span class="value-display" id="margins-value">15</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="warp-spacing">Warp Spacing (mm)</label>
+                    <div class="input-row">
+                        <input type="range" id="warp-spacing" min="1" max="30" value="8" step="0.5">
+                        <span class="value-display" id="warp-spacing-value">8</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="weft-spacing">Weft Spacing (mm)</label>
+                    <div class="input-row">
+                        <input type="range" id="weft-spacing" min="1" max="30" value="8" step="0.5">
+                        <span class="value-display" id="weft-spacing-value">8</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="spacing-variance">Spacing Variance</label>
+                    <div class="input-row">
+                        <input type="range" id="spacing-variance" min="0" max="5" value="0" step="0.1">
+                        <span class="value-display" id="spacing-variance-value">0</span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Pattern Physics -->
+            <fieldset class="control-group">
+                <legend>Pattern Physics</legend>
+                <div class="control">
+                    <label for="weft-angle">Weft Angle (degrees)</label>
+                    <div class="input-row">
+                        <input type="range" id="weft-angle" min="-5" max="5" value="0" step="0.1">
+                        <span class="value-display" id="weft-angle-value">0</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="grouping">Grouping</label>
+                    <select id="grouping">
+                        <option value="none">None</option>
+                        <option value="pairs">Pairs (2)</option>
+                        <option value="triplets">Triplets (3)</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="modulation-intensity">Modulation Intensity (%)</label>
+                    <div class="input-row">
+                        <input type="range" id="modulation-intensity" min="0" max="100" value="0" step="1">
+                        <span class="value-display" id="modulation-intensity-value">0</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="modulation-frequency">Modulation Waves</label>
+                    <div class="input-row">
+                        <input type="range" id="modulation-frequency" min="1" max="10" value="3" step="0.5">
+                        <span class="value-display" id="modulation-frequency-value">3</span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Organic/Jitter Controls -->
+            <fieldset class="control-group">
+                <legend>Organic</legend>
+                <div class="control">
+                    <label for="warp-jitter">Warp Jitter (mm)</label>
+                    <div class="input-row">
+                        <input type="range" id="warp-jitter" min="0" max="10" value="2" step="0.1">
+                        <span class="value-display" id="warp-jitter-value">2</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="weft-jitter">Weft Jitter (mm)</label>
+                    <div class="input-row">
+                        <input type="range" id="weft-jitter" min="0" max="10" value="2" step="0.1">
+                        <span class="value-display" id="weft-jitter-value">2</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="jitter-frequency">Jitter Frequency</label>
+                    <div class="input-row">
+                        <input type="range" id="jitter-frequency" min="0.01" max="0.5" value="0.1" step="0.01">
+                        <span class="value-display" id="jitter-frequency-value">0.1</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="segment-length">Segment Length (mm)</label>
+                    <div class="input-row">
+                        <input type="range" id="segment-length" min="1" max="20" value="5" step="0.5">
+                        <span class="value-display" id="segment-length-value">5</span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Color Controls -->
+            <fieldset class="control-group">
+                <legend>Colors / Pens</legend>
+                <div class="color-grid">
+                    <div class="color-item">
+                        <label for="pen1">Pen 1</label>
+                        <input type="color" id="pen1" value="#00bcd4">
+                    </div>
+                    <div class="color-item">
+                        <label for="pen2">Pen 2</label>
+                        <input type="color" id="pen2" value="#e91e63">
+                    </div>
+                    <div class="color-item">
+                        <label for="pen3">Pen 3</label>
+                        <input type="color" id="pen3" value="#ffc107">
+                    </div>
+                    <div class="color-item">
+                        <label for="pen4">Pen 4</label>
+                        <input type="color" id="pen4" value="#212121">
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="warp-pen">Warp Threads</label>
+                    <select id="warp-pen">
+                        <option value="0">Pen 1 (Cyan)</option>
+                        <option value="1">Pen 2 (Magenta)</option>
+                        <option value="2">Pen 3 (Yellow)</option>
+                        <option value="3">Pen 4 (Black)</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="weft-pen">Weft Threads</label>
+                    <select id="weft-pen">
+                        <option value="0">Pen 1 (Cyan)</option>
+                        <option value="1" selected>Pen 2 (Magenta)</option>
+                        <option value="2">Pen 3 (Yellow)</option>
+                        <option value="3">Pen 4 (Black)</option>
+                    </select>
+                </div>
+            </fieldset>
+
+            <!-- Stroke Width -->
+            <fieldset class="control-group">
+                <legend>Pen Settings</legend>
+                <div class="control">
+                    <label for="stroke-width">Stroke Width (mm)</label>
+                    <div class="input-row">
+                        <input type="range" id="stroke-width" min="0.1" max="1" value="0.3" step="0.05">
+                        <span class="value-display" id="stroke-width-value">0.3</span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Action Buttons -->
+            <div class="actions">
+                <button id="generate-btn" class="btn btn-primary">Generate</button>
+                <button id="download-btn" class="btn btn-secondary">Download SVG</button>
+            </div>
+
+            <footer class="sidebar-footer">
+                <p>Optimized for iDraw H SE A3</p>
+                <p class="dimensions">Output: 297mm × 420mm</p>
+            </footer>
+        </aside>
+
+        <!-- Canvas Preview Area -->
+        <main class="canvas-area">
+            <div class="canvas-container">
+                <canvas id="preview-canvas"></canvas>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

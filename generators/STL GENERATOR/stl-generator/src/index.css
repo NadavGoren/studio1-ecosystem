@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Modern Light Theme - Enhanced Contrast & Depth */
+    --background: 0 0% 96%;          /* #F5F5F5 - Slightly darker for better contrast */
+    --foreground: 0 0% 12%;           /* #1F1F1F - Dark text */
+    --primary: 220 65% 55%;           /* #5B8FC7 - Muted blue accent */
+    --primary-foreground: 0 0% 100%;  /* #FFFFFF - White text on primary */
+    --secondary: 0 0% 94%;            /* #F0F0F0 - Light gray */
+    --secondary-foreground: 0 0% 25%; /* #404040 - Dark gray text */
+    --muted: 0 0% 88%;                /* #E0E0E0 - Muted gray */
+    --muted-foreground: 0 0% 45%;     /* #737373 - Medium gray text */
+    --accent: 220 65% 55%;            /* #5B8FC7 - Muted blue accent */
+    --accent-foreground: 0 0% 100%;   /* #FFFFFF - White text on accent */
+    --border: 0 0% 88%;               /* #E0E0E0 - Softer borders for shadow-based design */
+    --card: 0 0% 100%;                /* #FFFFFF - Pure white cards for maximum contrast */
+    --card-foreground: 0 0% 12%;      /* #1F1F1F - Card text */
+    --radius: 0.75rem;                /* Rounded corners for modern look */
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-family: system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 14px;
+    line-height: 1.5;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    overflow: hidden;
+  }
+
+  #root {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Reset button styles */
+  button {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    border: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  /* Reset input styles */
+  input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  /* Reset SVG */
+  svg {
+    display: block;
+    vertical-align: middle;
+  }
+}
+
+/* Scrollbar styling */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: hsl(var(--secondary));
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}

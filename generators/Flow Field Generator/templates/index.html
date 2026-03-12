@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Field Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <path d="M16 4L4 12L16 20L28 12L16 4Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <path d="M4 12L16 20L28 12" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <path d="M4 20L16 28L28 20" stroke="currentColor" stroke-width="2" fill="none"/>
+                </svg>
+                <h1>Flow Field Generator</h1>
+            </div>
+        </header>
+
+        <!-- Statistics Bar -->
+        <section class="stats-bar">
+            <div class="stat-card compact">
+                <span class="stat-label">Lines</span>
+                <span class="stat-value" id="stat-line-count">0</span>
+            </div>
+        </section>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Floating Layers Toolbar -->
+            <aside class="layers-toolbar" id="layers-toolbar">
+                <div class="layers-toolbar-header">
+                    <div class="layers-title-group">
+                        <h2 class="section-title">Layers</h2>
+                        <p class="section-subtitle">Sync, overprint, and regenerate active stack</p>
+                    </div>
+                    <div class="layers-toolbar-actions">
+                        <div class="toolbar-toggle-stack">
+                            <label for="sync-all-layers" class="toolbar-checkbox">
+                                <input type="checkbox" id="sync-all-layers">
+                                <div class="checkbox-label">
+                                    <span class="checkbox-title">Sync All</span>
+                                    <span class="checkbox-hint">Keep every layer in lockstep</span>
+                                </div>
+                            </label>
+                            <label for="force-overprint" class="toolbar-checkbox">
+                                <input type="checkbox" id="force-overprint">
+                                <div class="checkbox-label">
+                                    <span class="checkbox-title">Force Overprint</span>
+                                    <span class="checkbox-hint">Ignore other layers when drawing</span>
+                                </div>
+                            </label>
+                        </div>
+                        <button class="btn btn-secondary btn-compact toolbar-regenerate" id="btn-regenerate-all">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6"/>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                            </svg>
+                            Regenerate All
+                        </button>
+                    </div>
+                </div>
+                <div class="resize-handle" id="layers-resize-handle" title="Drag to resize"></div>
+                <div class="layers-toolbar-body">
+                    <div class="layer-list" id="layer-list">
+                        <!-- Layers will be dynamically populated here -->
+                    </div>
+
+                    <div class="layers-toolbar-buttons">
+                        <div class="control-group" style="margin-bottom: 8px;">
+                            <div style="display: flex; gap: 8px;">
+                                <input type="number" id="batch-layer-count" value="6" min="1" max="50" class="spinner-input" style="width: 60px; padding: 6px; border: 1px solid var(--color-border); border-radius: 4px;">
+                                <button class="btn btn-secondary btn-full" id="btn-add-batch-layers" style="flex: 1;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14"/>
+                                    </svg>
+                                    Add Batch
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-full" id="btn-add-layer">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Add Layer
+                        </button>
+                        <button class="btn btn-secondary btn-full" id="btn-regenerate-layer">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6"/>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                            </svg>
+                            Regenerate Active
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Canvas Area -->
+            <section class="canvas-section">
+                <div class="canvas-container">
+                    <canvas id="flow-canvas"></canvas>
+                    
+                    <!-- Canvas Toolbar -->
+                    <div class="canvas-toolbar">
+                        <button class="tool-btn" id="btn-fit" title="Fit to View">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                            </svg>
+                        </button>
+                        <div class="toolbar-separator"></div>
+                        <button class="tool-btn" id="btn-zoom-in" title="Zoom In">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="11" y1="8" x2="11" y2="14"/>
+                                <line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                        <button class="tool-btn" id="btn-zoom-out" title="Zoom Out">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Controls Panel -->
+            <aside class="controls-panel">
+                <!-- Flow Field Parameters Section -->
+                <section class="panel-section collapsible" data-section="flow-field">
+                    <div class="section-header" onclick="toggleSection('flow-field')">
+                        <h2 class="section-title">Flow Field</h2>
+                        <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="control-group">
+                            <label for="flow-mode">Flow Mode</label>
+                            <select id="flow-mode" style="width: 100%; padding: 8px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); font-size: 0.875rem;">
+                                <option value="noise" selected>Perlin Noise</option>
+                                <option value="attractor">Strange Attractor</option>
+                                <option value="isometric">Isometric Terrain</option>
+                            </select>
+                            <small class="control-hint">Choose the driver for the flow field</small>
+                        </div>
+
+                        <div class="control-group">
+                            <label for="noise-scale">Noise Scale</label>
+                            <div class="slider-group">
+                                <input type="range" id="noise-scale" min="0" max="1" value="0.6" step="0.001">
+                                <span class="slider-value" id="noise-scale-value">0.010</span>
+                            </div>
+                            <small class="control-hint">Flow field detail / attractor zoom</small>
+                        </div>
+
+                        <div id="noise-settings-group">
+                            <div class="control-group">
+                                <label for="noise-enabled" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="noise-enabled" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span>Enable Noise</span>
+                                </label>
+                                <small class="control-hint">Toggle noise-based flow field</small>
+                            </div>
+                            
+                            <div class="control-group">
+                                <label for="noise-seed">Noise Seed</label>
+                                <div class="slider-group">
+                                    <input type="number" id="noise-seed" min="0" max="10000" value="0" step="1" style="width: 80px; padding: 4px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text);">
+                                    <button type="button" id="btn-randomize-seed" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.75rem;">Randomize</button>
+                                </div>
+                                <small class="control-hint">Change the random pattern</small>
+                            </div>
+                            
+                            <div class="control-group">
+                                <label for="noise-octaves">Noise Octaves</label>
+                                <div class="slider-group">
+                                    <input type="range" id="noise-octaves" min="1" max="6" value="1" step="1">
+                                    <span class="slider-value" id="noise-octaves-value">1</span>
+                                </div>
+                                <small class="control-hint">Layers of detail (higher = more complex)</small>
+                            </div>
+                            
+                            <div class="control-group">
+                                <label for="noise-persistence">Noise Persistence</label>
+                                <div class="slider-group">
+                                    <input type="range" id="noise-persistence" min="0.1" max="1.0" value="0.5" step="0.05">
+                                    <span class="slider-value" id="noise-persistence-value">0.50</span>
+                                </div>
+                                <small class="control-hint">How much each octave contributes</small>
+                            </div>
+
+                            <div class="control-group">
+                                <label for="curl-amount">Curl Amount</label>
+                                <div class="slider-group">
+                                    <input type="range" id="curl-amount" min="0" max="1" value="0" step="0.05">
+                                    <span class="slider-value" id="curl-amount-value">0%</span>
+                                </div>
+                                <small class="control-hint">Add swirling/spiral patterns</small>
+                            </div>
+                        </div>
+
+                        <div id="attractor-settings-group" style="display: none;">
+                            <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-primary); margin-bottom: 8px; display: block;">Clifford Parameters</label>
+                            <div class="control-group">
+                                <label for="attractor-a">Parameter A</label>
+                                <div class="slider-group">
+                                    <input type="range" id="attractor-a" min="-3.0" max="3.0" value="1.5" step="0.01">
+                                    <span class="slider-value" id="attractor-a-value">1.50</span>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label for="attractor-b">Parameter B</label>
+                                <div class="slider-group">
+                                    <input type="range" id="attractor-b" min="-3.0" max="3.0" value="-1.8" step="0.01">
+                                    <span class="slider-value" id="attractor-b-value">-1.80</span>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label for="attractor-c">Parameter C</label>
+                                <div class="slider-group">
+                                    <input type="range" id="attractor-c" min="-3.0" max="3.0" value="1.6" step="0.01">
+                                    <span class="slider-value" id="attractor-c-value">1.60</span>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label for="attractor-d">Parameter D</label>
+                                <div class="slider-group">
+                                    <input type="range" id="attractor-d" min="-3.0" max="3.0" value="0.9" step="0.01">
+                                    <span class="slider-value" id="attractor-d-value">0.90</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="angle-offset">Angle Offset</label>
+                            <div class="slider-group">
+                                <input type="range" id="angle-offset" min="0" max="360" value="0" step="1">
+                                <span class="slider-value" id="angle-offset-value">0°</span>
+                            </div>
+                            <small class="control-hint">Global rotation of flow field</small>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="flow-strength">Flow Strength</label>
+                            <div class="slider-group">
+                                <input type="range" id="flow-strength" min="0" max="1" value="1" step="0.05">
+                                <span class="slider-value" id="flow-strength-value">100%</span>
+                            </div>
+                            <small class="control-hint">Noise influence (0% = straight lines)</small>
+                        </div>
+                        
+                        <div class="control-group" id="num-particles-group">
+                            <label for="num-particles">Number of Particles</label>
+                            <div class="slider-group">
+                                <input type="range" id="num-particles" min="100" max="10000" value="1000" step="100">
+                                <span class="slider-value" id="num-particles-value">1000</span>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group" id="terrain-settings-group" style="display: none;">
+                            <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-primary); margin-bottom: 8px; display: block;">TERRAIN SETTINGS</label>
+                            <div class="control-group">
+                                <label for="terrain-vertical-gap">Vertical Gap</label>
+                                <div class="slider-group">
+                                    <input type="range" id="terrain-vertical-gap" min="1" max="20" value="5" step="0.5">
+                                    <span class="slider-value" id="terrain-vertical-gap-value">5.0 mm</span>
+                                </div>
+                                <small class="control-hint">Distance between horizontal lines</small>
+                            </div>
+                            <div class="control-group">
+                                <label for="terrain-altitude">Altitude</label>
+                                <div class="slider-group">
+                                    <input type="range" id="terrain-altitude" min="0" max="100" value="30" step="1">
+                                    <span class="slider-value" id="terrain-altitude-value">30 mm</span>
+                                </div>
+                                <small class="control-hint">How high the peaks go</small>
+                            </div>
+                            <div class="control-group">
+                                <label for="terrain-detail">Detail</label>
+                                <div class="slider-group">
+                                    <input type="range" id="terrain-detail" min="0.5" max="5" value="1" step="0.5">
+                                    <span class="slider-value" id="terrain-detail-value">1.0</span>
+                                </div>
+                                <small class="control-hint">Sampling resolution (Lower = better occlusion)</small>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="start-position-mode">Starting Position</label>
+                            <select id="start-position-mode" style="width: 100%; padding: 8px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); font-size: 0.875rem;">
+                                <option value="random">Random</option>
+                                <option value="grid">Regular Grid</option>
+                                <option value="circle">Circle Packing</option>
+                                <option value="phyllotaxis">Phyllotaxis (Spiral)</option>
+                                <option value="noise-density">Noise Density (Clouds)</option>
+                            </select>
+                            <small class="control-hint">How particles start</small>
+                        </div>
+                        <div id="advanced-settings-container" style="margin-top: 1rem; padding: 10px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 4px; display: none;">
+                            <div id="phyllotaxis-controls" style="display: none;">
+                                <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-primary); margin-bottom: 8px; display: block;">SPIRAL SETTINGS</label>
+                                <div class="control-group">
+                                    <label for="spiral-tightness">Spread</label>
+                                    <div class="slider-group">
+                                        <input type="range" id="spiral-tightness" min="1" max="20" value="5" step="0.5">
+                                        <span class="slider-value" id="spiral-tightness-value">5.0</span>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <label for="spiral-min-radius">Hollow Center</label>
+                                    <div class="slider-group">
+                                        <input type="range" id="spiral-min-radius" min="0" max="100" value="0" step="1">
+                                        <span class="slider-value" id="spiral-min-radius-value">0 mm</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="noise-density-controls" style="display: none;">
+                                <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-primary); margin-bottom: 8px; display: block;">CLOUD SETTINGS</label>
+                                <div class="control-group">
+                                    <label for="cloud-threshold">Density Threshold</label>
+                                    <div class="slider-group">
+                                        <input type="range" id="cloud-threshold" min="0.1" max="0.9" value="0.4" step="0.05">
+                                        <span class="slider-value" id="cloud-threshold-value">0.4</span>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <label for="cloud-scale">Cloud Scale</label>
+                                    <div class="slider-group">
+                                        <input type="range" id="cloud-scale" min="0.1" max="2.0" value="0.5" step="0.1">
+                                        <span class="slider-value" id="cloud-scale-value">0.5</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Grid Settings Section (shown only when grid mode is selected) -->
+                        <section class="panel-section collapsible" id="grid-settings-section" data-section="grid-settings" style="display: none;">
+                            <div class="section-header" onclick="toggleSection('grid-settings')">
+                                <h2 class="section-title">Grid Settings</h2>
+                                <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </div>
+                            <div class="section-content">
+                                <div class="control-group">
+                                    <label for="grid-auto-spacing" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="grid-auto-spacing" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                        <span>Auto Spacing</span>
+                                    </label>
+                                    <small class="control-hint">Automatically calculate spacing from number of particles</small>
+                                </div>
+                                
+                                <div class="control-group" id="grid-spacing-manual-group" style="display: none;">
+                                    <label for="grid-spacing">Grid Spacing</label>
+                                    <div class="slider-group">
+                                        <input type="range" id="grid-spacing" min="1" max="50" value="10" step="0.5">
+                                        <span class="slider-value" id="grid-spacing-value">10.0 mm</span>
+                                    </div>
+                                    <small class="control-hint">Distance between grid points</small>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <label for="grid-hex" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="grid-hex" style="width: 18px; height: 18px; cursor: pointer;">
+                                        <span>Hexagonal Grid</span>
+                                    </label>
+                                    <small class="control-hint">Honeycomb pattern (offset rows)</small>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <label for="grid-jitter">Grid Jitter</label>
+                                    <div class="slider-group">
+                                        <input type="range" id="grid-jitter" min="0" max="1" value="0" step="0.05">
+                                        <span class="slider-value" id="grid-jitter-value">0%</span>
+                                    </div>
+                                    <small class="control-hint">Random offset for each point</small>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <label>Grid Size</label>
+                                    <div style="padding: 8px; background: var(--color-bg-secondary, rgba(255,255,255,0.05)); border-radius: 4px; font-size: 0.875rem;">
+                                        <span id="grid-size-display">-</span>
+                                    </div>
+                                    <small class="control-hint">Calculated columns × rows</small>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <div class="control-group" id="line-length-group">
+                            <label for="line-length">Line Length</label>
+                            <div class="slider-group">
+                                <input type="range" id="line-length" min="10" max="1000" value="200" step="10">
+                                <span class="slider-value" id="line-length-value">200 mm</span>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="step-size">Step Size</label>
+                            <div class="slider-group">
+                                <input type="range" id="step-size" min="0.1" max="10" value="1" step="0.1">
+                                <span class="slider-value" id="step-size-value">1.0</span>
+                            </div>
+                            <small class="control-hint">Distance each particle moves per step</small>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="min-distance">Minimum Distance</label>
+                            <div class="slider-group">
+                                <input type="range" id="min-distance" min="0" max="10" value="2" step="0.1">
+                                <span class="slider-value" id="min-distance-value">2.0 mm</span>
+                            </div>
+                            <small class="control-hint">Stop curves if too close to others</small>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- Interactive Magnets Section -->
+                <section class="panel-section collapsible" data-section="interactive-magnets">
+                    <div class="section-header" onclick="toggleSection('interactive-magnets')">
+                        <h2 class="section-title">Interactive Magnets</h2>
+                        <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="control-group" style="display: flex; flex-direction: column; gap: 8px;">
+                            <label for="magnets-enabled" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="magnets-enabled" style="width: 18px; height: 18px; cursor: pointer;" checked>
+                                <span>Enable Magnet Effect</span>
+                            </label>
+                            <small class="control-hint">Toggle whether magnets influence lines.</small>
+                            <label for="magnets-visible" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="magnets-visible" style="width: 18px; height: 18px; cursor: pointer;" checked>
+                                <span>Show Indicators</span>
+                            </label>
+                            <small class="control-hint">Toggle the red/green/blue magnet markers.</small>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label for="toggle-magnet-placement" style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1;">
+                                    <input type="checkbox" id="toggle-magnet-placement" style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span>Edit Mode (Place)</span>
+                                </label>
+                                <button class="btn btn-secondary" id="btn-clear-magnets" style="padding: 6px 10px;">Clear Magnets</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="magnet-strength">Magnet Strength</label>
+                            <div class="slider-group">
+                                <input type="range" id="magnet-strength" min="-100" max="100" value="50" step="1">
+                                <span class="slider-value" id="magnet-strength-value">50</span>
+                            </div>
+                            <small class="control-hint">Left Click to Attract, Shift+Click to Repel</small>
+                        </div>
+                        <div class="control-group">
+                            <label for="magnet-radius">Magnet Radius</label>
+                            <div class="slider-group">
+                                <input type="range" id="magnet-radius" min="10" max="500" value="100" step="1">
+                                <span class="slider-value" id="magnet-radius-value">100</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="magnet-rotation">Rotation / Swirl</label>
+                            <div class="slider-group">
+                                <input type="range" id="magnet-rotation" min="-180" max="180" value="0" step="1">
+                                <span class="slider-value" id="magnet-rotation-value">0°</span>
+                            </div>
+                            <small class="control-hint">Adds a spiral effect to the magnets</small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Space Distortion Section -->
+                <section class="panel-section collapsible" data-section="space-distortion">
+                    <div class="section-header" onclick="toggleSection('space-distortion')">
+                        <h2 class="section-title">Space Distortion</h2>
+                        <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
+                            <label for="distortion-enabled" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="distortion-enabled" style="width: 18px; height: 18px; cursor: pointer;">
+                                <span>Enable Distortion</span>
+                            </label>
+                        </div>
+                        <div class="control-group">
+                            <label for="distortion-strength">Distortion Strength</label>
+                            <div class="slider-group">
+                                <input type="range" id="distortion-strength" min="0" max="300" value="40" step="0.1">
+                                <span class="slider-value" id="distortion-strength-value">40.0</span>
+                            </div>
+                            <small class="control-hint">How much to warp the space.</small>
+                        </div>
+                        <div class="control-group">
+                            <label for="distortion-scale">Distortion Scale</label>
+                            <div class="slider-group">
+                                <input type="range" id="distortion-scale" min="0.001" max="0.2" value="0.01" step="0.001">
+                                <span class="slider-value" id="distortion-scale-value">0.010</span>
+                            </div>
+                            <small class="control-hint">The size of the warp swirls.</small>
+                        </div>
+                        <div class="control-group">
+                            <label for="distortion-detail">Distortion Detail</label>
+                            <div class="slider-group">
+                                <input type="range" id="distortion-detail" min="1" max="5" value="2" step="1">
+                                <span class="slider-value" id="distortion-detail-value">2</span>
+                            </div>
+                            <small class="control-hint">Adds texture/roughness to the warp.</small>
+                        </div>
+                        <div class="control-group">
+                            <label for="distortion-phase">Distortion Speed / Phase</label>
+                            <div class="slider-group">
+                                <input type="range" id="distortion-phase" min="0" max="10" value="0" step="0.1">
+                                <span class="slider-value" id="distortion-phase-value">0.0</span>
+                            </div>
+                            <small class="control-hint">Shifts the distortion pattern.</small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Geometry & Symmetry Section -->
+                <section class="panel-section collapsible" data-section="geometry-symmetry">
+                    <div class="section-header" onclick="toggleSection('geometry-symmetry')">
+                        <h2 class="section-title">Geometry & Symmetry</h2>
+                        <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="control-group">
+                            <label for="symmetry-mode">Symmetry Mode</label>
+                            <select id="symmetry-mode" style="width: 100%; padding: 8px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); font-size: 0.875rem;">
+                                <option value="none">None</option>
+                                <option value="mirror-x">Mirror X</option>
+                                <option value="mirror-y">Mirror Y</option>
+                                <option value="mirror-both">Mirror Both</option>
+                                <option value="radial">Radial</option>
+                            </select>
+                        </div>
+                        <div class="control-group" id="radial-segments-group" style="display: none;">
+                            <label for="radial-segments">Radial Segments</label>
+                            <div class="slider-group">
+                                <input type="range" id="radial-segments" min="3" max="12" value="6" step="1">
+                                <span class="slider-value" id="radial-segments-value">6</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="angle-snapping">Angle Snapping</label>
+                            <select id="angle-snapping" style="width: 100%; padding: 8px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); font-size: 0.875rem;">
+                                <option value="0">Off (Smooth)</option>
+                                <option value="4">4 (90°)</option>
+                                <option value="6">6 (60°)</option>
+                                <option value="8">8 (45°)</option>
+                                <option value="3">3 (Triangle)</option>
+                            </select>
+                            <small class="control-hint">Forces lines to rigid geometric angles.</small>
+                        </div>
+                        <div class="control-group">
+                            <label for="snapping-strength">Constraint Strength</label>
+                            <div class="slider-group">
+                                <input type="range" id="snapping-strength" min="0" max="100" value="100" step="1">
+                                <span class="slider-value" id="snapping-strength-value">100%</span>
+                            </div>
+                            <small class="control-hint">How strictly to follow the snapping rules.</small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Canvas Settings Section -->
+                <section class="panel-section collapsible" data-section="canvas-settings">
+                    <div class="section-header" onclick="toggleSection('canvas-settings')">
+                        <h2 class="section-title">Canvas Settings</h2>
+                        <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="control-group">
+                            <label for="paper-size">Paper Size</label>
+                            <select id="paper-size" style="width: 100%; padding: 8px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); font-size: 0.875rem;">
+                                <option value="297x420" selected>A3 (297 × 420 mm)</option>
+                                <option value="210x297">A4 (210 × 297 mm)</option>
+                                <option value="148x210">A5 (148 × 210 mm)</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="stroke-width">Stroke Width</label>
+                            <div class="slider-group">
+                                <input type="range" id="stroke-width" min="0.1" max="2.0" value="0.4" step="0.05">
+                                <span class="slider-value" id="stroke-width-value">0.4 mm</span>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="margin">Margin</label>
+                            <div class="slider-group">
+                                <input type="range" id="margin" min="0" max="100" value="20" step="1">
+                                <span class="slider-value" id="margin-value">20 mm</span>
+                            </div>
+                            <small class="control-hint">Margin on all sides</small>
+                        </div>
+                        
+                    </div>
+                </section>
+
+                <!-- Render Style Section -->
+                <section class="panel-section collapsible" data-section="render-style">
+                    <div class="section-header" onclick="toggleSection('render-style')">
+                        <h2 class="section-title">Render Style</h2>
+                        <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="control-group">
+                            <label for="render-style">Render Style</label>
+                            <select id="render-style" style="width: 100%; padding: 8px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); font-size: 0.875rem;">
+                                <option value="default" selected>Standard Line (Current behavior)</option>
+                                <option value="ribbon-hatched">Variable Width Zig-Zag (Ribbon/Hatched)</option>
+                                <option value="pipes">Dual Parallel Lines (Pipes/Tubes)</option>
+                                <option value="circles">Chain of Circles (Scales/Chainmail)</option>
+                            </select>
+                            <small class="control-hint">Transform centerlines into complex geometric shapes</small>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="brush-width">Brush Width</label>
+                            <div class="slider-group">
+                                <input type="range" id="brush-width" min="1" max="50" value="5" step="1">
+                                <span class="slider-value" id="brush-width-value">5 mm</span>
+                            </div>
+                            <small class="control-hint">Width of brush effects (for non-default styles)</small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <section class="panel-section actions-section">
+                    <button class="btn btn-secondary btn-full" id="btn-export">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        Export SVG
+                    </button>
+                </section>
+            </aside>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/perlin.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/flowfield.js') }}?v=2"></script>
+    <script>
+        // Debounce function for live updates
+        let updateTimeout = null;
+        function debounceUpdate(func, delay = 300) {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(func, delay);
+        }
+
+        function saveActiveLayerSettings() {
+            if (typeof persistSettingsToActiveLayer === 'function') {
+                persistSettingsToActiveLayer();
+            }
+        }
+        
+        // Noise scale helpers (shared with flowfield.js log mapping)
+        function formatNoiseScale(scale) {
+            return scale >= 0.01 ? scale.toFixed(3) : scale.toFixed(4);
+        }
+        function updateNoiseScaleDisplay(scale) {
+            const display = document.getElementById('noise-scale-value');
+            if (display) {
+                display.textContent = formatNoiseScale(scale);
+            }
+        }
+        function syncNoiseScaleSliderFromState() {
+            const slider = document.getElementById('noise-scale');
+            if (!slider) return;
+            const sliderValue = noiseScaleToSlider(flowState.noiseScale);
+            slider.value = sliderValue.toFixed(3);
+            updateNoiseScaleDisplay(flowState.noiseScale);
+        }
+        function applyNoiseScaleFromSlider(sliderValue) {
+            const actualScale = sliderToNoiseScale(sliderValue);
+            flowState.noiseScale = actualScale;
+            flowState.savedNoiseScale = actualScale;
+            updateNoiseScaleDisplay(actualScale);
+        }
+
+        function updateFlowModeVisibility(mode) {
+            const noiseGroup = document.getElementById('noise-settings-group');
+            const attractorGroup = document.getElementById('attractor-settings-group');
+            const terrainGroup = document.getElementById('terrain-settings-group');
+            const numParticlesGroup = document.getElementById('num-particles-group');
+            const lineLengthGroup = document.getElementById('line-length-group');
+            
+            if (noiseGroup) noiseGroup.style.display = mode === 'noise' ? 'block' : 'none';
+            if (attractorGroup) attractorGroup.style.display = mode === 'attractor' ? 'block' : 'none';
+            if (terrainGroup) terrainGroup.style.display = mode === 'isometric' ? 'block' : 'none';
+            
+            // Hide num-particles and line-length when in isometric mode
+            if (numParticlesGroup) numParticlesGroup.style.display = mode === 'isometric' ? 'none' : 'block';
+            if (lineLengthGroup) lineLengthGroup.style.display = mode === 'isometric' ? 'none' : 'block';
+        }
+        
+        // Update flow field with debouncing
+        function updateFlowField() {
+            // When sync is on, regenerate every visible layer; otherwise just the active one.
+            if (flowState.syncAllLayers && typeof generateAllLayers === 'function') {
+                generateAllLayers();
+            } else if (typeof regenerateActiveLayer === 'function') {
+                regenerateActiveLayer();
+            } else if (typeof generateFlowField === 'function') {
+                generateFlowField();
+            } else {
+                console.warn('generateFlowField not available');
+            }
+        }
+        
+        // Setup all event handlers when DOM is ready
+        function setupEventHandlers() {
+            // UI Event Handlers with live updates
+            // Global sync toggle
+            const syncAllLayersEl = document.getElementById('sync-all-layers');
+            if (syncAllLayersEl) {
+                syncAllLayersEl.checked = !!flowState.syncAllLayers;
+                syncAllLayersEl.addEventListener('change', (e) => {
+                    flowState.syncAllLayers = e.target.checked;
+                    if (flowState.syncAllLayers && typeof syncAllLayersFromFlowState === 'function') {
+                        syncAllLayersFromFlowState();
+                    }
+                    saveActiveLayerSettings();
+                    // Refresh immediately so all layers stay in lockstep when enabling sync
+                    updateFlowField();
+                });
+            }
+            
+            // Flow mode selector
+            const flowModeEl = document.getElementById('flow-mode');
+            if (flowModeEl) {
+                const initialMode = flowState.flowMode || 'noise';
+                flowModeEl.value = initialMode;
+                updateFlowModeVisibility(initialMode);
+                flowModeEl.addEventListener('change', (e) => {
+                    flowState.flowMode = e.target.value;
+                    updateFlowModeVisibility(flowState.flowMode);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            } else {
+                updateFlowModeVisibility(flowState.flowMode || 'noise');
+            }
+
+            const bindAttractorSlider = (id, key, displayId) => {
+                const slider = document.getElementById(id);
+                const display = document.getElementById(displayId);
+                if (!slider) return;
+                const current = flowState.attractorParams?.[key];
+                if (typeof current === 'number') {
+                    slider.value = current;
+                    if (display) display.textContent = current.toFixed(2);
+                }
+                slider.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.attractorParams[key] = val;
+                    if (display) display.textContent = val.toFixed(2);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            };
+
+            bindAttractorSlider('attractor-a', 'a', 'attractor-a-value');
+            bindAttractorSlider('attractor-b', 'b', 'attractor-b-value');
+            bindAttractorSlider('attractor-c', 'c', 'attractor-c-value');
+            bindAttractorSlider('attractor-d', 'd', 'attractor-d-value');
+
+            // Noise enabled toggle
+            const noiseEnabledEl = document.getElementById('noise-enabled');
+            const noiseScaleEl = document.getElementById('noise-scale');
+            if (noiseEnabledEl) {
+                noiseEnabledEl.addEventListener('change', (e) => {
+                    flowState.noiseEnabled = e.target.checked;
+                    
+                    if (e.target.checked) {
+                        // Re-enable noise: restore saved scale or use default
+                        flowState.noiseScale = clampNoiseScale(flowState.savedNoiseScale || flowState.noiseScale || NOISE_SCALE_MIN);
+                        flowState.savedNoiseScale = flowState.noiseScale;
+                        if (noiseScaleEl) {
+                            noiseScaleEl.disabled = false;
+                            noiseScaleEl.value = noiseScaleToSlider(flowState.noiseScale).toFixed(3);
+                            updateNoiseScaleDisplay(flowState.noiseScale);
+                        }
+                    } else {
+                        // Disable noise: save current scale and set to 0
+                        if (flowState.noiseScale > 0) {
+                            flowState.savedNoiseScale = flowState.noiseScale;
+                        }
+                        flowState.noiseScale = 0;
+                        if (noiseScaleEl) {
+                            noiseScaleEl.disabled = true;
+                            noiseScaleEl.value = 0;
+                            updateNoiseScaleDisplay(0);
+                        }
+                    }
+                    
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Noise scale slider
+            if (noiseScaleEl) {
+                noiseScaleEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    applyNoiseScaleFromSlider(value);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+                // Align slider with clamped noise scale on load
+                syncNoiseScaleSliderFromState();
+            }
+            
+            // Noise seed input
+            const noiseSeedEl = document.getElementById('noise-seed');
+            if (noiseSeedEl) {
+                noiseSeedEl.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    flowState.noiseSeed = value;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Randomize seed button
+            const randomizeSeedBtn = document.getElementById('btn-randomize-seed');
+            if (randomizeSeedBtn) {
+                randomizeSeedBtn.addEventListener('click', () => {
+                    const newSeed = Math.floor(Math.random() * 10000);
+                    flowState.noiseSeed = newSeed;
+                    document.getElementById('noise-seed').value = newSeed;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Noise octaves slider
+            const noiseOctavesEl = document.getElementById('noise-octaves');
+            if (noiseOctavesEl) {
+                noiseOctavesEl.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    flowState.noiseOctaves = value;
+                    document.getElementById('noise-octaves-value').textContent = value;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Noise persistence slider
+            const noisePersistenceEl = document.getElementById('noise-persistence');
+            if (noisePersistenceEl) {
+                noisePersistenceEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.noisePersistence = value;
+                    document.getElementById('noise-persistence-value').textContent = value.toFixed(2);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Angle offset slider
+            const angleOffsetEl = document.getElementById('angle-offset');
+            if (angleOffsetEl) {
+                angleOffsetEl.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    flowState.angleOffset = value;
+                    document.getElementById('angle-offset-value').textContent = value + '°';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Flow strength slider
+            const flowStrengthEl = document.getElementById('flow-strength');
+            if (flowStrengthEl) {
+                flowStrengthEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.flowStrength = value;
+                    document.getElementById('flow-strength-value').textContent = Math.round(value * 100) + '%';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Curl amount slider
+            const curlAmountEl = document.getElementById('curl-amount');
+            if (curlAmountEl) {
+                curlAmountEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.curlAmount = value;
+                    document.getElementById('curl-amount-value').textContent = Math.round(value * 100) + '%';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Magnet controls
+            const magnetStrengthEl = document.getElementById('magnet-strength');
+            const magnetRadiusEl = document.getElementById('magnet-radius');
+            const magnetRotationEl = document.getElementById('magnet-rotation');
+            const magnetToggleEl = document.getElementById('toggle-magnet-placement');
+            const clearMagnetsBtn = document.getElementById('btn-clear-magnets');
+            const magnetsEnabledEl = document.getElementById('magnets-enabled');
+            const magnetsVisibleEl = document.getElementById('magnets-visible');
+            const distortionEnabledEl = document.getElementById('distortion-enabled');
+            const distortionStrengthEl = document.getElementById('distortion-strength');
+            const distortionScaleEl = document.getElementById('distortion-scale');
+            const distortionPhaseEl = document.getElementById('distortion-phase');
+            const distortionDetailEl = document.getElementById('distortion-detail');
+            const symmetryModeEl = document.getElementById('symmetry-mode');
+            const radialSegmentsEl = document.getElementById('radial-segments');
+            const angleSnappingEl = document.getElementById('angle-snapping');
+            const snappingStrengthEl = document.getElementById('snapping-strength');
+
+            function updateRadialVisibility(mode) {
+                const group = document.getElementById('radial-segments-group');
+                if (group) group.style.display = mode === 'radial' ? 'block' : 'none';
+            }
+
+            if (magnetToggleEl) {
+                magnetToggleEl.checked = !!flowState.isPlacingMagnets;
+                magnetToggleEl.addEventListener('change', (e) => {
+                    flowState.isPlacingMagnets = e.target.checked;
+                    if (typeof updateCanvasCursor === 'function') updateCanvasCursor();
+                });
+            }
+
+            if (magnetsEnabledEl) {
+                magnetsEnabledEl.checked = flowState.magnetConfig?.enabled ?? true;
+                magnetsEnabledEl.addEventListener('change', (e) => {
+                    flowState.magnetConfig.enabled = e.target.checked;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (magnetsVisibleEl) {
+                magnetsVisibleEl.checked = flowState.magnetConfig?.visible ?? true;
+                magnetsVisibleEl.addEventListener('change', (e) => {
+                    flowState.magnetConfig.visible = e.target.checked;
+                    saveActiveLayerSettings();
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+
+            if (clearMagnetsBtn) {
+                clearMagnetsBtn.addEventListener('click', () => {
+                    flowState.magnets = [];
+                    debounceUpdate(updateFlowField);
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+
+            if (magnetStrengthEl) {
+                magnetStrengthEl.value = flowState.magnetConfig?.strength ?? 50;
+                const display = document.getElementById('magnet-strength-value');
+                if (display) display.textContent = magnetStrengthEl.value;
+                magnetStrengthEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.magnetConfig.strength = val;
+                    if (display) display.textContent = val;
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (magnetRadiusEl) {
+                magnetRadiusEl.value = flowState.magnetConfig?.radius ?? 100;
+                const display = document.getElementById('magnet-radius-value');
+                if (display) display.textContent = magnetRadiusEl.value;
+                magnetRadiusEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.magnetConfig.radius = val;
+                    if (display) display.textContent = val;
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (magnetRotationEl) {
+                magnetRotationEl.value = flowState.magnetConfig?.rotation ?? 0;
+                const display = document.getElementById('magnet-rotation-value');
+                if (display) display.textContent = `${magnetRotationEl.value}°`;
+                magnetRotationEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.magnetConfig.rotation = val;
+                    if (display) display.textContent = `${val}°`;
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Distortion controls
+            if (distortionEnabledEl) {
+                distortionEnabledEl.checked = !!flowState.distortion.enabled;
+                distortionEnabledEl.addEventListener('change', (e) => {
+                    flowState.distortion.enabled = e.target.checked;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (distortionStrengthEl) {
+                distortionStrengthEl.value = flowState.distortion?.strength ?? 0;
+                const display = document.getElementById('distortion-strength-value');
+                if (display) display.textContent = parseFloat(distortionStrengthEl.value).toFixed(1);
+                distortionStrengthEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.distortion.strength = val;
+                    if (display) display.textContent = val.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (distortionScaleEl) {
+                distortionScaleEl.value = flowState.distortion?.scale ?? 0.01;
+                const display = document.getElementById('distortion-scale-value');
+                if (display) display.textContent = parseFloat(distortionScaleEl.value).toFixed(3);
+                distortionScaleEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.distortion.scale = val;
+                    if (display) display.textContent = val.toFixed(3);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (distortionPhaseEl) {
+                distortionPhaseEl.value = flowState.distortion?.phase ?? 0;
+                const display = document.getElementById('distortion-phase-value');
+                if (display) display.textContent = parseFloat(distortionPhaseEl.value).toFixed(1);
+                distortionPhaseEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.distortion.phase = val;
+                    if (display) display.textContent = val.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (distortionDetailEl) {
+                distortionDetailEl.value = flowState.distortion?.detail ?? 2;
+                const display = document.getElementById('distortion-detail-value');
+                if (display) display.textContent = `${distortionDetailEl.value}`;
+                distortionDetailEl.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value, 10);
+                    flowState.distortion.detail = val;
+                    if (display) display.textContent = `${val}`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (symmetryModeEl) {
+                symmetryModeEl.value = flowState.geometry?.symmetry ?? 'none';
+                updateRadialVisibility(symmetryModeEl.value);
+                symmetryModeEl.addEventListener('change', (e) => {
+                    flowState.geometry.symmetry = e.target.value;
+                    updateRadialVisibility(e.target.value);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (radialSegmentsEl) {
+                radialSegmentsEl.value = flowState.geometry?.segments ?? 6;
+                const display = document.getElementById('radial-segments-value');
+                if (display) display.textContent = radialSegmentsEl.value;
+                radialSegmentsEl.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value, 10);
+                    flowState.geometry.segments = val;
+                    if (display) display.textContent = `${val}`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (angleSnappingEl) {
+                angleSnappingEl.value = flowState.geometry?.snapping ?? 0;
+                angleSnappingEl.addEventListener('change', (e) => {
+                    flowState.geometry.snapping = parseInt(e.target.value, 10);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (snappingStrengthEl) {
+                snappingStrengthEl.value = (flowState.geometry?.snappingStrength ?? 1) * 100;
+                const display = document.getElementById('snapping-strength-value');
+                if (display) display.textContent = `${snappingStrengthEl.value}%`;
+                snappingStrengthEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.geometry.snappingStrength = val / 100;
+                    if (display) display.textContent = `${Math.round(val)}%`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Number of particles slider
+            const numParticlesEl = document.getElementById('num-particles');
+            if (numParticlesEl) {
+                numParticlesEl.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    flowState.numParticles = value;
+                    document.getElementById('num-particles-value').textContent = value;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Starting position mode
+            const startPositionModeEl = document.getElementById('start-position-mode');
+            if (startPositionModeEl) {
+                startPositionModeEl.addEventListener('change', (e) => {
+                    flowState.startPositionMode = e.target.value;
+                    // Show/hide grid settings section
+                    const gridSettingsSection = document.getElementById('grid-settings-section');
+                    if (gridSettingsSection) {
+                        gridSettingsSection.style.display = e.target.value === 'grid' ? 'block' : 'none';
+                    }
+                    const advContainer = document.getElementById('advanced-settings-container');
+                    const spiralControls = document.getElementById('phyllotaxis-controls');
+                    const cloudControls = document.getElementById('noise-density-controls');
+                    if (advContainer && spiralControls && cloudControls) {
+                        if (e.target.value === 'phyllotaxis') {
+                            advContainer.style.display = 'block';
+                            spiralControls.style.display = 'block';
+                            cloudControls.style.display = 'none';
+                        } else if (e.target.value === 'noise-density') {
+                            advContainer.style.display = 'block';
+                            spiralControls.style.display = 'none';
+                            cloudControls.style.display = 'block';
+                        } else {
+                            advContainer.style.display = 'none';
+                        }
+                    }
+                    updateGridSizeDisplay();
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Spiral Spread
+            const spiralTightnessEl = document.getElementById('spiral-tightness');
+            if (spiralTightnessEl) {
+                spiralTightnessEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.phyllotaxisConfig.spread = val;
+                    document.getElementById('spiral-tightness-value').textContent = val.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Spiral Radius
+            const spiralMinRadiusEl = document.getElementById('spiral-min-radius');
+            if (spiralMinRadiusEl) {
+                spiralMinRadiusEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.phyllotaxisConfig.minRadius = val;
+                    document.getElementById('spiral-min-radius-value').textContent = val + ' mm';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Cloud Threshold
+            const cloudThresholdEl = document.getElementById('cloud-threshold');
+            if (cloudThresholdEl) {
+                cloudThresholdEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.cloudConfig.threshold = val;
+                    document.getElementById('cloud-threshold-value').textContent = val.toFixed(2);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Cloud Scale
+            const cloudScaleEl = document.getElementById('cloud-scale');
+            if (cloudScaleEl) {
+                cloudScaleEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.cloudConfig.scale = val;
+                    document.getElementById('cloud-scale-value').textContent = val.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Grid auto spacing toggle
+            const gridAutoSpacingEl = document.getElementById('grid-auto-spacing');
+            if (gridAutoSpacingEl) {
+                gridAutoSpacingEl.addEventListener('change', (e) => {
+                    flowState.gridConfig.spacingMode = e.target.checked ? 'auto' : 'manual';
+                    const manualGroup = document.getElementById('grid-spacing-manual-group');
+                    if (manualGroup) {
+                        manualGroup.style.display = e.target.checked ? 'none' : 'block';
+                    }
+                    updateGridSizeDisplay();
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Grid spacing slider
+            const gridSpacingEl = document.getElementById('grid-spacing');
+            if (gridSpacingEl) {
+                gridSpacingEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.gridConfig.spacing = value;
+                    document.getElementById('grid-spacing-value').textContent = `${value.toFixed(1)} mm`;
+                    updateGridSizeDisplay();
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Hex grid toggle
+            const gridHexEl = document.getElementById('grid-hex');
+            if (gridHexEl) {
+                gridHexEl.addEventListener('change', (e) => {
+                    flowState.gridConfig.hexGrid = e.target.checked;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Grid jitter slider
+            const gridJitterEl = document.getElementById('grid-jitter');
+            if (gridJitterEl) {
+                gridJitterEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.gridConfig.jitter = value;
+                    document.getElementById('grid-jitter-value').textContent = Math.round(value * 100) + '%';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Function to update grid size display
+            function updateGridSizeDisplay() {
+                const displayEl = document.getElementById('grid-size-display');
+                if (!displayEl || flowState.startPositionMode !== 'grid') return;
+                
+                const margin = flowState.margin;
+                const drawWidth = flowState.widthMm - 2 * margin;
+                const drawHeight = flowState.heightMm - 2 * margin;
+                
+                if (drawWidth <= 0 || drawHeight <= 0) {
+                    displayEl.textContent = '-';
+                    return;
+                }
+                
+                const numPoints = flowState.numParticles;
+                let cols, rows;
+                
+                if (flowState.gridConfig.spacingMode === 'manual') {
+                    const spacing = Math.max(0.1, flowState.gridConfig.spacing);
+                    cols = Math.max(1, Math.ceil(drawWidth / spacing));
+                    rows = Math.max(1, Math.ceil(drawHeight / spacing));
+                } else {
+                    cols = Math.ceil(Math.sqrt(numPoints * (drawWidth / drawHeight)));
+                    rows = Math.ceil(numPoints / cols);
+                }
+                
+                displayEl.textContent = `${cols} × ${rows} (${cols * rows} points)`;
+            }
+            
+            // Initialize grid settings visibility on page load
+            if (startPositionModeEl) {
+                const gridSettingsSection = document.getElementById('grid-settings-section');
+                if (gridSettingsSection) {
+                    gridSettingsSection.style.display = flowState.startPositionMode === 'grid' ? 'block' : 'none';
+                }
+                // Set initial visibility of manual spacing group
+                const manualGroup = document.getElementById('grid-spacing-manual-group');
+                const autoSpacingEl = document.getElementById('grid-auto-spacing');
+                if (manualGroup && autoSpacingEl) {
+                    manualGroup.style.display = autoSpacingEl.checked ? 'none' : 'block';
+                }
+                updateGridSizeDisplay();
+            }
+            
+            // Line length slider
+            const lineLengthEl = document.getElementById('line-length');
+            if (lineLengthEl) {
+                lineLengthEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.lineLength = value;
+                    document.getElementById('line-length-value').textContent = `${value} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Step size slider
+            const stepSizeEl = document.getElementById('step-size');
+            if (stepSizeEl) {
+                stepSizeEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.stepSize = value;
+                    document.getElementById('step-size-value').textContent = value.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Minimum distance slider
+            const minDistanceEl = document.getElementById('min-distance');
+            if (minDistanceEl) {
+                minDistanceEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.minDistance = value;
+                    document.getElementById('min-distance-value').textContent = `${value.toFixed(1)} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Force overprint toggle
+            const forceOverprintEl = document.getElementById('force-overprint');
+            if (forceOverprintEl) {
+                forceOverprintEl.addEventListener('change', (e) => {
+                    const checked = e.target.checked;
+                    flowState.forceOverprint = checked;
+                    if (typeof getActiveLayer === 'function') {
+                        const activeLayer = getActiveLayer();
+                        if (activeLayer) {
+                            ensureLayerDefaults(activeLayer);
+                            activeLayer.settings.forceOverprint = checked;
+                            activeLayer.forceOverprint = checked;
+                        }
+                    }
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Stroke width slider (only updates rendering, not flow field)
+            const strokeWidthEl = document.getElementById('stroke-width');
+            if (strokeWidthEl) {
+                strokeWidthEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.strokeWidth = value;
+                    document.getElementById('stroke-width-value').textContent = `${value.toFixed(2)} mm`;
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                    saveActiveLayerSettings();
+                });
+            }
+            
+            // Margin slider (unified)
+            const marginEl = document.getElementById('margin');
+            if (marginEl) {
+                marginEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.margin = value;
+                    document.getElementById('margin-value').textContent = `${value} mm`;
+                    debounceUpdate(() => {
+                        updateFlowField();
+                        if (typeof renderCanvas === 'function') renderCanvas();
+                    });
+                    saveActiveLayerSettings();
+                });
+            }
+
+            // Paper size selector
+            const paperSizeEl = document.getElementById('paper-size');
+            if (paperSizeEl) {
+                // Initialize selected value based on current state
+                const sizeValue = `${flowState.widthMm}x${flowState.heightMm}`;
+                if (paperSizeEl.querySelector(`option[value="${sizeValue}"]`)) {
+                    paperSizeEl.value = sizeValue;
+                }
+
+                paperSizeEl.addEventListener('change', (e) => {
+                    const [wStr, hStr] = String(e.target.value || '').split('x');
+                    const nextWidth = parseFloat(wStr);
+                    const nextHeight = parseFloat(hStr);
+                    if (!isFinite(nextWidth) || !isFinite(nextHeight)) return;
+
+                    flowState.widthMm = nextWidth;
+                    flowState.heightMm = nextHeight;
+
+                    if (typeof initCanvas === 'function') {
+                        initCanvas();
+                    }
+
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Render style selector
+            const renderStyleEl = document.getElementById('render-style');
+            if (renderStyleEl) {
+                renderStyleEl.value = flowState.renderStyle ?? 'default';
+                renderStyleEl.addEventListener('change', (e) => {
+                    flowState.renderStyle = e.target.value;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Brush width slider
+            const brushWidthEl = document.getElementById('brush-width');
+            if (brushWidthEl) {
+                brushWidthEl.value = flowState.brushWidth ?? 5;
+                const display = document.getElementById('brush-width-value');
+                if (display) display.textContent = `${brushWidthEl.value} mm`;
+                brushWidthEl.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value, 10);
+                    flowState.brushWidth = value;
+                    if (display) display.textContent = `${value} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Terrain controls
+            const terrainVerticalGapEl = document.getElementById('terrain-vertical-gap');
+            if (terrainVerticalGapEl) {
+                terrainVerticalGapEl.value = flowState.terrainVerticalGap ?? 5;
+                const display = document.getElementById('terrain-vertical-gap-value');
+                if (display) display.textContent = `${terrainVerticalGapEl.value} mm`;
+                terrainVerticalGapEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.terrainVerticalGap = value;
+                    if (display) display.textContent = `${value.toFixed(1)} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            const terrainAltitudeEl = document.getElementById('terrain-altitude');
+            if (terrainAltitudeEl) {
+                terrainAltitudeEl.value = flowState.terrainAltitude ?? 30;
+                const display = document.getElementById('terrain-altitude-value');
+                if (display) display.textContent = `${terrainAltitudeEl.value} mm`;
+                terrainAltitudeEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.terrainAltitude = value;
+                    if (display) display.textContent = `${value} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            const terrainDetailEl = document.getElementById('terrain-detail');
+            if (terrainDetailEl) {
+                terrainDetailEl.value = flowState.terrainDetail ?? 1;
+                const display = document.getElementById('terrain-detail-value');
+                if (display) display.textContent = parseFloat(terrainDetailEl.value).toFixed(1);
+                terrainDetailEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.terrainDetail = value;
+                    if (display) display.textContent = value.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Export button
+            const exportBtn = document.getElementById('btn-export');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    if (typeof exportSVG === 'function') exportSVG();
+                });
+            }
+            
+            // Canvas toolbar buttons
+            const fitBtn = document.getElementById('btn-fit');
+            if (fitBtn) {
+                fitBtn.addEventListener('click', () => {
+                    if (typeof fitToView === 'function') fitToView();
+                });
+            }
+            
+            const zoomInBtn = document.getElementById('btn-zoom-in');
+            if (zoomInBtn) {
+                zoomInBtn.addEventListener('click', () => {
+                    flowState.zoom *= 1.2;
+                    flowState.zoom = Math.min(10, flowState.zoom);
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+            
+            const zoomOutBtn = document.getElementById('btn-zoom-out');
+            if (zoomOutBtn) {
+                zoomOutBtn.addEventListener('click', () => {
+                    flowState.zoom *= 0.8;
+                    flowState.zoom = Math.max(0.1, flowState.zoom);
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+            
+            // === Layer Panel Event Handlers ===
+            
+            // Add Layer button
+            const addLayerBtn = document.getElementById('btn-add-layer');
+            if (addLayerBtn) {
+                addLayerBtn.addEventListener('click', () => {
+                    if (typeof addNewLayer === 'function') {
+                        addNewLayer();
+                    }
+                });
+            }
+            
+            // Batch Add Layers
+            const addBatchBtn = document.getElementById('btn-add-batch-layers');
+            const batchCountInput = document.getElementById('batch-layer-count');
+            if (addBatchBtn && batchCountInput) {
+                addBatchBtn.addEventListener('click', () => {
+                    if (typeof addNewLayer !== 'function') return;
+                    const count = Math.max(1, parseInt(batchCountInput.value, 10) || 6);
+                    const batchColors = [
+                        '#00008B', // Dark Blue
+                        '#00BFFF', // Light Blue
+                        '#FF0000', // Red
+                        '#FFA500', // Orange
+                        '#FFD700', // Yellow
+                        '#008000'  // Green
+                    ];
+                    for (let i = 0; i < count; i++) {
+                        const color = batchColors[i % batchColors.length];
+                        addNewLayer(color);
+                    }
+                });
+            }
+            
+            // Regenerate Active Layer button
+            const regenerateLayerBtn = document.getElementById('btn-regenerate-layer');
+            if (regenerateLayerBtn) {
+                regenerateLayerBtn.addEventListener('click', () => {
+                    if (typeof regenerateActiveLayer === 'function') {
+                        regenerateActiveLayer();
+                    }
+                });
+            }
+
+            // Regenerate All button
+            const regenerateAllBtn = document.getElementById('btn-regenerate-all');
+            if (regenerateAllBtn) {
+                regenerateAllBtn.addEventListener('click', () => {
+                    if (typeof generateAllLayers === 'function') {
+                        generateAllLayers();
+                    }
+                });
+            }
+            
+            // Initialize layer list display
+            if (typeof renderLayerList === 'function') {
+                renderLayerList();
+            }
+            
+            // Initialize statistics display
+            if (typeof updateStatistics === 'function') {
+                updateStatistics();
+            }
+        }
+        
+        // Section collapse/expand
+        function toggleSection(sectionId) {
+            const section = document.querySelector(`[data-section="${sectionId}"]`);
+            if (section) {
+                section.classList.toggle('collapsed');
+            }
+        }
+
+        // Simple resizable handle for the floating layers toolbar
+        function setupLayersToolbarResize() {
+            const toolbar = document.getElementById('layers-toolbar');
+            const handle = document.getElementById('layers-resize-handle');
+            if (!toolbar || !handle) return;
+
+            let isDragging = false;
+
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                const minWidth = 220;
+                const maxWidth = 420;
+                const newWidth = Math.min(maxWidth, Math.max(minWidth, e.clientX - toolbar.getBoundingClientRect().left));
+                document.documentElement.style.setProperty('--layers-toolbar-width', `${newWidth}px`);
+            }
+
+            function onMouseUp() {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            handle.addEventListener('mousedown', () => {
+                isDragging = true;
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        }
+
+        // Make toggleSection available globally
+        window.toggleSection = toggleSection;
+        
+        // Generate initial flow field on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup all event handlers
+            setupEventHandlers();
+            setupLayersToolbarResize();
+            
+            // Ensure canvas is initialized first
+            if (typeof initCanvas === 'function') {
+                initCanvas();
+            }
+            if (typeof setupCanvasEvents === 'function') {
+                setupCanvasEvents();
+            }
+            // Initialize layers system
+            if (typeof initLayers === 'function') {
+                initLayers();
+            }
+            // Generate flow field after a short delay to ensure everything is ready
+            setTimeout(() => {
+                if (typeof generateFlowField === 'function') {
+                    generateFlowField();
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>
+

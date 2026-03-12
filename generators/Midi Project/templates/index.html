@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI → SVG Blueprint</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <span class="logo-icon">◈</span>
+                <span class="logo-text">MIDI → SVG</span>
+            </div>
+            
+            <!-- Theme Toggle -->
+            <div class="header-controls">
+                <div class="theme-toggle">
+                    <button class="theme-btn active" id="themeDark" title="Dark Theme">☾</button>
+                    <button class="theme-btn" id="themeLight" title="Light Theme">☀</button>
+                </div>
+                <div class="file-info" id="fileInfo">
+                    <span class="file-name">No file loaded</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Control Panel -->
+            <aside class="control-panel">
+                <div class="panel-scroll">
+                    
+                    <!-- Style Section -->
+                    <section class="control-section">
+                        <h3 class="section-title">Visualization Style</h3>
+                        <div class="select-group">
+                            <label class="select-item">
+                                <select id="vizStyle">
+                                    <option value="linear" selected>Linear (Timeline)</option>
+                                    <option value="circular">Circular (Clock)</option>
+                                    <option value="spiral">Spiral</option>
+                                    <option value="waterfall">Waterfall</option>
+                                    <option value="piano">Piano Keys</option>
+                                    <option value="flow_field">Flow Field (Generative)</option>
+                                </select>
+                            </label>
+                        </div>
+                    </section>
+                    
+                    <!-- Visibility Section -->
+                    <section class="control-section">
+                        <h3 class="section-title">Visibility</h3>
+                        <div class="toggle-grid">
+                            <label class="toggle-item">
+                                <input type="checkbox" id="showNotes" checked>
+                                <span class="toggle-label">Notes</span>
+                            </label>
+                            <label class="toggle-item">
+                                <input type="checkbox" id="showChords" checked>
+                                <span class="toggle-label">Chords</span>
+                            </label>
+                            <label class="toggle-item">
+                                <input type="checkbox" id="showSustain" checked>
+                                <span class="toggle-label">Sustain</span>
+                            </label>
+                            <label class="toggle-item">
+                                <input type="checkbox" id="showEnergy" checked>
+                                <span class="toggle-label">Energy</span>
+                            </label>
+                            <label class="toggle-item">
+                                <input type="checkbox" id="showFrame" checked>
+                                <span class="toggle-label">Frame</span>
+                            </label>
+                            <label class="toggle-item">
+                                <input type="checkbox" id="showPianoKeys">
+                                <span class="toggle-label">Piano Keys</span>
+                            </label>
+                            <label class="toggle-item">
+                                <input type="checkbox" id="showBeatGrid">
+                                <span class="toggle-label">Beat Grid</span>
+                            </label>
+                            <label class="toggle-item">
+                                <input type="checkbox" id="showBarMarkers">
+                                <span class="toggle-label">Bar Markers</span>
+                            </label>
+                            <label class="toggle-item">
+                                <input type="checkbox" id="showTimeLabels">
+                                <span class="toggle-label">Time Labels</span>
+                            </label>
+                        </div>
+                    </section>
+
+                    <!-- Colors Section -->
+                    <section class="control-section">
+                        <h3 class="section-title">Colors</h3>
+                        <div class="color-grid">
+                            <div class="color-item">
+                                <input type="color" id="noteColor" value="#00d4ff">
+                                <span class="color-label">Notes</span>
+                            </div>
+                            <div class="color-item">
+                                <input type="color" id="chordColor" value="#ff6b9d">
+                                <span class="color-label">Chords</span>
+                            </div>
+                            <div class="color-item">
+                                <input type="color" id="sustainColor" value="#7c5cbf">
+                                <span class="color-label">Sustain</span>
+                            </div>
+                            <div class="color-item">
+                                <input type="color" id="energyColor" value="#00ff88">
+                                <span class="color-label">Energy</span>
+                            </div>
+                            <div class="color-item">
+                                <input type="color" id="frameColor" value="#4a5568">
+                                <span class="color-label">Frame</span>
+                            </div>
+                            <div class="color-item">
+                                <input type="color" id="bgColor" value="#0d1117">
+                                <span class="color-label">Background</span>
+                            </div>
+                        </div>
+                        <div class="preset-buttons-row">
+                            <button class="preset-btn" id="randomizeBtn">🎲 Random</button>
+                            <button class="preset-btn" id="monochromeBtn">Mono</button>
+                        </div>
+                        <div class="preset-buttons-row">
+                            <button class="preset-btn secondary" id="blueprintBtn">Blueprint</button>
+                            <button class="preset-btn secondary" id="lightPaperBtn">Light Paper</button>
+                        </div>
+                    </section>
+
+                    <!-- Pitch Class Color Legend Section -->
+                    <section class="control-section">
+                        <h3 class="section-title">Pitch Class Colors (Architectural Sequencer)</h3>
+                        <div class="color-legend" id="colorLegend">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </section>
+
+                    <!-- Stroke Width Section -->
+                    <section class="control-section">
+                        <h3 class="section-title">Stroke Width</h3>
+                        <div class="slider-group">
+                            <label class="slider-item">
+                                <span class="slider-label">All Lines</span>
+                                <input type="range" id="strokeWidth" min="0.1" max="2" step="0.05" value="0.4">
+                                <span class="slider-value" data-for="strokeWidth">0.4</span>
+                            </label>
+                        </div>
+                    </section>
+
+                    <!-- Layout Section -->
+                    <section class="control-section">
+                        <h3 class="section-title">Layout</h3>
+                        <div class="select-group">
+                            <label class="select-item">
+                                <span class="select-label">Paper Size</span>
+                                <select id="paperSize">
+                                    <option value="a4">A4 (297×210mm)</option>
+                                    <option value="a3" selected>A3 (420×297mm)</option>
+                                    <option value="a2">A2 (594×420mm)</option>
+                                    <option value="letter">Letter (279×216mm)</option>
+                                    <option value="tabloid">Tabloid (432×279mm)</option>
+                                </select>
+                            </label>
+                            <label class="toggle-item full-width">
+                                <input type="checkbox" id="portraitMode">
+                                <span class="toggle-label">Portrait Orientation</span>
+                            </label>
+                        </div>
+                        <div class="slider-group">
+                            <label class="slider-item">
+                                <span class="slider-label">Margin</span>
+                                <input type="range" id="margin" min="5" max="40" step="1" value="15">
+                                <span class="slider-value" data-for="margin">15mm</span>
+                            </label>
+                        </div>
+                    </section>
+
+                    <!-- Musical Details Section -->
+                    <section class="control-section">
+                        <h3 class="section-title">Musical Details</h3>
+                        <div class="slider-group">
+                            <label class="slider-item">
+                                <span class="slider-label">Chord Sensitivity</span>
+                                <input type="range" id="chordThreshold" min="1" max="50" step="1" value="10">
+                                <span class="slider-value" data-for="chordThreshold">10 ticks</span>
+                            </label>
+                        </div>
+                    </section>
+
+                    <!-- Sustain Appearance Section -->
+                    <section class="control-section">
+                        <h3 class="section-title">Sustain Appearance</h3>
+                        <div class="slider-group">
+                            <label class="slider-item">
+                                <span class="slider-label">Hatch Spacing</span>
+                                <input type="range" id="sustainSpacing" min="0.5" max="5" step="0.5" value="1.5">
+                                <span class="slider-value" data-for="sustainSpacing">1.5mm</span>
+                            </label>
+                        </div>
+                        <div class="select-group">
+                            <label class="select-item">
+                                <span class="select-label">Hatch Style</span>
+                                <select id="sustainStyle">
+                                    <option value="dashed" selected>Dashed</option>
+                                    <option value="solid">Solid</option>
+                                    <option value="dotted">Dotted</option>
+                                </select>
+                            </label>
+                        </div>
+                    </section>
+
+                    <!-- Energy Curve Section -->
+                    <section class="control-section">
+                        <h3 class="section-title">Energy Curve</h3>
+                        <div class="slider-group">
+                            <label class="slider-item">
+                                <span class="slider-label">Smoothing</span>
+                                <input type="range" id="energySmoothing" min="0.5" max="8" step="0.5" value="2">
+                                <span class="slider-value" data-for="energySmoothing">2 beats</span>
+                            </label>
+                        </div>
+                        <label class="toggle-item">
+                            <input type="checkbox" id="showEnergyFill" checked>
+                            <span class="toggle-label">Show Fill Lines</span>
+                        </label>
+                    </section>
+
+                    <!-- Export Section -->
+                    <section class="control-section export-section">
+                        <h3 class="section-title">Export</h3>
+                        <div class="export-buttons">
+                            <button class="export-btn primary" id="downloadSvg" disabled>
+                                <span class="btn-icon">↓</span>
+                                Download SVG
+                            </button>
+                            <button class="export-btn" id="downloadPng" disabled>
+                                <span class="btn-icon">↓</span>
+                                Download PNG
+                            </button>
+                        </div>
+                    </section>
+
+                </div>
+            </aside>
+
+            <!-- Preview Area -->
+            <main class="preview-area">
+                <div class="preview-container" id="previewContainer">
+                    <!-- SVG will be rendered here -->
+                    <div class="empty-state" id="emptyState">
+                        <div class="drop-zone" id="dropZone">
+                            <div class="drop-icon">♪</div>
+                            <h2>Drop MIDI File Here</h2>
+                            <p>or click to browse</p>
+                            <input type="file" id="fileInput" accept=".mid,.midi" hidden>
+                        </div>
+                    </div>
+                    <svg id="svgOutput" class="hidden"></svg>
+                </div>
+            </main>
+        </div>
+
+        <!-- Drag Overlay -->
+        <div class="drag-overlay hidden" id="dragOverlay">
+            <div class="drag-content">
+                <div class="drag-icon">♪</div>
+                <span>Drop MIDI file to visualize</span>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay hidden" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+            <span>Parsing MIDI file...</span>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

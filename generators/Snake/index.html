@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Plotter — Generative A3 Path Tool</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ─── CONTROL PANEL ─── -->
+  <aside id="controls">
+    <h1>Snake Plotter</h1>
+    <p class="subtitle">Generative A3 pen-plotter paths</p>
+
+    <fieldset>
+      <legend>Grid</legend>
+
+      <label>
+        Cell Size (mm)
+        <input type="range" id="cellSize" min="1" max="50" value="10" step="1">
+        <output for="cellSize">10</output>
+      </label>
+
+      <label>
+        Margin (mm)
+        <input type="range" id="margin" min="0" max="100" value="15">
+        <output for="margin">15</output>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Paths</legend>
+
+      <label>
+        Number of Lines (N)
+        <input type="range" id="numLines" min="1" max="12" value="3">
+        <output for="numLines">3</output>
+      </label>
+
+      <div id="ratioGroup">
+        <span class="ratio-title">Line Distribution (%)</span>
+        <div id="ratioInputs"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Geometry</legend>
+
+      <label>
+        Corner Radius
+        <input type="range" id="cornerRadius" min="0" max="100" value="40">
+        <output for="cornerRadius">40</output>
+        <span class="hint">% of half cell-size</span>
+      </label>
+
+    </fieldset>
+
+    <fieldset>
+      <legend>Display</legend>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="showGrid">
+        Show Grid
+      </label>
+
+      <label>
+        Stroke Width (mm)
+        <input type="range" id="strokeWidth" min="0.3" max="20" value="4" step="0.1">
+        <output for="strokeWidth">4</output>
+      </label>
+    </fieldset>
+
+    <div class="actions">
+      <button id="btnGenerate">Generate</button>
+      <button id="btnExport">Export SVG</button>
+    </div>
+
+    <p class="seed-display">Seed: <code id="seedDisplay">—</code></p>
+  </aside>
+
+  <!-- ─── CANVAS AREA ─── -->
+  <main id="canvas-area">
+    <div id="svg-wrapper">
+      <svg id="artboard"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 2970 4200"
+        preserveAspectRatio="xMidYMid meet">
+      </svg>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
