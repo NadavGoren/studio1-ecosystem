@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+/* Neutral, quiet, white-label theme. */
+:root {
+  color-scheme: light;
+  --accent: #171717;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    Helvetica, Arial, 'Noto Sans Hebrew', 'Arial Hebrew', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Consistent, accessible keyboard focus across all controls. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: #171717;
+  color: #fff;
+}
+
+/* Sliders: slightly larger hit area, consistent accent. */
+input[type='range'] {
+  height: 1.25rem;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
