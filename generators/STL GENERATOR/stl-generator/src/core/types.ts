@@ -66,7 +66,7 @@ export interface LightingState {
   backlight: boolean;
 }
 
-export type CanvasPreset = 'A6' | 'A5' | 'A4' | 'A3' | 'Custom';
+export type CanvasPreset = 'A6' | 'A5' | 'A4' | 'A3' | 'A2' | 'Custom';
 
 export interface CanvasConfig {
   width: number; // mm

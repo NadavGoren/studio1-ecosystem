@@ -44,6 +44,7 @@ export function RightSidebar() {
                 onChange={(e) => setPreset(e.target.value as any)}
                 className="w-full px-3 py-2.5 text-sm border border-border/60 rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 cursor-pointer transition-all shadow-sm hover:shadow-md"
               >
+                <option value="A2">A2 (594 × 420 mm)</option>
                 <option value="A3">A3 (420 × 297 mm)</option>
                 <option value="A4">A4 (297 × 210 mm)</option>
                 <option value="A5">A5 (210 × 148 mm)</option>

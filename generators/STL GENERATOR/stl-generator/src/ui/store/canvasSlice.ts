@@ -17,6 +17,7 @@ const CANVAS_PRESETS: Record<CanvasPreset, { width: number; height: number }> = 
   A5: { width: 210, height: 148 },
   A4: { width: 297, height: 210 },
   A3: { width: 420, height: 297 },
+  A2: { width: 594, height: 420 },
   Custom: { width: 297, height: 210 },
 };
 
