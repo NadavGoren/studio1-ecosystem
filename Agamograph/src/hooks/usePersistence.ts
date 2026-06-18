@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useProjectStore, type ImageState, type Slot } from '../store/useProjectStore'
+import {
+  useProjectStore,
+  DEFAULT_MARGINS,
+  DEFAULT_DIVIDERS,
+  type ImageState,
+  type Slot,
+} from '../store/useProjectStore'
 import { DEFAULT_CROP } from '../lib/crop'
 import { makeDefaultImages } from '../lib/defaultImages'
 import {
@@ -48,6 +54,8 @@ function projectFromState(): PersistedProject {
       unit: s.canvas.unit,
       dpi: s.dpi,
       exportFormat: s.exportFormat,
+      margins: s.margins,
+      dividers: s.dividers,
     },
     imageA: s.images.A.blob ? { blob: s.images.A.blob, crop: s.images.A.crop } : null,
     imageB: s.images.B.blob ? { blob: s.images.B.blob, crop: s.images.B.crop } : null,
@@ -74,6 +82,8 @@ async function restore(saved: PersistedProject): Promise<void> {
     },
     dpi: saved.settings.dpi,
     exportFormat: saved.settings.exportFormat,
+    margins: saved.settings.margins ?? { ...DEFAULT_MARGINS },
+    dividers: saved.settings.dividers ?? { ...DEFAULT_DIVIDERS },
   })
 }
 

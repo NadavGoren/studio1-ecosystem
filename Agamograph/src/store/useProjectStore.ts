@@ -32,6 +32,31 @@ export const SLICES_MAX = 60
 export const ANGLE_MIN = 60
 export const ANGLE_MAX = 120
 
+// Margins & dividers — print-sheet packaging, NOT part of the fold math.
+export const MARGIN_MIN_CM = 1
+export const MARGIN_MAX_CM = 15
+export const DIVIDER_MIN_MM = 0.4
+export const DIVIDER_MAX_MM = 2
+
+/** White margin bands on the left & right print edges (height stays = H). */
+export type MarginSettings = { enabled: boolean; widthCm: number }
+/** Printed fold-line dividers drawn between adjacent strips. */
+export type DividerSettings = {
+  enabled: boolean
+  widthMm: number
+  color: string
+  /** Auto = two-tone line that borrows each neighbouring strip's edge colour. */
+  auto: boolean
+}
+
+export const DEFAULT_MARGINS: MarginSettings = { enabled: false, widthCm: 2 }
+export const DEFAULT_DIVIDERS: DividerSettings = {
+  enabled: false,
+  widthMm: 0.6,
+  color: '#000000',
+  auto: false,
+}
+
 const emptyImage = (): ImageState => ({
   blob: null,
   url: null,
@@ -52,6 +77,10 @@ type ProjectState = {
   dpi: number
   /** Chosen export file type. */
   exportFormat: ExportFormat
+  /** Optional white margins on the left & right print edges. */
+  margins: MarginSettings
+  /** Optional printed fold-line dividers between strips. */
+  dividers: DividerSettings
 
   setImage: (slot: Slot, img: LoadedImage) => void
   setCrop: (slot: Slot, crop: CropTransform) => void
@@ -65,6 +94,8 @@ type ProjectState = {
 
   setDpi: (dpi: number) => void
   setExportFormat: (format: ExportFormat) => void
+  setMargins: (patch: Partial<MarginSettings>) => void
+  setDividers: (patch: Partial<DividerSettings>) => void
   /** Swap width ↔ height (portrait ↔ landscape). */
   swapOrientation: () => void
   /** Replace the whole project (used to restore a saved session). */
@@ -75,6 +106,8 @@ type ProjectState = {
     canvas: CanvasSettings
     dpi: number
     exportFormat: ExportFormat
+    margins: MarginSettings
+    dividers: DividerSettings
   }) => void
 }
 
@@ -85,6 +118,8 @@ export const useProjectStore = create<ProjectState>((set) => ({
   canvas: { width: 40, height: 30, unit: 'cm' },
   dpi: 300,
   exportFormat: 'png',
+  margins: { ...DEFAULT_MARGINS },
+  dividers: { ...DEFAULT_DIVIDERS },
 
   setImage: (slot, img) =>
     set((s) => {
@@ -152,6 +187,30 @@ export const useProjectStore = create<ProjectState>((set) => ({
 
   setExportFormat: (format) => set(() => ({ exportFormat: format })),
 
+  setMargins: (patch) =>
+    set((s) => {
+      const next = { ...s.margins, ...patch }
+      return {
+        margins: {
+          enabled: next.enabled,
+          widthCm: Math.min(MARGIN_MAX_CM, Math.max(MARGIN_MIN_CM, next.widthCm)),
+        },
+      }
+    }),
+
+  setDividers: (patch) =>
+    set((s) => {
+      const next = { ...s.dividers, ...patch }
+      return {
+        dividers: {
+          enabled: next.enabled,
+          widthMm: Math.min(DIVIDER_MAX_MM, Math.max(DIVIDER_MIN_MM, next.widthMm)),
+          color: next.color,
+          auto: next.auto,
+        },
+      }
+    }),
+
   swapOrientation: () =>
     set((s) => ({
       canvas: { ...s.canvas, width: s.canvas.height, height: s.canvas.width },
@@ -172,6 +231,8 @@ export const useProjectStore = create<ProjectState>((set) => ({
         canvas: data.canvas,
         dpi: data.dpi,
         exportFormat: data.exportFormat,
+        margins: data.margins,
+        dividers: data.dividers,
       }
     }),
 }))

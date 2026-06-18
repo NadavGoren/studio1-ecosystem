@@ -1,5 +1,5 @@
 import { useProjectStore } from '../store/useProjectStore'
-import { computeDimensions, computePixelSheet } from '../lib/geometry'
+import { computeDimensions, computeSheetWithMargins, toInches } from '../lib/geometry'
 import { useLanguage } from '../i18n/LanguageProvider'
 
 export function DimensionsPanel() {
@@ -8,6 +8,7 @@ export function DimensionsPanel() {
   const apexAngleDeg = useProjectStore((s) => s.apexAngleDeg)
   const canvas = useProjectStore((s) => s.canvas)
   const dpi = useProjectStore((s) => s.dpi)
+  const margins = useProjectStore((s) => s.margins)
 
   const params = {
     slices,
@@ -16,7 +17,10 @@ export function DimensionsPanel() {
     height: canvas.height,
   }
   const dims = computeDimensions(params)
-  const sheet = computePixelSheet(dims, canvas.unit, dpi, slices)
+  // Flat sheet + print file include the left/right margins when enabled.
+  const sheetCm = computeSheetWithMargins(dims, margins)
+  const totalPxW = Math.round(toInches(sheetCm.totalWidth, canvas.unit) * dpi)
+  const totalPxH = Math.round(toInches(sheetCm.totalHeight, canvas.unit) * dpi)
   const u = t('unit.cm')
   const n2 = (v: number) => v.toFixed(2)
   const n1 = (v: number) => v.toFixed(1)
@@ -28,7 +32,7 @@ export function DimensionsPanel() {
     },
     {
       label: t('dims.flatSheet'),
-      value: `${n2(dims.flatSheetWidth)} × ${n2(canvas.height)} ${u}`,
+      value: `${n2(sheetCm.totalWidth)} × ${n2(sheetCm.totalHeight)} ${u}`,
       strong: true,
     },
     { label: t('dims.foldDepth'), value: `${n2(dims.foldDepth)} ${u}` },
@@ -41,15 +45,12 @@ export function DimensionsPanel() {
     { label: t('dims.stripWidth'), value: `${n2(dims.s)} ${u}` },
     {
       label: t('dims.printFile'),
-      value: `${sheet.pxWidth} × ${sheet.pxHeight} px @ ${dpi} DPI`,
+      value: `${totalPxW} × ${totalPxH} px @ ${dpi} DPI`,
     },
   ]
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-base font-semibold text-neutral-900">
-        {t('dims.title')}
-      </h2>
       <dl className="overflow-hidden rounded-lg border border-neutral-200 text-sm">
         {rows.map((r, i) => (
           <div
@@ -71,7 +72,6 @@ export function DimensionsPanel() {
           </div>
         ))}
       </dl>
-      <p className="text-xs text-neutral-400">{t('dims.flatSheetHelp')}</p>
     </div>
   )
 }

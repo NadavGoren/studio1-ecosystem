@@ -4,7 +4,9 @@ import {
   buildStripLayout,
   buildFaces,
   computePixelSheet,
+  computeSheetWithMargins,
   buildFilename,
+  buildFilenameBase,
   toInches,
   A_FIRST,
   type GeometryParams,
@@ -214,5 +216,35 @@ describe('export pipeline (spec §3)', () => {
         ext: 'pdf',
       }),
     ).toBe('agamograph_15.5x10in_40slices_75deg.pdf')
+  })
+
+  it('buildFilenameBase = buildFilename without the extension', () => {
+    const opts = {
+      width: 40,
+      height: 30,
+      unit: 'cm' as const,
+      slices: 24,
+      apexAngleDeg: 90,
+    }
+    expect(buildFilenameBase(opts)).toBe('agamograph_40x30cm_24slices_90deg')
+    expect(buildFilename({ ...opts, ext: 'jpg' })).toBe(`${buildFilenameBase(opts)}.jpg`)
+  })
+})
+
+describe('computeSheetWithMargins (left/right white bands; spec packaging)', () => {
+  it('disabled → unchanged: total width = flat sheet, height = H, margin 0', () => {
+    const d = computeDimensions(base)
+    const s = computeSheetWithMargins(d, { enabled: false, widthCm: 5 })
+    approx(s.totalWidth, d.flatSheetWidth)
+    approx(s.totalHeight, d.sheetHeight)
+    expect(s.marginCm).toBe(0)
+  })
+
+  it('enabled → adds margin on BOTH left & right; height stays = H', () => {
+    const d = computeDimensions(base)
+    const s = computeSheetWithMargins(d, { enabled: true, widthCm: 2 })
+    approx(s.totalWidth, d.flatSheetWidth + 2 * 2) // one margin each side
+    approx(s.totalHeight, d.sheetHeight) // no top/bottom margin
+    expect(s.marginCm).toBe(2)
   })
 })

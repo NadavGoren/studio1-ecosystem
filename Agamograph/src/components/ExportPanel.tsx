@@ -7,6 +7,7 @@ import {
 } from '../store/useProjectStore'
 import { useLoadedImage } from '../hooks/useLoadedImage'
 import { exportAgamograph } from '../lib/exportSheet'
+import { buildFilenameBase } from '../lib/geometry'
 import { useLanguage } from '../i18n/LanguageProvider'
 
 const FORMATS: ExportFormat[] = ['png', 'jpg', 'pdf']
@@ -20,6 +21,8 @@ export function ExportPanel() {
   const canvas = useProjectStore((s) => s.canvas)
   const dpi = useProjectStore((s) => s.dpi)
   const exportFormat = useProjectStore((s) => s.exportFormat)
+  const margins = useProjectStore((s) => s.margins)
+  const dividers = useProjectStore((s) => s.dividers)
   const setDpi = useProjectStore((s) => s.setDpi)
   const setExportFormat = useProjectStore((s) => s.setExportFormat)
 
@@ -29,6 +32,16 @@ export function ExportPanel() {
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [filename, setFilename] = useState('')
+
+  // The auto-generated name (shown as the placeholder; used when left blank).
+  const defaultBase = buildFilenameBase({
+    width: canvas.width,
+    height: canvas.height,
+    unit: canvas.unit,
+    slices,
+    apexAngleDeg,
+  })
 
   async function onExport() {
     if (!ready || busy) return
@@ -42,6 +55,9 @@ export function ExportPanel() {
         format: exportFormat,
         A: { img: imgA, natW: A.natW, natH: A.natH, crop: A.crop },
         B: { img: imgB, natW: B.natW, natH: B.natH, crop: B.crop },
+        margins,
+        dividers,
+        filenameBase: filename.trim() || undefined,
       })
     } catch (err) {
       setError(t('export.error'))
@@ -53,10 +69,6 @@ export function ExportPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-base font-semibold text-neutral-900">
-        {t('export.title')}
-      </h2>
-
       <div className="flex items-end gap-3">
         {/* Format */}
         <div className="flex flex-col gap-1">
@@ -94,6 +106,21 @@ export function ExportPanel() {
           />
         </label>
       </div>
+
+      {/* File name (defaults to the auto-generated name shown as placeholder) */}
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-neutral-400">{t('export.filename')}</span>
+        <div dir="ltr" className="flex items-center gap-1">
+          <input
+            type="text"
+            value={filename}
+            onChange={(e) => setFilename(e.target.value)}
+            placeholder={defaultBase}
+            className="w-full rounded-md border border-neutral-200 px-2 py-1 text-sm"
+          />
+          <span className="shrink-0 text-sm text-neutral-400">.{exportFormat}</span>
+        </div>
+      </label>
 
       <button
         type="button"

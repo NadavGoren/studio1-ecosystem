@@ -85,12 +85,9 @@ export function TriangleProfile() {
 
   return (
     <figure className="flex flex-col gap-1.5">
-      <figcaption className="text-sm font-medium text-neutral-700">
-        {t('profile.title')}
-      </figcaption>
       <svg
         viewBox={`0 0 ${VBW} ${VBH}`}
-        className="w-full rounded-lg border border-neutral-200 bg-white"
+        className="w-full max-w-xs rounded-lg border border-neutral-200 bg-white"
         role="img"
       >
         {/* wall line */}

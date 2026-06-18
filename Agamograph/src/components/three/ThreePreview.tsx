@@ -1,14 +1,55 @@
-import { Canvas } from '@react-three/fiber'
+import { useEffect, useRef } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import { useProjectStore } from '../../store/useProjectStore'
 import { useLanguage } from '../../i18n/LanguageProvider'
+import { buildFilenameBase } from '../../lib/geometry'
+import { downloadBlob } from '../../lib/exportSheet'
 import { AgamographMesh } from './AgamographMesh'
+
+type Captured = { gl: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.Camera }
+
+/** Lifts the renderer/scene/camera out of the Canvas so we can snapshot it. */
+function CaptureBridge({ sink }: { sink: { current: Captured | null } }) {
+  const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
+  const camera = useThree((s) => s.camera)
+  useEffect(() => {
+    sink.current = { gl, scene, camera }
+  }, [gl, scene, camera, sink])
+  return null
+}
 
 export function ThreePreview() {
   const { t } = useLanguage()
   const canvas = useProjectStore((s) => s.canvas)
+  const slices = useProjectStore((s) => s.slices)
+  const apexAngleDeg = useProjectStore((s) => s.apexAngleDeg)
   const hasAny = useProjectStore((s) => !!s.images.A.url || !!s.images.B.url)
+
+  const captured = useRef<Captured | null>(null)
+
+  function saveJpg() {
+    const c = captured.current
+    if (!c) return
+    // Force a fresh draw so the (preserved) buffer is current, then snapshot.
+    c.gl.render(c.scene, c.camera)
+    const base = buildFilenameBase({
+      width: canvas.width,
+      height: canvas.height,
+      unit: canvas.unit,
+      slices,
+      apexAngleDeg,
+    })
+    c.gl.domElement.toBlob(
+      (blob) => {
+        if (blob) downloadBlob(blob, `${base}_3d.jpg`)
+      },
+      'image/jpeg',
+      0.95,
+    )
+  }
 
   const W = canvas.width
   const H = canvas.height
@@ -21,13 +62,15 @@ export function ThreePreview() {
       <figcaption className="text-sm font-medium text-neutral-700">
         {t('preview.3d')}
       </figcaption>
-      <div className="relative h-[460px] w-full overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+      <div className="relative h-[320px] w-full overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
         <Canvas
           shadows
           dpr={[1, 2]}
+          gl={{ preserveDrawingBuffer: true }}
           camera={{ position: [span * 0.35, span * 0.15, dist], fov: 35, near: 0.1, far: dist * 5 }}
         >
           <color attach="background" args={['#f4f4f5']} />
+          <CaptureBridge sink={captured} />
 
           {/* Medium-realism studio lighting — all local, no HDR fetch.
               Low fill + a raking key give the folds real contrast and let the
@@ -81,6 +124,29 @@ export function ThreePreview() {
             maxDistance={dist * 1.7}
           />
         </Canvas>
+
+        <button
+          type="button"
+          onClick={saveJpg}
+          disabled={!hasAny}
+          title={t('preview.save3d')}
+          aria-label={t('preview.save3d')}
+          className="absolute end-3 top-3 inline-flex items-center justify-center rounded-md border border-neutral-200 bg-white/85 p-2 text-neutral-700 shadow-sm backdrop-blur transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
 
         {!hasAny && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-neutral-400">

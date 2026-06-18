@@ -28,12 +28,15 @@ export type PersistedProject = {
     unit: 'cm' | 'in'
     dpi: number
     exportFormat: 'png' | 'jpg' | 'pdf'
+    // Optional (added in v2): older saves omit these and restore() defaults them.
+    margins?: { enabled: boolean; widthCm: number }
+    dividers?: { enabled: boolean; widthMm: number; color: string; auto: boolean }
   }
   imageA: PersistedImage | null
   imageB: PersistedImage | null
 }
 
-export const PROJECT_SCHEMA_VERSION = 1
+export const PROJECT_SCHEMA_VERSION = 2
 
 let dbPromise: Promise<IDBPDatabase> | null = null
 
@@ -61,7 +64,10 @@ export async function loadCurrentProject(): Promise<PersistedProject | null> {
   try {
     const db = await getDb()
     const p = (await db.get(STORE, CURRENT_KEY)) as PersistedProject | undefined
-    if (!p || p.version !== PROJECT_SCHEMA_VERSION) return null
+    // Accept the current + any older version (older saves merely lack the
+    // margins/dividers fields, which restore() defaults). Reject only unknown
+    // future versions so we never misread a newer shape.
+    if (!p || p.version > PROJECT_SCHEMA_VERSION) return null
     return p
   } catch {
     return null

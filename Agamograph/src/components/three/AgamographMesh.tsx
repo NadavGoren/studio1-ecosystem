@@ -7,7 +7,7 @@ import {
 } from '../../store/useProjectStore'
 import { useLoadedImage } from '../../hooks/useLoadedImage'
 import { buildSourceGeometry } from '../../lib/buildThreeGeometry'
-import { makeCroppedCanvas } from '../../lib/croppedCanvas'
+import { makeCroppedCanvas, drawCanvasDividers } from '../../lib/croppedCanvas'
 import type { GeometryParams, Source } from '../../lib/geometry'
 
 /** Build a CanvasTexture of the cropped image for one slot; disposes on change. */
@@ -16,18 +16,23 @@ function useSourceTexture(slot: Slot): THREE.CanvasTexture | null {
   const slices = useProjectStore((s) => s.slices)
   const apexAngleDeg = useProjectStore((s) => s.apexAngleDeg)
   const canvas = useProjectStore((s) => s.canvas)
+  const dividers = useProjectStore((s) => s.dividers)
   const img = useLoadedImage(image.url)
   const frameAspect = getFrameAspect({ slices, apexAngleDeg, canvas })
+  // perceivedImageWidth = frameAspect · H (frameAspect = perceivedImageWidth / H).
+  const perceivedImageWidth = frameAspect * canvas.height
 
   const texture = useMemo(() => {
     if (!img) return null
     const c = makeCroppedCanvas(img, image.natW, image.natH, frameAspect, image.crop)
+    // Bake the printed dividers into the texture so the 3D fold matches the print.
+    drawCanvasDividers(c, slices, perceivedImageWidth, dividers)
     const t = new THREE.CanvasTexture(c)
     t.colorSpace = THREE.SRGBColorSpace
     t.anisotropy = 8
     return t
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [img, image.crop, image.natW, image.natH, frameAspect])
+  }, [img, image.crop, image.natW, image.natH, frameAspect, slices, perceivedImageWidth, dividers])
 
   useEffect(() => () => texture?.dispose(), [texture])
   return texture

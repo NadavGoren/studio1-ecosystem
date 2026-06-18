@@ -55,8 +55,30 @@ export type Strings = {
   'controls.custom': string
   'controls.portrait': string
   'controls.landscape': string
+  'controls.margins': string
+  'controls.marginsHelp': string
+  'controls.marginsWidth': string
+  'controls.dividers': string
+  'controls.dividersHelp': string
+  'controls.dividersWidth': string
+  'controls.dividersColor': string
+  'controls.dividersAuto': string
+  'controls.dividersAutoHelp': string
+
+  'section.slicesAngle': string
+  'section.slicesAngleDesc': string
+  'section.size': string
+  'section.sizeDesc': string
+  'section.dimensionsDesc': string
+  'section.livePreview': string
+  'section.livePreviewDesc': string
+  'section.detailsDesc': string
+  'section.profileDesc': string
+
+  'common.enable': string
 
   'unit.cm': string
+  'unit.mm': string
 
   'profile.title': string
   'profile.wall': string
@@ -86,10 +108,12 @@ export type Strings = {
   'preview.3dHelp': string
   'preview.3dLoading': string
   'preview.needBoth': string
+  'preview.save3d': string
 
   'export.title': string
   'export.format': string
   'export.dpi': string
+  'export.filename': string
   'export.button': string
   'export.busy': string
   'export.needBoth': string
@@ -140,8 +164,31 @@ const en: Strings = {
   'controls.custom': 'Custom…',
   'controls.portrait': 'Portrait',
   'controls.landscape': 'Landscape',
+  'controls.margins': 'Margins',
+  'controls.marginsHelp': 'White border on the left & right edges, with a gray cut line for trimming.',
+  'controls.marginsWidth': 'Margin width',
+  'controls.dividers': 'Fold dividers',
+  'controls.dividersHelp': 'Print a thin line between every strip.',
+  'controls.dividersWidth': 'Line width',
+  'controls.dividersColor': 'Color',
+  'controls.dividersAuto': 'Auto (invisible)',
+  'controls.dividersAutoHelp':
+    'Each line borrows the colors of the two strips around it, so the fold lines disappear into the image.',
+
+  'section.slicesAngle': 'Slices & fold angle',
+  'section.slicesAngleDesc': 'How many strips, and the fold angle',
+  'section.size': 'Print size',
+  'section.sizeDesc': 'The finished size on the wall',
+  'section.dimensionsDesc': 'Calculated sizes and the print file',
+  'section.livePreview': 'Live preview',
+  'section.livePreviewDesc': 'Updates with every change',
+  'section.detailsDesc': 'Reconstructed views and the fold profile',
+  'section.profileDesc': 'Side cross-section of the fold — angle, width and depth',
+
+  'common.enable': 'Enable',
 
   'unit.cm': 'cm',
+  'unit.mm': 'mm',
 
   'profile.title': 'Fold profile (cross-section)',
   'profile.wall': 'wall',
@@ -151,7 +198,7 @@ const en: Strings = {
   'profile.unitsNote': 'Dimensions in cm',
 
   'dims.title': 'Dimensions',
-  'dims.finished': 'Finished (on wall)',
+  'dims.finished': 'Final folded size on the wall',
   'dims.flatSheet': 'Flat sheet (to print)',
   'dims.flatSheetHelp':
     'The flat sheet is wider than the finished piece — folding takes up the extra width.',
@@ -173,10 +220,12 @@ const en: Strings = {
   'preview.3dHelp': 'Drag left and right to walk past the artwork.',
   'preview.3dLoading': 'Loading 3D preview…',
   'preview.needBoth': 'Upload both images to see the folded preview.',
+  'preview.save3d': 'Save view as JPG',
 
   'export.title': 'Export',
   'export.format': 'File type',
   'export.dpi': 'Quality (DPI)',
+  'export.filename': 'File name',
   'export.button': 'Export print file',
   'export.busy': 'Exporting…',
   'export.needBoth': 'Upload both images to export.',
@@ -225,8 +274,31 @@ const he: Strings = {
   'controls.custom': 'מותאם אישית…',
   'controls.portrait': 'לאורך',
   'controls.landscape': 'לרוחב',
+  'controls.margins': 'שוליים',
+  'controls.marginsHelp': 'מסגרת לבנה בקצה הימני והשמאלי, עם קו חיתוך אפור לגזירה.',
+  'controls.marginsWidth': 'רוחב השוליים',
+  'controls.dividers': 'קווי קיפול',
+  'controls.dividersHelp': 'הדפסת קו דק בין כל שתי רצועות.',
+  'controls.dividersWidth': 'עובי הקו',
+  'controls.dividersColor': 'צבע',
+  'controls.dividersAuto': 'אוטומטי (בלתי נראה)',
+  'controls.dividersAutoHelp':
+    'כל קו מקבל את צבעי שתי הרצועות שסביבו, כך שקווי הקיפול נעלמים בתוך התמונה.',
+
+  'section.slicesAngle': 'פרוסות וזווית',
+  'section.slicesAngleDesc': 'כמה רצועות ובאיזו זווית מתקפלת היצירה',
+  'section.size': 'גודל הדפסה',
+  'section.sizeDesc': 'הגודל הסופי של היצירה על הקיר',
+  'section.dimensionsDesc': 'המידות המחושבות והקובץ להדפסה',
+  'section.livePreview': 'תצוגה חיה',
+  'section.livePreviewDesc': 'מתעדכן עם כל שינוי',
+  'section.detailsDesc': 'שחזור כל צד ופרופיל הקיפול',
+  'section.profileDesc': 'חתך צדי של הקיפול — זווית, רוחב ועומק',
+
+  'common.enable': 'הפעלה',
 
   'unit.cm': 'ס״מ',
+  'unit.mm': 'מ״מ',
 
   'profile.title': 'פרופיל הקיפול (חתך)',
   'profile.wall': 'קיר',
@@ -236,7 +308,7 @@ const he: Strings = {
   'profile.unitsNote': 'המידות בס״מ',
 
   'dims.title': 'מידות',
-  'dims.finished': 'גודל סופי (על הקיר)',
+  'dims.finished': 'גודל סופי מקופל על הקיר',
   'dims.flatSheet': 'גיליון שטוח (להדפסה)',
   'dims.flatSheetHelp':
     'הגיליון השטוח רחב מהיצירה המוגמרת — הקיפול בולע את הרוחב העודף.',
@@ -257,10 +329,12 @@ const he: Strings = {
   'preview.3dHelp': 'גררו שמאלה וימינה כדי לחלוף על פני היצירה.',
   'preview.3dLoading': 'טוען תצוגת תלת־ממד…',
   'preview.needBoth': 'העלו את שתי התמונות כדי לראות תצוגה מקופלת.',
+  'preview.save3d': 'שמירת התצוגה כ-JPG',
 
   'export.title': 'ייצוא',
   'export.format': 'סוג קובץ',
   'export.dpi': 'איכות (DPI)',
+  'export.filename': 'שם הקובץ',
   'export.button': 'ייצוא קובץ להדפסה',
   'export.busy': 'מייצא…',
   'export.needBoth': 'העלו את שתי התמונות כדי לייצא.',

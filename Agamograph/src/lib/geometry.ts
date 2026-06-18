@@ -150,6 +150,37 @@ export function computeDimensions(p: GeometryParams): Dimensions {
 }
 
 // ---------------------------------------------------------------------------
+// Margins (print-sheet packaging — left & right white bands; NOT fold math)
+// ---------------------------------------------------------------------------
+
+export type SheetWithMargins = {
+  /** Total flat-sheet width to print, incl. left & right margins. */
+  totalWidth: number
+  /** Total height (margins are left/right only, so == sheetHeight). */
+  totalHeight: number
+  /** Resolved margin width per side (0 when disabled), in the caller's unit. */
+  marginCm: number
+}
+
+/**
+ * Expand the flat sheet by a white margin on the LEFT & RIGHT edges only.
+ * Height is unchanged (strips stay full height). Pure — keeps computeDimensions
+ * free of packaging concerns while the preview and export share one definition,
+ * so the margin-inclusive sheet size can't drift between them.
+ */
+export function computeSheetWithMargins(
+  dims: Dimensions,
+  margins: { enabled: boolean; widthCm: number },
+): SheetWithMargins {
+  const m = margins.enabled ? Math.max(0, margins.widthCm) : 0
+  return {
+    totalWidth: dims.flatSheetWidth + 2 * m,
+    totalHeight: dims.sheetHeight,
+    marginCm: m,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Flat strip layout (spec §2.4) — used by flat print preview + export
 // ---------------------------------------------------------------------------
 
@@ -248,6 +279,20 @@ export function computePixelSheet(
 const fmt = (n: number): string =>
   Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)))
 
+/** The self-documenting filename WITHOUT extension (reused by the custom-name field). */
+export function buildFilenameBase(opts: {
+  width: number
+  height: number
+  unit: Unit
+  slices: number
+  apexAngleDeg: number
+}): string {
+  const { width, height, unit, slices, apexAngleDeg } = opts
+  return `agamograph_${fmt(width)}x${fmt(height)}${unit}_${slices}slices_${fmt(
+    apexAngleDeg,
+  )}deg`
+}
+
 export function buildFilename(opts: {
   width: number
   height: number
@@ -256,8 +301,6 @@ export function buildFilename(opts: {
   apexAngleDeg: number
   ext: 'png' | 'jpg' | 'pdf'
 }): string {
-  const { width, height, unit, slices, apexAngleDeg, ext } = opts
-  return `agamograph_${fmt(width)}x${fmt(height)}${unit}_${slices}slices_${fmt(
-    apexAngleDeg,
-  )}deg.${ext}`
+  const { ext, ...base } = opts
+  return `${buildFilenameBase(base)}.${ext}`
 }
