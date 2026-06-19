@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hatch",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd 'Hatch Generator' && npm run dev -- --port 4007 --strictPort"
+      ],
+      "port": 4007
+    },
+    {
+      "name": "hershey-hebrew",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd 'Hershey Hebrew Generator' && python3 server.py 8095"
+      ],
+      "port": 8095
+    },
+    {
+      "name": "modular",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd 'Modular Generator' && python3 -m http.server 8099"
+      ],
+      "port": 8099
+    },
+    {
+      "name": "rietveld-lattice",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd 'Rietveld Lattice' && npm run dev -- --port 6060 --strictPort"
+      ],
+      "port": 6060
+    }
+  ]
+}
