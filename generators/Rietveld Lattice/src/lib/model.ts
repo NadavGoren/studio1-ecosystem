@@ -50,6 +50,21 @@ export function buildModel(p: Params): BeamModel {
     })
   }
 
+  // ── 3D collision: nothing may occupy another box's space (as in real life) ─
+  // Beams pass over and under each other on separate depth planes and never
+  // interpenetrate; touching (shared face) is allowed, interior overlap is not.
+  const GAP = 1e-4
+  const collides = (c: Vec3, h: Vec3): boolean =>
+    boxes.some((b) => {
+      for (let k = 0; k < 3; k++) {
+        const overlap = Math.min(c[k] + h[k], b.center[k] + b.half[k]) - Math.max(c[k] - h[k], b.center[k] - b.half[k])
+        if (overlap <= GAP) return false // separated on this axis → no interpenetration
+      }
+      return true // overlap on all three axes → interpenetrating
+    })
+  const centerOf = (min: Vec3, max: Vec3): Vec3 => [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2]
+  const halfOf = (min: Vec3, max: Vec3): Vec3 => [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2]
+
   // ── colour ordering strategy (rule, not random) ──────────────────────────
   let colourIdx = 0
   const pickColour = (posFrac: number): PenColor => {
@@ -86,10 +101,11 @@ export function buildModel(p: Params): BeamModel {
     const y0 = gy * 0.3
     add('board', 'y', 'y', [x0, y0, z0], [x1, y0 + thk, z1], seatColour)
   }
-  // back — upright board, thin on z, rising above the seat, offset to form an L
+  // back — upright board, thin on z, rising FROM the seat surface to form a
+  // clean L (it sits on the seat rather than passing through it)
   {
     const [x0, x1] = span(0.36, 0.56, gx, boardScale)
-    const yBase = gy * 0.26
+    const yBase = gy * 0.3 + thk // start at the seat's top face → no interpenetration
     const yTop = yBase + lerp(0.42, 0.66, dom) * gy * boardScale
     const z0 = gz * 0.66
     add('board', 'z', 'z', [x0, yBase, z0], [x1, clamp(yTop, 0, gy), z0 + thk], backColour)
@@ -101,51 +117,60 @@ export function buildModel(p: Params): BeamModel {
   const freeCount = Math.round(p.beamCount * lerp(1.25, 0.5, dom))
 
   for (let i = 0; i < freeCount; i++) {
-    const axis = rng.weighted<Axis>(['x', 'y', 'z'], [0.4, 0.4, 0.2])
-    const [a, b] = OTHERS[axis]
-    const gRun = grid[axis]
+    // try a few lanes/positions until one fits without interpenetrating anything
+    for (let tries = 0; tries < 40; tries++) {
+      const axis = rng.weighted<Axis>(['x', 'y', 'z'], [0.4, 0.4, 0.2])
+      const [a, b] = OTHERS[axis]
+      const gRun = grid[axis]
 
-    // lane assignment on the two non-run axes = this beam's depth
-    const laneA = rng.int(1, Math.max(1, grid[a] - 1))
-    const laneB = rng.int(1, Math.max(1, grid[b] - 1))
+      // lane assignment on the two non-run axes = this beam's depth
+      const laneA = rng.int(1, Math.max(1, grid[a] - 1))
+      const laneB = rng.int(1, Math.max(1, grid[b] - 1))
 
-    // span along the run axis, then overrun past both ends
-    const len = clamp(rng.range(p.beamLenMin, p.beamLenMax), 0.5, gRun)
-    const start = rng.range(0, Math.max(0.001, gRun - len))
-    const lo = start - p.overrun
-    const hi = start + len + p.overrun
+      // span along the run axis, then overrun past both ends
+      const len = clamp(rng.range(p.beamLenMin, p.beamLenMax), 0.5, gRun)
+      const start = rng.range(0, Math.max(0.001, gRun - len))
+      const lo = start - p.overrun
+      const hi = start + len + p.overrun
 
-    const min: Vec3 = [0, 0, 0]
-    const max: Vec3 = [0, 0, 0]
-    min[AXIS_INDEX[axis]] = lo
-    max[AXIS_INDEX[axis]] = hi
-    min[AXIS_INDEX[a]] = laneA - ch
-    max[AXIS_INDEX[a]] = laneA + ch
-    min[AXIS_INDEX[b]] = laneB - ch
-    max[AXIS_INDEX[b]] = laneB + ch
+      const min: Vec3 = [0, 0, 0]
+      const max: Vec3 = [0, 0, 0]
+      min[AXIS_INDEX[axis]] = lo
+      max[AXIS_INDEX[axis]] = hi
+      min[AXIS_INDEX[a]] = laneA - ch
+      max[AXIS_INDEX[a]] = laneA + ch
+      min[AXIS_INDEX[b]] = laneB - ch
+      max[AXIS_INDEX[b]] = laneB + ch
 
-    add('beam', axis, axis, min, max, 'black')
+      if (collides(centerOf(min, max), halfOf(min, max))) continue
+      add('beam', axis, axis, min, max, 'black')
+      break
+    }
   }
 
   // ── a few extra colour boards floating in the lattice ────────────────────
   for (let i = 0; i < p.extraBoards; i++) {
-    const thinAxis = rng.weighted<Axis>(['x', 'y', 'z'], [0.3, 0.3, 0.4])
-    const [a, b] = OTHERS[thinAxis]
-    const laneT = rng.range(1, Math.max(1, grid[thinAxis] - 1))
-    const [a0, a1] = span(rng.range(0.3, 0.7), rng.range(0.28, 0.5), grid[a], 1)
-    const [b0, b1] = span(rng.range(0.3, 0.7), rng.range(0.28, 0.5), grid[b], 1)
+    for (let tries = 0; tries < 40; tries++) {
+      const thinAxis = rng.weighted<Axis>(['x', 'y', 'z'], [0.3, 0.3, 0.4])
+      const [a, b] = OTHERS[thinAxis]
+      const laneT = rng.range(1, Math.max(1, grid[thinAxis] - 1))
+      const [a0, a1] = span(rng.range(0.3, 0.7), rng.range(0.28, 0.5), grid[a], 1)
+      const [b0, b1] = span(rng.range(0.3, 0.7), rng.range(0.28, 0.5), grid[b], 1)
 
-    const min: Vec3 = [0, 0, 0]
-    const max: Vec3 = [0, 0, 0]
-    min[AXIS_INDEX[thinAxis]] = laneT - thk / 2
-    max[AXIS_INDEX[thinAxis]] = laneT + thk / 2
-    min[AXIS_INDEX[a]] = a0
-    max[AXIS_INDEX[a]] = a1
-    min[AXIS_INDEX[b]] = b0
-    max[AXIS_INDEX[b]] = b1
+      const min: Vec3 = [0, 0, 0]
+      const max: Vec3 = [0, 0, 0]
+      min[AXIS_INDEX[thinAxis]] = laneT - thk / 2
+      max[AXIS_INDEX[thinAxis]] = laneT + thk / 2
+      min[AXIS_INDEX[a]] = a0
+      max[AXIS_INDEX[a]] = a1
+      min[AXIS_INDEX[b]] = b0
+      max[AXIS_INDEX[b]] = b1
 
-    const posFrac = (min[0] + max[0]) / 2 / gx
-    add('board', thinAxis, thinAxis, min, max, pickColour(posFrac))
+      if (collides(centerOf(min, max), halfOf(min, max))) continue
+      const posFrac = (min[0] + max[0]) / 2 / gx
+      add('board', thinAxis, thinAxis, min, max, pickColour(posFrac))
+      break
+    }
   }
 
   // ── centre the whole model on the origin (nice for orbit + projection) ───

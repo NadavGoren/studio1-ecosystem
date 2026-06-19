@@ -110,23 +110,60 @@ export function segInsideConvex(A: Vec2, B: Vec2, poly: Vec2[]): [number, number
 }
 
 /**
- * Clip a segment so only the parts covered by FEWER than `maxLayers` nearer
- * faces survive. maxLayers = Infinity → x-ray (nothing clips); 1 → solid (any
- * nearer face hides it). `occluders` should already be depth-nearer than the
- * segment's face and bbox-filtered.
+ * A planar occluder face: its 2D polygon plus an affine depth function
+ * depth(px, py) = dA·px + dB·py + dC (exact under parallel projection).
  */
-export function clipByCoverage(seg: Segment, occluders: Vec2[][], maxLayers: number): Segment[] {
-  const [A, B] = seg
-  if (!isFinite(maxLayers)) return [seg]
+export interface PlaneFace {
+  poly: Vec2[]
+  dA: number
+  dB: number
+  dC: number
+}
+
+/** where along [t0,t1] is g(t)=g0+g1·t > eps (the face is nearer than the line) */
+function nearerRange(t0: number, t1: number, g0: number, g1: number, eps: number): [number, number] | null {
+  if (Math.abs(g1) < 1e-12) return g0 > eps ? [t0, t1] : null
+  const tc = (eps - g0) / g1
+  if (g1 > 0) {
+    const lo = Math.max(t0, tc)
+    return lo < t1 ? [lo, t1] : null
+  }
+  const hi = Math.min(t1, tc)
+  return t0 < hi ? [t0, hi] : null
+}
+
+/**
+ * Hidden-line removal with a TRUE local depth test. The segment A→B has real
+ * endpoint depths da, db (larger = nearer). For each occluder face we take the
+ * sub-interval where the segment is (a) inside the face in 2D AND (b) actually
+ * behind the face's plane in depth — both vary affinely along the segment, so
+ * the comparison is exact per point, not per-face-average. Keep the parts hidden
+ * by FEWER than `maxLayers` faces (Infinity = x-ray, 1 = solid).
+ */
+export function clipByDepth(
+  A: Vec2,
+  B: Vec2,
+  da: number,
+  db: number,
+  faces: PlaneFace[],
+  maxLayers: number,
+  eps: number,
+): Segment[] {
+  if (!isFinite(maxLayers)) return [[A, B]]
 
   const intervals: [number, number][] = []
-  for (const poly of occluders) {
-    const iv = segInsideConvex(A, B, poly)
-    if (iv && iv[1] - iv[0] > 1e-7) intervals.push(iv)
+  for (const f of faces) {
+    const cov = segInsideConvex(A, B, f.poly)
+    if (!cov) continue
+    const fA = f.dA * A[0] + f.dB * A[1] + f.dC // face depth under the segment's A
+    const fB = f.dA * B[0] + f.dB * B[1] + f.dC
+    const g0 = fA - da
+    const g1 = fB - fA - (db - da)
+    const occ = nearerRange(cov[0], cov[1], g0, g1, eps)
+    if (occ && occ[1] - occ[0] > 1e-7) intervals.push(occ)
   }
-  if (intervals.length === 0) return [seg]
+  if (intervals.length === 0) return [[A, B]]
 
-  // breakpoints
   const pts: number[] = [0, 1]
   for (const [a, b] of intervals) {
     if (a > 0 && a < 1) pts.push(a)
@@ -144,7 +181,6 @@ export function clipByCoverage(seg: Segment, occluders: Vec2[][], maxLayers: num
     let count = 0
     for (const [a, b] of intervals) if (mid > a && mid < b) count++
     if (count < maxLayers) {
-      // accumulate contiguous kept pieces into one segment
       if (pending && Math.abs(pending[1] - ta) < 1e-6) pending[1] = tb
       else {
         if (pending) out.push([lerp2(A, B, pending[0]), lerp2(A, B, pending[1])])
