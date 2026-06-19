@@ -2,7 +2,7 @@ import type { Axis, BeamModel, LineLayer, Params, PenColor, RenderResult, Segmen
 import { boxEdges, boxFaces } from './geometry'
 import { makeProjector } from './projection'
 import { hatchPolygon } from './hatch'
-import { bboxOverlap, clipByCoverage, polyBBox, type BBox } from './occlusion'
+import { bboxOverlap, clipByCoverage, convexOverlap, polyBBox, segInsideConvex, type BBox } from './occlusion'
 import { PEN_HEX, PEN_ORDER } from './palette'
 
 const PAPER: Record<string, [number, number]> = {
@@ -16,21 +16,24 @@ export function pageSize(p: Params): { w: number; h: number } {
   return p.orientation === 'landscape' ? { w: ph, h: pw } : { w: pw, h: ph }
 }
 
-/** Map the occlusion slider (0 = x-ray, 100 = solid) to a coverage layer count. */
-function occlusionLayers(occlusion: number): number {
-  const o = occlusion / 100
+/** Map a 0 (x-ray) … 100 (solid) slider to a "see-through N layers" count. */
+function occlusionLayers(value: number): number {
+  const o = value / 100
   if (o <= 0.02) return Infinity // x-ray: nothing clips
   const maxLayers = 6
   return Math.max(1, Math.round(maxLayers - (maxLayers - 1) * o)) // o=1 → 1 (solid)
 }
 
-interface FillFace {
+// every visible face is an opaque occluder; a subset of them also carry a fill
+interface SolidFace {
   poly: Vec2[]
   bbox: BBox
-  depth: number
+  depth: number // larger = nearer the viewer
+  boxId: number
+}
+interface FillFace extends SolidFace {
   color: PenColor
   hatchAxis: Axis
-  boxId: number
 }
 
 export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boolean } = {}): RenderResult {
@@ -64,68 +67,120 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
   const ty = margin + (dh - projH * s) / 2 - pminy * s
   const toPage = (q: { x: number; y: number }): Vec2 => [q.x * s + tx, q.y * s + ty]
 
-  // ── edges: full wireframe, never occluded → permanent density ─────────────
-  const edgeSegs: Segment[] = []
-  const seen = new Set<string>()
-  for (const box of model.boxes) {
-    for (const e of boxEdges(box)) {
-      const a = toPage(proj.project(e[0]))
-      const b = toPage(proj.project(e[1]))
-      // dedupe coincident segments to spare the pen
-      const ka = `${a[0].toFixed(2)},${a[1].toFixed(2)}`
-      const kb = `${b[0].toFixed(2)},${b[1].toFixed(2)}`
-      const key = ka < kb ? ka + '|' + kb : kb + '|' + ka
-      if (seen.has(key)) continue
-      seen.add(key)
-      edgeSegs.push([a, b])
-    }
-  }
-  const edgeCount = edgeSegs.length // before any black fills are appended below
+  const needFills = !opts.edgesOnly
+  // thumbnails (edgesOnly) skip hidden-line removal for speed → fast full wireframe
+  const hiddenLayers = opts.edgesOnly ? Infinity : occlusionLayers(p.hiddenLine)
+  const fillLayers = occlusionLayers(p.occlusion)
+  const needSolids = needFills || isFinite(hiddenLayers)
 
-  const layerMap: Record<PenColor, Segment[]> = { black: edgeSegs, red: [], blue: [], yellow: [] }
-
-  if (!opts.edgesOnly) {
-    // ── collect visible, fillable faces ─────────────────────────────────────
-    const fillFaces: FillFace[] = []
+  // ── gather every visible face: solid occluders + the fillable subset ──────
+  const solids: SolidFace[] = []
+  const fillFaces: FillFace[] = []
+  let dMin = Infinity
+  let dMax = -Infinity
+  if (needSolids) {
     for (const box of model.boxes) {
       for (const f of boxFaces(box)) {
         const rn = proj.rotate(f.normal)
         if (rn[2] <= 1e-6) continue // back-facing → cull
-
-        let color: PenColor | null = null
-        if (f.isCap) {
-          if (p.yellowCaps) color = 'yellow'
-        } else if (f.isBoardFace) {
-          color = box.color
-        } else if (box.kind === 'beam' && p.hatchBeams) {
-          color = 'black'
-        }
-        if (!color) continue // long board sides & unhatched beam faces stay edges-only
-
         const poly = f.corners.map((c: Vec3) => toPage(proj.project(c)))
         let depth = 0
         for (const c of f.corners) depth += proj.project(c).depth
         depth /= 4
-        fillFaces.push({ poly, bbox: polyBBox(poly), depth, color, hatchAxis: f.axis, boxId: box.id })
+        const bbox = polyBBox(poly)
+        const solid: SolidFace = { poly, bbox, depth, boxId: box.id }
+        solids.push(solid)
+        if (depth < dMin) dMin = depth
+        if (depth > dMax) dMax = depth
+
+        if (!needFills) continue
+        let color: PenColor | null = null
+        if (f.isCap) {
+          if (p.yellowCaps) color = 'yellow'
+        } else if (box.kind === 'board') {
+          color = box.color // ALL board faces (incl. thin sides) → visible thickness
+        } else if (box.kind === 'beam' && p.hatchBeams) {
+          color = 'black'
+        }
+        if (color) fillFaces.push({ ...solid, color, hatchAxis: f.axis })
       }
     }
+  }
+  const dRange = Math.max(1e-6, dMax - dMin)
 
-    // depth range for atmospheric falloff (far → wider hatch → lighter)
-    let dMin = Infinity
-    let dMax = -Infinity
-    for (const ff of fillFaces) {
-      if (ff.depth < dMin) dMin = ff.depth
-      if (ff.depth > dMax) dMax = ff.depth
+  // Nearer solids from OTHER boxes that genuinely cover the target — bounded by
+  // a nearest-K cap. `covers` is a geometry test (not just bbox) so the cap can
+  // never evict the face that actually does the hiding. depthEps treats
+  // near-coplanar faces as co-planar so they don't z-fight and erase each
+  // other's lines. Note: this is a painter's-style per-face average-depth sort,
+  // so two interpenetrating faces are hidden wholesale (a known limitation that
+  // a z-buffer / BSP split would resolve; visually negligible here).
+  const K = 32
+  const depthEps = dRange * 1e-3 + 1e-6
+  const gatherOccluders = (
+    depth: number,
+    bbox: BBox,
+    boxId: number,
+    covers: (sf: SolidFace) => boolean,
+  ): Vec2[][] => {
+    const cand: SolidFace[] = []
+    for (const sf of solids) {
+      if (sf.boxId === boxId) continue // a box never hides its own lines (avoids self-erasure)
+      if (sf.depth <= depth + depthEps) continue // must be clearly nearer
+      if (!bboxOverlap(sf.bbox, bbox)) continue
+      if (!covers(sf)) continue // drop bbox-only overlaps that don't actually cover
+      cand.push(sf)
     }
-    const dRange = Math.max(1e-6, dMax - dMin)
+    if (cand.length > K) {
+      cand.sort((a, b) => b.depth - a.depth)
+      cand.length = K
+    }
+    return cand.map((c) => c.poly)
+  }
 
+  // ── edges with hidden-line removal (front objects hide back objects) ──────
+  // Dedupe coincident projected edges keeping the NEAREST one, so an edge that
+  // is unoccluded at the front is never erased using a farther twin's depth.
+  const edgeSegs: Segment[] = []
+  const edgeMap = new Map<string, { a: Vec2; b: Vec2; depth: number; boxId: number }>()
+  for (const box of model.boxes) {
+    for (const e of boxEdges(box)) {
+      const pa = proj.project(e[0])
+      const pb = proj.project(e[1])
+      const a = toPage(pa)
+      const b = toPage(pb)
+      const ka = `${a[0].toFixed(2)},${a[1].toFixed(2)}`
+      const kb = `${b[0].toFixed(2)},${b[1].toFixed(2)}`
+      const key = ka < kb ? ka + '|' + kb : kb + '|' + ka
+      const depth = (pa.depth + pb.depth) / 2
+      const existing = edgeMap.get(key)
+      if (!existing || depth > existing.depth) edgeMap.set(key, { a, b, depth, boxId: box.id })
+    }
+  }
+  for (const ed of edgeMap.values()) {
+    if (!isFinite(hiddenLayers)) {
+      edgeSegs.push([ed.a, ed.b])
+      continue
+    }
+    const occ = gatherOccluders(
+      ed.depth,
+      polyBBox([ed.a, ed.b]),
+      ed.boxId,
+      (sf) => segInsideConvex(ed.a, ed.b, sf.poly) !== null,
+    )
+    if (occ.length === 0) edgeSegs.push([ed.a, ed.b])
+    else for (const k of clipByCoverage([ed.a, ed.b], occ, hiddenLayers)) edgeSegs.push(k)
+  }
+  const edgeCount = edgeSegs.length // before any black fills are appended
+
+  const layerMap: Record<PenColor, Segment[]> = { black: edgeSegs, red: [], blue: [], yellow: [] }
+
+  if (needFills) {
     const angleByAxis: Record<Axis, number> = {
       x: (p.angleX * Math.PI) / 180,
       y: (p.angleY * Math.PI) / 180,
       z: (p.angleZ * Math.PI) / 180,
     }
-    const maxLayers = occlusionLayers(p.occlusion)
-
     for (const ff of fillFaces) {
       const nd = (dMax - ff.depth) / dRange // 0 near, 1 far
       const spacing = p.hatchSpacing * (1 + p.depthFalloff * nd)
@@ -133,35 +188,17 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
 
       let segs = hatchPolygon(ff.poly, angle, spacing)
       if (p.crossHatch) segs = segs.concat(hatchPolygon(ff.poly, angle + Math.PI / 2, spacing))
+      if (segs.length === 0) continue
 
-      // occluders = nearer fill-faces (solid colour) that overlap in 2D
-      let occluders: Vec2[][] = []
-      if (isFinite(maxLayers)) {
-        const cand: { poly: Vec2[]; depth: number }[] = []
-        for (const other of fillFaces) {
-          if (other === ff || other.boxId === ff.boxId) continue
-          if (other.depth <= ff.depth + 1e-6) continue
-          if (!bboxOverlap(other.bbox, ff.bbox)) continue
-          cand.push({ poly: other.poly, depth: other.depth })
-        }
-        // keep only the nearest K occluders: a coverage count that only needs to
-        // reach maxLayers (<=6) is never changed by the far ones, and this caps
-        // the clip cost so extreme params can't freeze the main thread
-        const K = 32
-        if (cand.length > K) {
-          cand.sort((a, b) => b.depth - a.depth)
-          cand.length = K
-        }
-        occluders = cand.map((c) => c.poly)
-      }
-
+      const occ = isFinite(fillLayers)
+        ? gatherOccluders(ff.depth, ff.bbox, ff.boxId, (sf) => convexOverlap(sf.poly, ff.poly))
+        : []
       const dest = layerMap[ff.color]
-      if (occluders.length === 0) {
+      if (occ.length === 0) {
         for (const sgmt of segs) dest.push(sgmt)
       } else {
         for (const sgmt of segs) {
-          const kept = clipByCoverage(sgmt, occluders, maxLayers)
-          for (const k of kept) dest.push(k)
+          for (const k of clipByCoverage(sgmt, occ, fillLayers)) dest.push(k)
         }
       }
     }

@@ -25,6 +25,40 @@ export function bboxOverlap(a: BBox, b: BBox): boolean {
   return a.minx <= b.maxx && a.maxx >= b.minx && a.miny <= b.maxy && a.maxy >= b.miny
 }
 
+/**
+ * Separating-axis test: do two convex polygons share any area? Used to drop
+ * occluder faces that only share a bounding box (not actual overlap) so a
+ * nearest-K cap can never evict the face that genuinely covers a target.
+ */
+export function convexOverlap(a: Vec2[], b: Vec2[]): boolean {
+  for (const poly of [a, b]) {
+    const n = poly.length
+    for (let i = 0; i < n; i++) {
+      const p0 = poly[i]
+      const p1 = poly[(i + 1) % n]
+      const ax = -(p1[1] - p0[1]) // edge normal
+      const ay = p1[0] - p0[0]
+      if (ax === 0 && ay === 0) continue
+      let minA = Infinity
+      let maxA = -Infinity
+      let minB = Infinity
+      let maxB = -Infinity
+      for (const p of a) {
+        const d = p[0] * ax + p[1] * ay
+        if (d < minA) minA = d
+        if (d > maxA) maxA = d
+      }
+      for (const p of b) {
+        const d = p[0] * ax + p[1] * ay
+        if (d < minB) minB = d
+        if (d > maxB) maxB = d
+      }
+      if (maxA < minB || maxB < minA) return false // a gap on this axis → separated
+    }
+  }
+  return true
+}
+
 const lerp2 = (a: Vec2, b: Vec2, t: number): Vec2 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
 
 /**

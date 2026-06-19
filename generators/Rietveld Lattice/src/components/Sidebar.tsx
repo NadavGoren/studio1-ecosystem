@@ -66,10 +66,12 @@ export default function Sidebar() {
         <Toggle label="Cross-hatch" checked={p.crossHatch} onChange={(v) => set('crossHatch', v)} />
       </Section>
 
-      <Section title="Fill occlusion">
-        <Slider label="X-ray ↔ solid" value={p.occlusion} min={0} max={100} onChange={(v) => set('occlusion', v)} format={(v) => (v <= 2 ? 'x-ray' : v >= 98 ? 'solid' : `see-thru ${v}`)} />
+      <Section title="Depth & occlusion">
+        <Slider label="Hidden lines (edges)" value={p.hiddenLine} min={0} max={100} onChange={(v) => set('hiddenLine', v)} format={(v) => (v <= 2 ? 'x-ray' : v >= 98 ? 'solid' : `depth ${v}`)} />
+        <Slider label="Fill occlusion" value={p.occlusion} min={0} max={100} onChange={(v) => set('occlusion', v)} format={(v) => (v <= 2 ? 'x-ray' : v >= 98 ? 'solid' : `see-thru ${v}`)} />
         <p className="text-[10px] leading-relaxed text-neutral-500">
-          Edges always draw. This only clips the colour fills behind nearer faces — left is full x-ray, right is clean occluded colour.
+          Each box is a solid: a nearer object hides what is behind it. <b>Hidden lines</b> controls edges (left = full x-ray
+          wireframe, right = front fully hides back); <b>Fill occlusion</b> controls the colour fills the same way.
         </p>
       </Section>
 

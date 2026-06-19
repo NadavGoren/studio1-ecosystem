@@ -35,8 +35,9 @@ export const DEFAULT_PARAMS: Params = {
   crossHatch: false,
   depthFalloff: 0.8,
 
-  // occlusion
-  occlusion: 38,
+  // depth / occlusion
+  hiddenLine: 100,
+  occlusion: 100,
 
   // page
   paperSize: 'A3',

@@ -72,8 +72,9 @@ export interface Params {
   crossHatch: boolean
   depthFalloff: number // 0..1, widens far-face hatch spacing
 
-  // occlusion
-  occlusion: number // 0 = x-ray, 100 = solid
+  // depth / occlusion
+  hiddenLine: number // edges: 0 = x-ray wireframe, 100 = solid (front hides back)
+  occlusion: number // fills: 0 = x-ray, 100 = solid
 
   // page
   paperSize: PaperSize
