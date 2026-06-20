@@ -1,11 +1,15 @@
 import { useMemo } from 'react'
 import { buildModel } from '../lib/model'
 import { renderModel } from '../lib/render'
-import type { Params, Segment } from '../types'
+import type { Params, Polyline } from '../types'
 
-function pathFor(segments: Segment[]): string {
+function pathFor(paths: Polyline[]): string {
   let d = ''
-  for (const [a, b] of segments) d += `M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}`
+  for (const pl of paths) {
+    if (pl.length < 2) continue
+    d += `M${pl[0][0].toFixed(1)} ${pl[0][1].toFixed(1)}`
+    for (let i = 1; i < pl.length; i++) d += `L${pl[i][0].toFixed(1)} ${pl[i][1].toFixed(1)}`
+  }
   return d
 }
 
@@ -22,7 +26,7 @@ export default function Thumbnail({
   const { d, w, h } = useMemo(() => {
     const r = renderModel(buildModel(params), params, { edgesOnly: true })
     const black = r.layers.find((l) => l.color === 'black')
-    return { d: black ? pathFor(black.segments) : '', w: r.page.w, h: r.page.h }
+    return { d: black ? pathFor(black.paths) : '', w: r.page.w, h: r.page.h }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(params)])
 

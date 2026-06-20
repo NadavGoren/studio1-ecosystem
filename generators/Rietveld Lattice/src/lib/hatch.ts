@@ -1,5 +1,24 @@
-import type { Segment, Vec2 } from '../types'
+import type { Polyline, Segment, Vec2 } from '../types'
 import { segInsideConvex } from './occlusion'
+
+/**
+ * Connect ordered, parallel hatch lines into ONE continuous zig-zag (boustrophedon)
+ * stroke: draw line 0 forward, hop along the edge to line 1, draw it back, hop to
+ * line 2, and so on. Same hatched look, but one pen-down instead of N. The hops
+ * are short chords between adjacent scan-line ends and stay inside the convex face.
+ */
+export function serpentine(lines: Segment[]): Polyline {
+  const pts: Vec2[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const [a, b] = lines[i]
+    if (i % 2 === 0) {
+      pts.push(a, b)
+    } else {
+      pts.push(b, a)
+    }
+  }
+  return pts
+}
 
 /**
  * Fill a convex polygon with parallel hatch lines at `angleRad`, spaced

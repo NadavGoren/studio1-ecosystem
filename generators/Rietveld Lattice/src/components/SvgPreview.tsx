@@ -1,10 +1,12 @@
-import type { RenderResult, Segment } from '../types'
+import type { Polyline, RenderResult } from '../types'
 import { PEN_HEX } from '../lib/palette'
 
-function pathFor(segments: Segment[]): string {
+function pathFor(paths: Polyline[]): string {
   let d = ''
-  for (const [a, b] of segments) {
-    d += `M${a[0].toFixed(2)} ${a[1].toFixed(2)}L${b[0].toFixed(2)} ${b[1].toFixed(2)}`
+  for (const pl of paths) {
+    if (pl.length < 2) continue
+    d += `M${pl[0][0].toFixed(2)} ${pl[0][1].toFixed(2)}`
+    for (let i = 1; i < pl.length; i++) d += `L${pl[i][0].toFixed(2)} ${pl[i][1].toFixed(2)}`
   }
   return d
 }
@@ -43,7 +45,7 @@ export default function SvgPreview({
         {render.layers.map((layer) => (
           <path
             key={layer.color}
-            d={pathFor(layer.segments)}
+            d={pathFor(layer.paths)}
             fill="none"
             stroke={PEN_HEX[layer.color]}
             strokeWidth={strokeWidth}

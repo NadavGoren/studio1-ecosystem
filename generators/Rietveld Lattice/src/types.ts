@@ -8,6 +8,8 @@ export type PenColor = 'black' | 'red' | 'blue' | 'yellow'
 export type Vec3 = [number, number, number]
 export type Vec2 = [number, number]
 export type Segment = [Vec2, Vec2]
+/** a single continuous pen stroke: 2+ points drawn without lifting the pen */
+export type Polyline = Vec2[]
 /** row-major 3x3 rotation matrix */
 export type Mat3 = [number, number, number, number, number, number, number, number, number]
 
@@ -100,8 +102,8 @@ export interface Params {
 export interface LineLayer {
   color: PenColor
   hex: string
-  /** plotter line segments in page millimetres */
-  segments: Segment[]
+  /** plotter pen strokes in page millimetres (connected hatch = few long strokes) */
+  paths: Polyline[]
 }
 
 export interface RenderResult {
@@ -110,8 +112,9 @@ export interface RenderResult {
   seed: number
   stats: {
     boxes: number
-    edgeSegments: number
-    fillSegments: number
-    totalLines: number
+    /** number of pen-down strokes (each = one pen-up/pen-down cycle) */
+    penPaths: number
+    /** total line segments drawn (hatch density is preserved across strokes) */
+    segments: number
   }
 }

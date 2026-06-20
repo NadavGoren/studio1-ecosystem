@@ -1,8 +1,8 @@
-import type { Axis, BeamModel, LineLayer, Params, PenColor, RenderResult, Segment, Vec2, Vec3 } from '../types'
+import type { Axis, BeamModel, LineLayer, Params, PenColor, Polyline, RenderResult, Vec2, Vec3 } from '../types'
 import { boxEdges, boxFaces } from './geometry'
 import { makeProjector } from './projection'
-import { hatchPolygon } from './hatch'
-import { bboxOverlap, clipByDepth, convexOverlap, polyBBox, segInsideConvex, type BBox } from './occlusion'
+import { hatchPolygon, serpentine } from './hatch'
+import { bboxOverlap, clipPolyline, convexOverlap, polyBBox, segInsideConvex, type BBox } from './occlusion'
 import { PEN_HEX, PEN_ORDER } from './palette'
 
 const PAPER: Record<string, [number, number]> = {
@@ -146,7 +146,7 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
 
   // Candidate occluder faces from OTHER boxes that could be nearer somewhere over
   // the target (depth-range overlap, not a single average) and genuinely cover it
-  // in 2D. The exact front/back decision is made per-point later by clipByDepth;
+  // in 2D. The exact front/back decision is made per-point later by clipPolyline;
   // here we only build a bounded candidate set. nearLimit = the target's farthest
   // depth — a face can occlude only if it reaches at least that near somewhere.
   const depthEps = dRange * 1.5e-3 + 1e-6
@@ -174,13 +174,20 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
     }
     return cand
   }
-  const MIN_SEG = 0.25 // mm — drop occlusion-clip fragments too small to plot cleanly
-  const segLen = (s: Segment) => Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1])
+  const MIN_LEN = 0.25 // mm — drop strokes too small to plot cleanly
+  const polyLen = (pl: Polyline) => {
+    let L = 0
+    for (let i = 1; i < pl.length; i++) L += Math.hypot(pl[i][0] - pl[i - 1][0], pl[i][1] - pl[i - 1][1])
+    return L
+  }
+  const push = (dest: Polyline[], pl: Polyline) => {
+    if (pl.length >= 2 && polyLen(pl) >= MIN_LEN) dest.push(pl)
+  }
 
   // ── edges with hidden-line removal (front objects hide back objects) ──────
   // Dedupe coincident projected edges keeping the NEAREST one, so an edge that
   // is unoccluded at the front is never erased using a farther twin's depth.
-  const edgeSegs: Segment[] = []
+  const layerMap: Record<PenColor, Polyline[]> = { black: [], red: [], blue: [], yellow: [] }
   const edgeMap = new Map<string, { a: Vec2; b: Vec2; da: number; db: number; depth: number; boxId: number }>()
   for (const box of model.boxes) {
     for (const e of boxEdges(box)) {
@@ -199,7 +206,7 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
   }
   for (const ed of edgeMap.values()) {
     if (!isFinite(hiddenLayers)) {
-      edgeSegs.push([ed.a, ed.b])
+      push(layerMap.black, [ed.a, ed.b])
       continue
     }
     const occ = gatherOccluders(
@@ -209,12 +216,9 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
       (sf) => segInsideConvex(ed.a, ed.b, sf.poly) !== null,
       true, // let a box hide its own back edges
     )
-    if (occ.length === 0) edgeSegs.push([ed.a, ed.b])
-    else for (const k of clipByDepth(ed.a, ed.b, ed.da, ed.db, occ, hiddenLayers, depthEps)) if (segLen(k) >= MIN_SEG) edgeSegs.push(k)
+    if (occ.length === 0) push(layerMap.black, [ed.a, ed.b])
+    else for (const pl of clipPolyline([ed.a, ed.b], [ed.da, ed.db], occ, hiddenLayers, depthEps)) push(layerMap.black, pl)
   }
-  const edgeCount = edgeSegs.length // before any black fills are appended
-
-  const layerMap: Record<PenColor, Segment[]> = { black: edgeSegs, red: [], blue: [], yellow: [] }
 
   if (needFills) {
     const angleByAxis: Record<Axis, number> = {
@@ -227,9 +231,9 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
       const spacing = p.hatchSpacing * (1 + p.depthFalloff * nd)
       const angle = angleByAxis[ff.hatchAxis]
 
-      let segs = hatchPolygon(ff.poly, angle, spacing)
-      if (p.crossHatch) segs = segs.concat(hatchPolygon(ff.poly, angle + Math.PI / 2, spacing))
-      if (segs.length === 0) continue
+      // connect each set of parallel hatch lines into one zig-zag stroke
+      const strokes: Polyline[] = [serpentine(hatchPolygon(ff.poly, angle, spacing))]
+      if (p.crossHatch) strokes.push(serpentine(hatchPolygon(ff.poly, angle + Math.PI / 2, spacing)))
 
       // boards are few faces but heavily crossed → use a larger occluder cap so
       // dense scenes never leak hatch through a dropped occluder
@@ -237,14 +241,14 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
         ? gatherOccluders(ff.depthMin, ff.bbox, ff.boxId, (sf) => convexOverlap(sf.poly, ff.poly), false, 96)
         : []
       const dest = layerMap[ff.color]
-      if (occ.length === 0) {
-        for (const sgmt of segs) dest.push(sgmt)
-      } else {
-        for (const [pq0, pq1] of segs) {
-          // the hatch lies on this face's plane → its endpoint depths come from it
-          const d0 = ff.dA * pq0[0] + ff.dB * pq0[1] + ff.dC
-          const d1 = ff.dA * pq1[0] + ff.dB * pq1[1] + ff.dC
-          for (const k of clipByDepth(pq0, pq1, d0, d1, occ, fillLayers, depthEps)) if (segLen(k) >= MIN_SEG) dest.push(k)
+      for (const stroke of strokes) {
+        if (stroke.length < 2) continue
+        if (occ.length === 0) {
+          push(dest, stroke)
+        } else {
+          // the hatch lies on this face's plane → depth of any point comes from it
+          const depths = stroke.map((q) => ff.dA * q[0] + ff.dB * q[1] + ff.dC)
+          for (const pl of clipPolyline(stroke, depths, occ, fillLayers, depthEps)) push(dest, pl)
         }
       }
     }
@@ -253,20 +257,19 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
   const layers: LineLayer[] = PEN_ORDER.filter((c) => layerMap[c].length > 0).map((c) => ({
     color: c,
     hex: PEN_HEX[c],
-    segments: layerMap[c],
+    paths: layerMap[c],
   }))
 
-  const fillSegments =
-    layerMap.red.length + layerMap.blue.length + layerMap.yellow.length + (layerMap.black.length - edgeCount)
+  let penPaths = 0
+  let segments = 0
+  for (const c of PEN_ORDER) {
+    penPaths += layerMap[c].length
+    for (const pl of layerMap[c]) segments += pl.length - 1
+  }
   return {
     layers,
     page: { w, h },
     seed: p.seed,
-    stats: {
-      boxes: model.boxes.length,
-      edgeSegments: edgeCount,
-      fillSegments,
-      totalLines: edgeCount + fillSegments,
-    },
+    stats: { boxes: model.boxes.length, penPaths, segments },
   }
 }

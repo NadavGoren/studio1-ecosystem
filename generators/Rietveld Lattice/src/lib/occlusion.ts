@@ -1,4 +1,4 @@
-import type { Segment, Vec2 } from '../types'
+import type { Vec2 } from '../types'
 
 export interface BBox {
   minx: number
@@ -133,14 +133,13 @@ function nearerRange(t0: number, t1: number, g0: number, g1: number, eps: number
 }
 
 /**
- * Hidden-line removal with a TRUE local depth test. The segment A→B has real
- * endpoint depths da, db (larger = nearer). For each occluder face we take the
- * sub-interval where the segment is (a) inside the face in 2D AND (b) actually
- * behind the face's plane in depth — both vary affinely along the segment, so
- * the comparison is exact per point, not per-face-average. Keep the parts hidden
- * by FEWER than `maxLayers` faces (Infinity = x-ray, 1 = solid).
+ * The visible t-ranges of segment A→B under hidden-line removal with a TRUE
+ * local depth test. Endpoint depths da, db (larger = nearer). For each occluder
+ * face we take the sub-interval where A→B is (a) inside the face in 2D AND (b)
+ * behind the face's plane in depth — both affine, so the comparison is exact per
+ * point. Keep where FEWER than `maxLayers` faces hide it (Infinity = x-ray).
  */
-export function clipByDepth(
+export function keptRanges(
   A: Vec2,
   B: Vec2,
   da: number,
@@ -148,8 +147,8 @@ export function clipByDepth(
   faces: PlaneFace[],
   maxLayers: number,
   eps: number,
-): Segment[] {
-  if (!isFinite(maxLayers)) return [[A, B]]
+): [number, number][] {
+  if (!isFinite(maxLayers)) return [[0, 1]]
 
   const intervals: [number, number][] = []
   for (const f of faces) {
@@ -162,7 +161,7 @@ export function clipByDepth(
     const occ = nearerRange(cov[0], cov[1], g0, g1, eps)
     if (occ && occ[1] - occ[0] > 1e-7) intervals.push(occ)
   }
-  if (intervals.length === 0) return [[A, B]]
+  if (intervals.length === 0) return [[0, 1]]
 
   const pts: number[] = [0, 1]
   for (const [a, b] of intervals) {
@@ -171,7 +170,7 @@ export function clipByDepth(
   }
   pts.sort((u, v) => u - v)
 
-  const out: Segment[] = []
+  const out: [number, number][] = []
   let pending: [number, number] | null = null
   for (let i = 0; i + 1 < pts.length; i++) {
     const ta = pts[i]
@@ -183,11 +182,59 @@ export function clipByDepth(
     if (count < maxLayers) {
       if (pending && Math.abs(pending[1] - ta) < 1e-6) pending[1] = tb
       else {
-        if (pending) out.push([lerp2(A, B, pending[0]), lerp2(A, B, pending[1])])
+        if (pending) out.push(pending)
         pending = [ta, tb]
       }
     }
   }
-  if (pending) out.push([lerp2(A, B, pending[0]), lerp2(A, B, pending[1])])
+  if (pending) out.push(pending)
+  return out
+}
+
+/**
+ * Clip a whole polyline (lying on `faces`-comparable depth) by hidden-line
+ * removal, returning continuous sub-polylines. A run survives across a vertex
+ * only if that vertex is unoccluded — so a connected (serpentine) hatch stays a
+ * few long pen strokes instead of shattering into one segment per scan line.
+ * `depths[i]` is the true view-depth of point i.
+ */
+export function clipPolyline(
+  points: Vec2[],
+  depths: number[],
+  faces: PlaneFace[],
+  maxLayers: number,
+  eps: number,
+): Vec2[][] {
+  if (points.length < 2) return []
+  if (!isFinite(maxLayers) || faces.length === 0) return [points]
+
+  const out: Vec2[][] = []
+  let current: Vec2[] = []
+  const flush = () => {
+    if (current.length >= 2) out.push(current)
+    current = []
+  }
+  for (let i = 0; i + 1 < points.length; i++) {
+    const A = points[i]
+    const B = points[i + 1]
+    const ranges = keptRanges(A, B, depths[i], depths[i + 1], faces, maxLayers, eps)
+    if (ranges.length === 0) {
+      flush() // segment fully hidden
+      continue
+    }
+    for (const [t0, t1] of ranges) {
+      if (t1 - t0 < 1e-9) continue
+      const p0 = lerp2(A, B, t0)
+      const p1 = lerp2(A, B, t1)
+      if (t0 <= 1e-9 && current.length > 0) {
+        current.push(p1) // continues from the shared (visible) vertex
+      } else {
+        flush()
+        current = [p0, p1]
+      }
+      if (t1 < 1 - 1e-9) flush() // hidden before reaching the next vertex
+    }
+  }
+  flush()
   return out
 }

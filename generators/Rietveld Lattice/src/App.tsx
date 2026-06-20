@@ -115,8 +115,11 @@ export default function App() {
         </div>
 
         <div className="ml-auto flex items-center gap-2.5">
-          <span className="hidden font-mono text-[11px] text-neutral-500 sm:inline">
-            {render.stats.totalLines.toLocaleString()} lines · {render.stats.boxes} parts
+          <span
+            className="hidden font-mono text-[11px] text-neutral-500 sm:inline"
+            title={`${render.stats.segments.toLocaleString()} hatch/edge segments drawn`}
+          >
+            {render.stats.penPaths.toLocaleString()} pen paths · {render.stats.boxes} parts
             {busy ? ' · rendering…' : ''}
           </span>
           <button

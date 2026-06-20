@@ -1,4 +1,4 @@
-import type { Params, RenderResult, Segment } from '../types'
+import type { Params, Polyline, RenderResult } from '../types'
 import { PEN_LABEL } from './palette'
 
 const f = (n: number) => {
@@ -6,10 +6,15 @@ const f = (n: number) => {
   return Object.is(r, -0) ? '0' : String(r)
 }
 
-/** Chain a layer's segments into one path string (one M…L per segment). */
-function segmentsToPath(segments: Segment[]): string {
+/** One `M…L…L…` subpath per pen stroke — connected hatch stays a single subpath. */
+function pathsToD(paths: Polyline[]): string {
   const parts: string[] = []
-  for (const [a, b] of segments) parts.push(`M${f(a[0])} ${f(a[1])} L${f(b[0])} ${f(b[1])}`)
+  for (const pl of paths) {
+    if (pl.length < 2) continue
+    let d = `M${f(pl[0][0])} ${f(pl[0][1])}`
+    for (let i = 1; i < pl.length; i++) d += ` L${f(pl[i][0])} ${f(pl[i][1])}`
+    parts.push(d)
+  }
   return parts.join(' ')
 }
 
@@ -25,7 +30,7 @@ export function buildSVG(render: RenderResult, p: Params): string {
   const layers = render.layers
     .map((layer) => {
       const id = `layer-${layer.color}`
-      const d = segmentsToPath(layer.segments)
+      const d = pathsToD(layer.paths)
       return (
         `  <g inkscape:groupmode="layer" inkscape:label="${PEN_LABEL[layer.color]}" id="${id}"\n` +
         `     fill="none" stroke="${layer.hex}" stroke-width="${sw}" ` +
