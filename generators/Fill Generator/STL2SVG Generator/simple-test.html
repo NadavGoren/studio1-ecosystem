@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Render Test</title>
+  <style>
+    body { margin: 20px; font-family: Arial; }
+    #status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <h1>Simple Render Test</h1>
+  <div id="status">Testing...</div>
+  <svg id="svg" width="600" height="600" style="border: 2px solid #333;"></svg>
+  
+  <!-- Hidden inputs that renderer needs -->
+  <div style="display:none">
+    <input id="canvasWidth" value="210">
+    <input id="canvasHeight" value="297">
+    <input id="cubeSize" value="50">
+    <input id="margin" value="10">
+    <input id="strokeWidth" value="0.5">
+    <input id="lightAngle" value="45">
+    <input id="lightElevation" value="30">
+    <input id="lightBrightness" value="1">
+    <input id="ambientLight" value="0.3">
+    <input id="hatchSpacing" value="3">
+    <input id="minSpacing" value="1">
+    <input id="hatchAngle" value="45">
+    <input id="viewMode" value="isometric">
+    <input id="perspectiveStrength" value="0.5">
+    <input id="singleColor" value="#000000">
+    <input id="faceTopColor" value="#FF0000">
+    <input id="faceFrontColor" value="#00FF00">
+    <input id="faceBackColor" value="#0000FF">
+    <input id="faceLeftColor" value="#FFFF00">
+    <input id="faceRightColor" value="#FF00FF">
+    <input id="faceBottomColor" value="#00FFFF">
+    <input type="checkbox" id="showEdges" checked>
+    <input type="checkbox" id="showShadow" checked>
+    <input type="checkbox" id="showGrid" checked>
+    <input type="checkbox" id="advancedShading">
+    <input type="checkbox" id="crossHatch">
+    <input type="checkbox" id="useFaceColors" checked>
+    <input id="crossHatchDensity" value="0.5">
+  </div>
+  
+  <script type="module">
+    const status = document.getElementById('status');
+    
+    async function test() {
+      try {
+        status.textContent = 'Loading renderer...';
+        console.log('Importing renderer...');
+        
+        const { draw } = await import('./src/rendering/renderer.js');
+        
+        status.textContent = 'Renderer loaded, attempting draw...';
+        console.log('Calling draw(0)...');
+        
+        draw(0);
+        
+        status.textContent = '✓ SUCCESS! Cube rendered.';
+        status.className = 'success';
+        console.log('✓ Draw completed successfully!');
+        
+      } catch (error) {
+        status.textContent = '✗ ERROR: ' + error.message;
+        status.className = 'error';
+        console.error('✗ Error:', error);
+        console.error('Stack:', error.stack);
+      }
+    }
+    
+    test();
+  </script>
+</body>
+</html>
+
+
+

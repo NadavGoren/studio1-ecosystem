@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Server Headers</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 { color: #0ff; }
+        .check { margin: 10px 0; padding: 10px; background: #2a2a2a; border-left: 3px solid #0f0; }
+        .fail { border-left-color: #f00; }
+        .info { color: #ff0; margin: 5px 0; }
+        code { color: #0ff; }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Server Headers Check</h1>
+    <p>This page checks if the server is sending the correct headers for SharedArrayBuffer.</p>
+    
+    <div id="results"></div>
+    
+    <h2>Manual Check</h2>
+    <p>Open browser DevTools (F12) → Network tab → Refresh this page → Click on this page's request → Headers tab</p>
+    <p>Look for these headers in the Response Headers:</p>
+    <ul>
+        <li><code>Cross-Origin-Opener-Policy: same-origin</code></li>
+        <li><code>Cross-Origin-Embedder-Policy: require-corp</code></li>
+    </ul>
+    
+    <h2>SharedArrayBuffer Test</h2>
+    <div id="sab-test"></div>
+    
+    <script>
+        const resultsDiv = document.getElementById('results');
+        const sabTestDiv = document.getElementById('sab-test');
+        
+        // Check SharedArrayBuffer
+        const hasSAB = typeof SharedArrayBuffer !== 'undefined';
+        
+        sabTestDiv.innerHTML = `
+            <div class="check ${hasSAB ? '' : 'fail'}">
+                <strong>SharedArrayBuffer:</strong> ${hasSAB ? '✅ AVAILABLE' : '❌ NOT AVAILABLE'}<br>
+                <span class="info">Type: ${typeof SharedArrayBuffer}</span>
+            </div>
+        `;
+        
+        // Try to fetch this page and check headers
+        fetch(window.location.href, { method: 'HEAD' })
+            .then(response => {
+                const headers = {};
+                for (const [key, value] of response.headers.entries()) {
+                    headers[key.toLowerCase()] = value;
+                }
+                
+                const coop = headers['cross-origin-opener-policy'];
+                const coep = headers['cross-origin-embedder-policy'];
+                
+                resultsDiv.innerHTML = `
+                    <h2>Response Headers</h2>
+                    <div class="check ${coop === 'same-origin' ? '' : 'fail'}">
+                        <strong>Cross-Origin-Opener-Policy:</strong> ${coop || '❌ MISSING'}<br>
+                        ${coop === 'same-origin' ? '✅ Correct' : '❌ Should be "same-origin"'}
+                    </div>
+                    <div class="check ${coep ? '' : 'fail'}">
+                        <strong>Cross-Origin-Embedder-Policy:</strong> ${coep || '❌ MISSING'}<br>
+                        ${coep ? `✅ Present: "${coep}"` : '❌ Should be "require-corp" or "credentialless"'}
+                    </div>
+                    <div class="check ${hasSAB ? '' : 'fail'}">
+                        <strong>SharedArrayBuffer Available:</strong> ${hasSAB ? '✅ YES' : '❌ NO'}<br>
+                        <span class="info">
+                            ${hasSAB 
+                                ? 'Great! Headers are working.' 
+                                : 'Headers may not be set correctly, or browser needs refresh.'}
+                        </span>
+                    </div>
+                    <h2>All Headers</h2>
+                    <pre>${JSON.stringify(headers, null, 2)}</pre>
+                `;
+            })
+            .catch(error => {
+                resultsDiv.innerHTML = `
+                    <div class="check fail">
+                        <strong>Error checking headers:</strong> ${error.message}<br>
+                        <span class="info">Check browser console (F12) for details</span>
+                    </div>
+                `;
+            });
+        
+        console.log('=== Header Check ===');
+        console.log('SharedArrayBuffer:', typeof SharedArrayBuffer);
+        console.log('URL:', window.location.href);
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<title>Hatch Generator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">H</div>
+      <h1>Hatch Generator</h1>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- =======================
+         SIDEBAR CONTROLS
+    ======================= -->
+    <aside id="controls">
+
+  <!-- =======================
+       CANVAS SETTINGS
+  ======================= -->
+  <div class="section always-open">
+    <div class="section-header">Canvas</div>
+    <div class="section-body">
+
+      <div class="control-group">
+        <label>Canvas Preset
+          <span id="canvasPresetLabel">A3</span>
+        </label>
+        <select id="canvasPreset">
+          <option value="A2">A2 (594 × 420 mm)</option>
+          <option value="A3">A3 (420 × 297 mm)</option>
+          <option value="A4">A4 (297 × 210 mm)</option>
+          <option value="A5">A5 (210 × 148 mm)</option>
+          <option value="A6">A6 (148 × 105 mm)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Orientation</label>
+        <div class="orientation-toggle">
+          <button type="button" id="orientationLandscape" class="orientation-btn active" data-orientation="landscape">Landscape</button>
+          <button type="button" id="orientationPortrait" class="orientation-btn" data-orientation="portrait">Portrait</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Canvas Width (mm)
+          <span id="canvasWidthValue">420</span>
+        </label>
+        <input type="number" id="canvasWidth" min="20" max="1000" value="420">
+      </div>
+
+      <div class="control-group">
+        <label>Canvas Height (mm)
+          <span id="canvasHeightValue">297</span>
+        </label>
+        <input type="number" id="canvasHeight" min="20" max="1000" value="297">
+      </div>
+
+      <div class="control-group">
+        <label>Margin (mm)
+          <span id="marginValue">20</span>
+        </label>
+        <input type="range" id="margin" min="0" max="60" step="1" value="20">
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       CORE SETTINGS
+  ======================= -->
+  <div class="section always-open">
+    <div class="section-header">Core</div>
+    <div class="section-body">
+
+      <div class="control-group">
+        <label>Spacing (mm)
+          <span id="spacingValue">5.0</span>
+        </label>
+        <input type="range" id="spacing" min="0.5" max="40" step="0.1" value="5">
+      </div>
+
+      <div class="control-group">
+        <label>Stroke Width (mm)
+          <span id="strokeWidthValue">0.5</span>
+        </label>
+        <input type="range" id="strokeWidth" min="0.1" max="4" step="0.1" value="0.5">
+      </div>
+
+      <div class="control-group">
+        <label>Stroke Color
+          <span id="colorValue">#000000</span>
+        </label>
+        <input type="color" id="strokeColor" value="#000000">
+      </div>
+
+      <div class="control-group">
+        <label>Jitter (%)
+          <span id="jitterValue">0</span>
+        </label>
+        <input type="range" id="jitter" min="0" max="200" step="1" value="0">
+      </div>
+
+      <div class="control-group">
+        <label>Seed
+          <span id="seedValue">1</span>
+        </label>
+        <input type="number" id="seed" min="1" max="999999" value="1">
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       ANGLE SETTINGS
+  ======================= -->
+  <div class="section always-open">
+    <div class="section-header">Angles</div>
+    <div class="section-body">
+
+      <div class="control-group">
+        <label>Angle Behavior
+          <span id="angleBehaviorLabel">Uniform</span>
+        </label>
+        <select id="angleBehavior">
+          <option value="uniform">Uniform</option>
+          <option value="dynamic">Dynamic</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Primary Angle
+          <span id="angleValue">0</span>
+        </label>
+        <input type="range" id="angle" min="-90" max="90" step="1" value="0">
+      </div>
+
+      <!-- DYNAMIC ANGLE SECTION -->
+      <div class="advanced-toggle" data-target="dynamicAngle">
+        Advanced ▼
+      </div>
+
+      <div id="dynamicAngle" class="advanced-section">
+
+        <div class="control-group">
+          <label>Pattern Mode
+            <span id="dynamicAngleModeLabel">Radial</span>
+          </label>
+          <select id="dynamicAngleMode">
+            <option value="radial">Radial</option>
+            <option value="spiral">Spiral</option>
+            <option value="wave">Wave</option>
+            <option value="grid">Grid</option>
+            <option value="concentric">Concentric</option>
+            <option value="lissajous">Lissajous</option>
+          </select>
+        </div>
+
+        <!-- RADIAL PATTERN CONTROLS -->
+        <div class="control-group dynamic-only radial-only">
+          <label>Center X (mm)
+            <span id="radialCenterXValue">210</span>
+          </label>
+          <input type="range" id="radialCenterX" min="0" max="1000" step="1" value="210">
+        </div>
+        <div class="control-group dynamic-only radial-only">
+          <label>Center Y (mm)
+            <span id="radialCenterYValue">148</span>
+          </label>
+          <input type="range" id="radialCenterY" min="0" max="1000" step="1" value="148">
+        </div>
+        <div class="control-group dynamic-only radial-only">
+          <label>Angle Offset (°)
+            <span id="radialOffsetValue">0</span>
+          </label>
+          <input type="range" id="radialOffset" min="-180" max="180" step="1" value="0">
+        </div>
+
+        <!-- SPIRAL PATTERN CONTROLS -->
+        <div class="control-group dynamic-only spiral-only">
+          <label>Spiral Type
+            <span id="spiralTypeValue">Logarithmic</span>
+          </label>
+          <select id="spiralType">
+            <option value="logarithmic">Logarithmic</option>
+            <option value="archimedean">Archimedean</option>
+          </select>
+        </div>
+        <div class="control-group dynamic-only spiral-only">
+          <label>Center X (mm)
+            <span id="spiralCenterXValue">210</span>
+          </label>
+          <input type="range" id="spiralCenterX" min="0" max="1000" step="1" value="210">
+        </div>
+        <div class="control-group dynamic-only spiral-only">
+          <label>Center Y (mm)
+            <span id="spiralCenterYValue">148</span>
+          </label>
+          <input type="range" id="spiralCenterY" min="0" max="1000" step="1" value="148">
+        </div>
+        <div class="control-group dynamic-only spiral-only">
+          <label>Tightness
+            <span id="spiralTightnessValue">10</span>
+          </label>
+          <input type="range" id="spiralTightness" min="0" max="50" step="0.5" value="10">
+        </div>
+
+        <!-- WAVE PATTERN CONTROLS -->
+        <div class="control-group dynamic-only wave-only">
+          <label>Wave Direction
+            <span id="waveDirectionValue">X</span>
+          </label>
+          <select id="waveDirection">
+            <option value="x">X Axis</option>
+            <option value="y">Y Axis</option>
+            <option value="grid">Grid (X+Y)</option>
+          </select>
+        </div>
+        <div class="control-group dynamic-only wave-only">
+          <label>Frequency
+            <span id="waveFrequencyValue">10</span>
+          </label>
+          <input type="range" id="waveFrequency" min="0.1" max="50" step="0.1" value="10">
+        </div>
+        <div class="control-group dynamic-only wave-only">
+          <label>Amplitude (°)
+            <span id="waveAmplitudeValue">30</span>
+          </label>
+          <input type="range" id="waveAmplitude" min="0" max="180" step="1" value="30">
+        </div>
+
+        <!-- GRID PATTERN CONTROLS -->
+        <div class="control-group dynamic-only grid-only">
+          <label>Grid Size (mm)
+            <span id="gridSizeValue">20</span>
+          </label>
+          <input type="range" id="gridSize" min="5" max="100" step="1" value="20">
+        </div>
+        <div class="control-group dynamic-only grid-only">
+          <label>Rotation (°)
+            <span id="gridRotationValue">90</span>
+          </label>
+          <input type="range" id="gridRotation" min="0" max="180" step="1" value="90">
+        </div>
+
+        <!-- CONCENTRIC PATTERN CONTROLS -->
+        <div class="control-group dynamic-only concentric-only">
+          <label>Center X (mm)
+            <span id="concentricCenterXValue">210</span>
+          </label>
+          <input type="range" id="concentricCenterX" min="0" max="1000" step="1" value="210">
+        </div>
+        <div class="control-group dynamic-only concentric-only">
+          <label>Center Y (mm)
+            <span id="concentricCenterYValue">148</span>
+          </label>
+          <input type="range" id="concentricCenterY" min="0" max="1000" step="1" value="148">
+        </div>
+
+        <!-- LISSAJOUS PATTERN CONTROLS -->
+        <div class="control-group dynamic-only lissajous-only">
+          <label>Frequency A
+            <span id="lissajousAValue">3</span>
+          </label>
+          <input type="range" id="lissajousA" min="1" max="10" step="1" value="3">
+        </div>
+        <div class="control-group dynamic-only lissajous-only">
+          <label>Frequency B
+            <span id="lissajousBValue">5</span>
+          </label>
+          <input type="range" id="lissajousB" min="1" max="10" step="1" value="5">
+        </div>
+        <div class="control-group dynamic-only lissajous-only">
+          <label>Phase
+            <span id="lissajousPhaseValue">0</span>
+          </label>
+          <input type="range" id="lissajousPhase" min="0" max="360" step="1" value="0">
+        </div>
+
+      </div>
+
+      <label class="inline-check">
+        <input type="checkbox" id="crosshatch"> Crosshatch
+      </label>
+
+      <div id="crosshatchAdvanced" class="advanced-section" style="display: none;">
+        <div class="control-group">
+          <label>Secondary Angle
+            <span id="angle2Value">90</span>
+          </label>
+          <input type="range" id="angle2" min="-90" max="90" step="1" value="90">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       NOISE (LINE GEOMETRY)
+  ======================= -->
+  <div class="section collapsible-section" id="lineNoiseSection">
+    <label class="section-header-toggle">
+      <input type="checkbox" id="noiseEnabled"> 
+      <span>Line Noise</span>
+    </label>
+    <div class="section-body" id="lineNoiseControls">
+      <div class="subsection-grid">
+        <div class="control-group">
+          <label>Jitter Strength (mm)
+            <span id="noiseStrengthValue">0.8</span>
+          </label>
+          <input type="range" id="noiseStrength" min="0" max="15" step="0.1" value="0.8">
+        </div>
+
+        <div class="control-group">
+          <label>Jitter Frequency
+            <span id="noiseFrequencyValue">0.15</span>
+          </label>
+          <input type="range" id="noiseFrequency" min="0.02" max="1.0" step="0.01" value="0.15">
+        </div>
+
+        <div class="control-group">
+          <label>Noise Detail
+            <span id="noiseDetailValue">2</span>
+          </label>
+          <input type="range" id="noiseDetail" min="1" max="6" step="1" value="2">
+        </div>
+
+        <div class="control-group">
+          <label>Intensity Boost
+            <span id="noiseIntensityValue">1.0</span>
+          </label>
+          <input type="range" id="noiseIntensity" min="0.5" max="3.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-group">
+          <label>Wave Smoothing
+            <span id="noiseWaveSmoothingValue">0.5</span>
+          </label>
+          <input type="range" id="noiseWaveSmoothing" min="0" max="1" step="0.05" value="0.5">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================
+       GRADIENT SYSTEM
+  ======================= -->
+  <div class="section collapsible-section" id="gradientSection">
+    <label class="section-header-toggle">
+      <input type="checkbox" id="gradientEnabled"> 
+      <span>Gradient</span>
+    </label>
+    <div class="section-body" id="gradientControls">
+      <div class="subsection-grid">
+        <div class="control-group">
+          <label>Gradient Type
+            <span id="gradientTypeValue">Linear</span>
+          </label>
+          <select id="gradientType">
+            <option value="linear">Linear</option>
+            <option value="radial">Radial</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>Gradient Strength
+            <span id="gradientStrengthValue">100</span>
+          </label>
+          <input type="range" id="gradientStrength" min="0" max="100" value="100">
+        </div>
+
+        <div class="control-group">
+          <label>Min Spacing (mm)
+            <span id="minSpacingValue">2.0</span>
+          </label>
+          <input type="range" id="minSpacing" min="0.1" max="10" step="0.1" value="2.0">
+        </div>
+
+        <div class="control-group">
+          <label>Gradient Angle (°)
+            <span id="gradientAngleValue">90</span>
+          </label>
+          <input type="range" id="gradientAngle" min="0" max="359" value="90">
+        </div>
+
+        <label class="inline-check full-span">
+          <input type="checkbox" id="gradientReverse"> Reverse Gradient
+        </label>
+      </div>
+    </div>
+  </div>
+
+      <!-- =======================
+           DOWNLOAD & INFO
+      ======================= -->
+      <button id="download">Download SVG</button>
+
+    </aside>
+
+    <!-- =======================
+         SVG PREVIEW
+    ======================= -->
+    <section id="preview">
+      <div class="preview-header">
+        <span class="preview-title">Preview</span>
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <div class="line-count-badge">
+            <span class="line-count-label">Lines</span>
+            <span class="line-count-value" id="lineCount">0</span>
+          </div>
+          <div class="line-count-badge">
+            <span class="line-count-label">Est. Time</span>
+            <span class="line-count-value" id="plotTime">0:00</span>
+          </div>
+        </div>
+      </div>
+      <div class="preview-content">
+        <svg id="svg" viewBox="0 0 420 297" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -12,6 +12,8 @@ node_modules/
 
 # ── Build / cache artifacts ──
 *.tsbuildinfo
+dist/
+.next/
 studio1-tracker/cache/
 
 # ── Claude Code local state (worktrees, machine-local settings) ──

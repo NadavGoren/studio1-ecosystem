@@ -1,0 +1,19 @@
+Hi! I need help integrating my STL project with the 3D Cube Generator.
+
+FOLDERS:
+- New clone: /Users/nadavgoren/Desktop/סטודיו/Fill Generator/STL2SVG Generator
+- STL project: /Users/nadavgoren/Desktop/סטודיו/STL GENERATOR
+
+MY STL PROJECT:
+- Main HTML file: [FILL IN - example: index.html]
+- Main JS file: [FILL IN - example: app.js or stl-viewer.js]
+- Working features: [FILL IN - example: "File upload works, can view mesh, shows triangle count"]
+
+WHAT I NEED:
+1. Connect STL upload/parsing to the rendering engine
+2. Add hatching and shading to STL models
+3. Keep the lighting and export features
+
+Please read both projects and help me integrate them.
+
+

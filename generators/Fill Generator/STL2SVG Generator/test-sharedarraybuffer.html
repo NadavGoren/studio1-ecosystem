@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SharedArrayBuffer Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .status {
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+        .success {
+            background: #2d5a2d;
+            border: 2px solid #4caf50;
+        }
+        .error {
+            background: #5a2d2d;
+            border: 2px solid #f44336;
+        }
+        .warning {
+            background: #5a5a2d;
+            border: 2px solid #ffc107;
+        }
+        .info {
+            background: #2d3a5a;
+            border: 2px solid #2196f3;
+        }
+        code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        h1 { color: #4caf50; }
+        h2 { color: #2196f3; margin-top: 30px; }
+        ul { line-height: 1.8; }
+        .check-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 SharedArrayBuffer Diagnostic Test</h1>
+    
+    <div id="status"></div>
+    
+    <h2>What This Tests</h2>
+    <p>This page checks if SharedArrayBuffer is available in your browser. SharedArrayBuffer is required for FFmpeg.wasm multi-threaded processing (faster video encoding).</p>
+    
+    <h2>Requirements</h2>
+    <ul>
+        <li>Browser must support SharedArrayBuffer</li>
+        <li>Page must be served with proper HTTP headers:
+            <ul>
+                <li><code>Cross-Origin-Opener-Policy: same-origin</code></li>
+                <li><code>Cross-Origin-Embedder-Policy: require-corp</code></li>
+            </ul>
+        </li>
+        <li>Page must be accessed via HTTP/HTTPS (not <code>file://</code>)</li>
+    </ul>
+    
+    <h2>Test Results</h2>
+    <div id="results"></div>
+    
+    <h2>Next Steps</h2>
+    <div id="nextSteps"></div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        const nextStepsDiv = document.getElementById('nextSteps');
+        
+        let allChecks = [];
+        
+        function addCheck(name, passed, message) {
+            allChecks.push({ name, passed, message });
+            const div = document.createElement('div');
+            div.className = 'check-item';
+            div.innerHTML = `
+                <strong>${passed ? '✅' : '❌'} ${name}</strong><br>
+                ${message}
+            `;
+            resultsDiv.appendChild(div);
+        }
+        
+        // Check 1: SharedArrayBuffer availability
+        const hasSAB = typeof SharedArrayBuffer !== 'undefined';
+        addCheck(
+            'SharedArrayBuffer Available',
+            hasSAB,
+            hasSAB 
+                ? `✅ SharedArrayBuffer is available! Type: ${typeof SharedArrayBuffer}`
+                : '❌ SharedArrayBuffer is NOT available. This means the HTTP headers are not set correctly.'
+        );
+        
+        // Check 2: Protocol
+        const isHttp = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+        addCheck(
+            'HTTP/HTTPS Protocol',
+            isHttp,
+            isHttp
+                ? `✅ Using ${window.location.protocol} protocol`
+                : `❌ Using ${window.location.protocol} protocol. SharedArrayBuffer only works with http:// or https://`
+        );
+        
+        // Check 3: Localhost
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname.startsWith('192.168.');
+        addCheck(
+            'Local Network',
+            isLocalhost,
+            isLocalhost
+                ? `✅ Accessing via ${window.location.hostname}`
+                : `⚠️ Accessing via ${window.location.hostname}. Make sure you're using the custom server.`
+        );
+        
+        // Check 4: Headers (we can't directly check, but we can infer)
+        // If SharedArrayBuffer is available, headers are likely correct
+        addCheck(
+            'HTTP Headers',
+            hasSAB,
+            hasSAB
+                ? '✅ Headers appear to be set correctly (SharedArrayBuffer is available)'
+                : '❌ Headers may not be set correctly. Make sure server.py is running and you restarted it.'
+        );
+        
+        // Overall status
+        const allPassed = allChecks.every(c => c.passed);
+        
+        if (allPassed) {
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = `
+                <h2 style="margin-top: 0;">✅ All Checks Passed!</h2>
+                <p>SharedArrayBuffer is available and configured correctly. Video export should work!</p>
+            `;
+            nextStepsDiv.innerHTML = `
+                <div class="info" style="padding: 15px; border-radius: 8px;">
+                    <strong>You're all set!</strong><br>
+                    Go back to <a href="3d-generator.html" style="color: #4caf50;">3d-generator.html</a> and try generating a video.
+                </div>
+            `;
+        } else {
+            statusDiv.className = 'status error';
+            statusDiv.innerHTML = `
+                <h2 style="margin-top: 0;">❌ SharedArrayBuffer Not Available</h2>
+                <p>Some checks failed. Follow the steps below to fix this.</p>
+            `;
+            nextStepsDiv.innerHTML = `
+                <div class="warning" style="padding: 15px; border-radius: 8px;">
+                    <strong>To Fix This:</strong>
+                    <ol style="line-height: 2;">
+                        <li><strong>Stop the server</strong> (if running) - Press Ctrl+C in the terminal</li>
+                        <li><strong>Start the server:</strong><br>
+                            <code style="display: block; margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3);">
+                                cd "3D Cube Generator"<br>
+                                python3 server.py
+                            </code>
+                        </li>
+                        <li><strong>Hard refresh this page:</strong><br>
+                            <code style="display: block; margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3);">
+                                Windows/Linux: Ctrl + Shift + R<br>
+                                Mac: Cmd + Shift + R
+                            </code>
+                        </li>
+                        <li><strong>Verify:</strong> Refresh this page and check if SharedArrayBuffer is now available</li>
+                    </ol>
+                    <p style="margin-top: 15px;">
+                        <strong>Note:</strong> If you're using a different server (not server.py), 
+                        make sure it sets these headers:
+                    </p>
+                    <ul style="margin-top: 10px;">
+                        <li><code>Cross-Origin-Opener-Policy: same-origin</code></li>
+                        <li><code>Cross-Origin-Embedder-Policy: require-corp</code></li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        // Additional info
+        console.log('=== SharedArrayBuffer Diagnostic ===');
+        console.log('SharedArrayBuffer available:', hasSAB);
+        console.log('Protocol:', window.location.protocol);
+        console.log('Hostname:', window.location.hostname);
+        console.log('Full URL:', window.location.href);
+        if (hasSAB) {
+            console.log('✅ All good! SharedArrayBuffer is available.');
+        } else {
+            console.log('❌ SharedArrayBuffer is not available.');
+            console.log('Make sure:');
+            console.log('1. Server is running with server.py');
+            console.log('2. You restarted the server after any changes');
+            console.log('3. You did a hard refresh (Ctrl+Shift+R)');
+        }
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/Users/nadavgoren/Desktop/סטודיו/Fill Generator/3D Cube Generator/server.py", line 70, in <module>
+    run(port)
+    ~~~^^^^^^
+  File "/Users/nadavgoren/Desktop/סטודיו/Fill Generator/3D Cube Generator/server.py", line 33, in run
+    httpd = HTTPServer(server_address, CORSRequestHandler)
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/socketserver.py", line 457, in __init__
+    self.server_bind()
+    ~~~~~~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/http/server.py", line 136, in server_bind
+    socketserver.TCPServer.server_bind(self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/socketserver.py", line 478, in server_bind
+    self.socket.bind(self.server_address)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 1] Operation not permitted

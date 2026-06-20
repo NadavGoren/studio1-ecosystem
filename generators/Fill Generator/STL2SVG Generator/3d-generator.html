@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>3D Isometric Generator</title>
+<link rel="stylesheet" href="3d-generator.css">
+</head>
+
+<body>
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">3D</div>
+      <h1>3D Isometric Generator</h1>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- =======================
+         SIDEBAR CONTROLS
+    ======================= -->
+    <aside id="controls">
+
+  <!-- =======================
+       CANVAS SETTINGS
+  ======================= -->
+  <div class="section always-open">
+    <div class="section-header">Canvas</div>
+    <div class="section-body">
+
+      <div class="control-group">
+        <label>Canvas Preset
+          <span id="canvasPresetLabel">A3</span>
+        </label>
+        <select id="canvasPreset">
+          <option value="A2">A2 (594 × 420 mm)</option>
+          <option value="A3" selected>A3 (420 × 297 mm)</option>
+          <option value="A4">A4 (297 × 210 mm)</option>
+          <option value="A5">A5 (210 × 148 mm)</option>
+          <option value="A6">A6 (148 × 105 mm)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Canvas Width (mm)
+          <span id="canvasWidthValue">420</span>
+        </label>
+        <input type="number" id="canvasWidth" min="20" max="1000" value="420">
+      </div>
+
+      <div class="control-group">
+        <label>Canvas Height (mm)
+          <span id="canvasHeightValue">297</span>
+        </label>
+        <input type="number" id="canvasHeight" min="20" max="1000" value="297">
+      </div>
+
+      <div class="control-group">
+        <label style="display: flex; justify-content: space-between; align-items: center; font-size: 0.92rem; color: var(--text-main); margin-bottom: 6px; font-weight: 600;">
+          <span>Orientation</span>
+          <span id="orientationLabel" style="color: var(--text-muted); font-weight: 500;">Portrait</span>
+        </label>
+        <div class="orientation-toggle-wrapper">
+          <span class="orientation-label-left">Landscape</span>
+          <label class="orientation-toggle">
+            <input type="checkbox" id="toggleOrientation">
+            <span class="orientation-slider"></span>
+          </label>
+          <span class="orientation-label-right">Portrait</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Margin (mm)
+          <span id="marginValue">10</span>
+        </label>
+        <input type="range" id="margin" min="0" max="60" step="1" value="10">
+      </div>
+
+      <div class="control-group">
+        <label>Stroke Width (mm)
+          <span id="strokeWidthValue">0.4</span>
+        </label>
+        <input type="range" id="strokeWidth" min="0.1" max="4" step="0.1" value="0.4">
+      </div>
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="lineJitterEnabled"> Line Jitter
+        </label>
+      </div>
+
+      <div class="control-group jitter-control" style="display: none;">
+        <label>Jitter Intensity (%)
+          <span id="lineJitterValue">50</span>
+        </label>
+        <input type="range" id="lineJitter" min="0" max="100" step="1" value="50">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
+          <span>None</span>
+          <span>Subtle</span>
+          <span>Maximum</span>
+        </div>
+      </div>
+
+      <div class="control-group jitter-control" style="display: none;">
+        <label>Wave Frequency
+          <span id="jitterFrequencyValue">50</span>
+        </label>
+        <input type="range" id="jitterFrequency" min="0" max="100" step="1" value="50">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
+          <span>Low</span>
+          <span>Medium</span>
+          <span>High</span>
+        </div>
+      </div>
+
+      <div class="control-group jitter-control" style="display: none;">
+        <label>Randomness
+          <span id="jitterRandomnessValue">50</span>
+        </label>
+        <input type="range" id="jitterRandomness" min="0" max="100" step="1" value="50">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
+          <span>Smooth</span>
+          <span>Balanced</span>
+          <span>Random</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       STL LOADER
+  ======================= -->
+  <div class="section always-open">
+    <div class="section-header">Model</div>
+    <div class="section-body">
+
+      <!-- Mode Indicator -->
+      <div class="control-group" style="text-align: center; padding: 8px; background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 12px;">
+        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 4px;">Current Mode</div>
+        <div id="currentMode" style="font-size: 1.1rem; font-weight: 600; color: var(--accent-primary);">Cube Mode</div>
+      </div>
+
+      <!-- STL File Input (hidden) -->
+      <input type="file" id="stlFileInput" accept=".stl" style="display: none;">
+
+      <!-- STL Drop Zone -->
+      <div id="stlDropZone" class="stl-drop-zone">
+        <div style="font-size: 2rem; margin-bottom: 8px;">📦</div>
+        <div style="font-weight: 600; margin-bottom: 4px;">Drop STL File Here</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">or click to browse</div>
+        <div id="meshStatus" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;"></div>
+      </div>
+
+      <!-- Mesh Info (hidden initially) -->
+      <div id="meshInfo" style="display: none;">
+        <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 12px;">
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Loaded File:</div>
+          <div id="meshFilename" style="font-weight: 600; margin-bottom: 12px; word-break: break-all;"></div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
+            <div>
+              <div style="color: var(--text-muted);">Triangles:</div>
+              <div id="meshTriangles" style="font-weight: 600;">0</div>
+            </div>
+            <div>
+              <div style="color: var(--text-muted);">Vertices:</div>
+              <div id="meshVertices" style="font-weight: 600;">0</div>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <div style="color: var(--text-muted);">Original Size:</div>
+              <div id="meshSize" style="font-weight: 600;">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STL Rotation Controls -->
+        <div class="control-group">
+          <label style="font-weight: 600; margin-bottom: 8px; display: block;">Rotate Model (90° steps)</label>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;">
+            <button id="rotateX90" class="stl-rotate-btn" style="padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-main); border-radius: 6px; cursor: pointer; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <span style="font-size: 1.2rem;">↻</span>
+              <span style="font-size: 0.8rem;">X-Axis</span>
+            </button>
+            <button id="rotateY90" class="stl-rotate-btn" style="padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-main); border-radius: 6px; cursor: pointer; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <span style="font-size: 1.2rem;">↻</span>
+              <span style="font-size: 0.8rem;">Y-Axis</span>
+            </button>
+            <button id="rotateZ90" class="stl-rotate-btn" style="padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-main); border-radius: 6px; cursor: pointer; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <span style="font-size: 1.2rem;">↻</span>
+              <span style="font-size: 0.8rem;">Z-Axis</span>
+            </button>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center;">
+            Each click rotates 90°. Model stays on floor after rotation.
+          </div>
+        </div>
+
+        <div class="control-group">
+          <button id="clearSTL" style="width: 100%; padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-main); border-radius: 6px; cursor: pointer; font-weight: 500;">
+            🗑️ Clear STL
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       3D OBJECT SETTINGS
+  ======================= -->
+  <div class="section always-open">
+    <div class="section-header">Size & Position</div>
+    <div class="section-body">
+
+      <div class="control-group">
+        <label>Object Size (mm)
+          <span id="cubeSizeValue">50</span>
+        </label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="range" id="cubeSize" min="20" max="200" step="0.5" value="120" style="flex: 1;">
+          <input type="number" id="cubeSizeInput" min="20" max="200" step="0.5" value="120" style="width: 80px;">
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">
+          <span id="cubeSizeNote">Scales the model to fit within this size</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label style="font-style: italic; color: #666;">
+          Drag the preview to orbit the view
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       PROJECTION MODE
+  ======================= -->
+  <div class="section always-open">
+    <div class="section-header">Projection</div>
+    <div class="section-body">
+
+      <div class="control-group">
+        <label>View Mode
+          <span id="viewModeLabel">Isometric</span>
+        </label>
+        <select id="viewMode">
+          <option value="isometric">Isometric</option>
+          <option value="perspective">Perspective</option>
+        </select>
+      </div>
+
+      <div id="perspectiveControls" style="display: none;">
+        <div class="control-group">
+          <label>Perspective Strength
+            <span id="perspectiveStrengthValue">2</span>
+          </label>
+          <input type="range" id="perspectiveStrength" min="0" max="4" step="0.5" value="2">
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
+            <span>Light</span>
+            <span>Medium</span>
+            <span>Strong</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       LAYERS (FACES)
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="layers">
+      <span>Layers</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="layers-body">
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="useFaceColors" checked> Use Different Colors per Face
+        </label>
+      </div>
+      <div class="control-group" id="singleColorGroup" style="display: none;">
+        <label>Color
+          <span id="singleColorValue">#000000</span>
+        </label>
+        <input type="color" id="singleColor" value="#000000">
+      </div>
+      <div class="control-group" id="faceColorsGroup">
+        <label>Top Face
+          <span id="faceTopColorValue">#FF6B6B</span>
+        </label>
+        <input type="color" id="faceTopColor" value="#FF6B6B">
+      </div>
+      <div class="control-group" id="faceColorsGroup">
+        <label>Front Face
+          <span id="faceFrontColorValue">#4ECDC4</span>
+        </label>
+        <input type="color" id="faceFrontColor" value="#4ECDC4">
+      </div>
+      <div class="control-group" id="faceColorsGroup">
+        <label>Back Face
+          <span id="faceBackColorValue">#45B7D1</span>
+        </label>
+        <input type="color" id="faceBackColor" value="#45B7D1">
+      </div>
+      <div class="control-group" id="faceColorsGroup">
+        <label>Left Face
+          <span id="faceLeftColorValue">#96CEB4</span>
+        </label>
+        <input type="color" id="faceLeftColor" value="#96CEB4">
+      </div>
+      <div class="control-group" id="faceColorsGroup">
+        <label>Right Face
+          <span id="faceRightColorValue">#FFEAA7</span>
+        </label>
+        <input type="color" id="faceRightColor" value="#FFEAA7">
+      </div>
+      <div class="control-group" id="faceColorsGroup">
+        <label>Bottom Face
+          <span id="faceBottomColorValue">#DDA15E</span>
+        </label>
+        <input type="color" id="faceBottomColor" value="#DDA15E">
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================
+       LIGHTING SETTINGS
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="lighting">
+      <span>Lighting</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="lighting-body">
+
+      <div class="control-group">
+        <label>Light Angle (azimuth) (°)
+          <span id="lightAngleValue">110</span>
+        </label>
+        <input type="range" id="lightAngle" min="0" max="360" step="1" value="110">
+      </div>
+
+      <div class="control-group">
+        <label>Light Elevation (°)
+          <span id="lightElevationValue">64</span>
+        </label>
+        <input type="range" id="lightElevation" min="0" max="90" step="1" value="64">
+      </div>
+
+      <div class="control-group">
+        <label>Light Brightness
+          <span id="lightBrightnessValue">1.0</span>
+        </label>
+        <input type="range" id="lightBrightness" min="0" max="2" step="0.1" value="1.0">
+      </div>
+
+      <div class="control-group">
+        <label>Ambient Light
+          <span id="ambientLightValue">0.15</span>
+        </label>
+        <input type="range" id="ambientLight" min="0" max="1" step="0.05" value="0.15">
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       SHADING SETTINGS
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="shading">
+      <span>Shading</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="shading-body">
+
+      <div class="control-group">
+        <label class="inline-check advanced-shading-toggle">
+          <input type="checkbox" id="advancedShading" checked> Advanced Shading
+        </label>
+      </div>
+
+      <div class="control-group" id="shadowFalloffGroup" style="display: none;">
+        <label>Shadow Falloff
+          <span id="shadowFalloffValue">6.2</span>
+        </label>
+        <input type="range" id="shadowFalloff" min="0.1" max="10" step="0.1" value="6.2">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
+          <span>Sharp</span>
+          <span>Medium</span>
+          <span>Soft</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="crossHatch" checked> Cross-Hatch (Perpendicular Lines)
+        </label>
+      </div>
+
+      <div class="control-group" id="crossHatchDensityGroup" style="display: none;">
+        <label>Cross-Hatch Density (%)
+          <span id="crossHatchDensityValue">100</span>
+        </label>
+        <input type="range" id="crossHatchDensity" min="0" max="100" step="5" value="100">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
+          <span>Light</span>
+          <span>Medium</span>
+          <span>Dense</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Hatch Spacing (mm)
+          <span id="hatchSpacingValue">2.0</span>
+        </label>
+        <input type="range" id="hatchSpacing" min="0.5" max="10" step="0.1" value="2.0">
+      </div>
+
+      <div class="control-group">
+        <label>Min Spacing (mm)
+          <span id="minSpacingValue">0.5</span>
+        </label>
+        <input type="range" id="minSpacing" min="0.1" max="5" step="0.1" value="0.5">
+      </div>
+
+      <div class="control-group">
+        <label>Hatch Angle (°)
+          <span id="hatchAngleValue">45</span>
+        </label>
+        <input type="range" id="hatchAngle" min="0" max="180" step="1" value="45">
+      </div>
+
+      <label class="inline-check">
+        <input type="checkbox" id="showShadow" checked> Show Floor Shadow
+      </label>
+
+      <label class="inline-check">
+        <input type="checkbox" id="shadowSoftEdges"> Shadow Soft Edges (Falloff Geometry)
+      </label>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       DISPLAY OPTIONS
+  ======================= -->
+  <div class="section always-open">
+    <div class="section-header">Display</div>
+    <div class="section-body">
+
+      <div class="control-group">
+        <label>Render Mode
+          <span id="renderModeLabel">Full Detail</span>
+        </label>
+        <select id="renderMode">
+          <option value="full">Full Detail (Line Art)</option>
+          <option value="solid">Solid Grayscale (Fast)</option>
+          <option value="wireframe">Wireframe (Fastest)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="autoSwitchMode" checked> Auto-Switch During Navigation
+        </label>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+          Automatically use fast rendering while rotating, then return to selected mode
+        </div>
+      </div>
+
+      <label class="inline-check">
+        <input type="checkbox" id="showEdges"> Show Edges
+      </label>
+
+      <label class="inline-check">
+        <input type="checkbox" id="showGrid"> Show 3D Grid
+      </label>
+
+      <label class="inline-check">
+        <input type="checkbox" id="debugOcclusion"> Debug: Show Occlusion Polygons
+      </label>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       ANIMATION / TIME-LAPSE
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="animation">
+      <span>Animation</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="animation-body">
+
+      <div class="control-group">
+        <label>Start Angle (°)
+          <span id="animStartAngleValue">0</span>
+        </label>
+        <input type="number" id="animStartAngle" min="0" max="360" step="1" value="0">
+      </div>
+
+      <div class="control-group">
+        <label>End Angle (°)
+          <span id="animEndAngleValue">360</span>
+        </label>
+        <input type="number" id="animEndAngle" min="0" max="360" step="1" value="360">
+      </div>
+
+      <div class="control-group">
+        <label>Number of Frames
+          <span id="animFrameCountValue">120</span>
+        </label>
+        <input type="number" id="animFrameCount" min="12" max="360" step="1" value="120">
+      </div>
+
+      <div class="control-group">
+        <label>Frames Per Second (FPS)
+          <span id="animFpsValue">30</span>
+        </label>
+        <select id="animFps">
+          <option value="12">12 FPS</option>
+          <option value="24">24 FPS</option>
+          <option value="30" selected>30 FPS</option>
+          <option value="60">60 FPS</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label style="font-weight: 600; color: var(--accent);">Duration
+          <span id="animDurationValue" style="color: var(--accent);">4.0s</span>
+        </label>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+          Calculated: Frames ÷ FPS
+        </div>
+      </div>
+
+      <div class="control-group">
+        <button id="playPreview" class="play-preview-btn">
+          <span class="play-icon">▶</span>
+          Play Preview
+        </button>
+      </div>
+
+      <div class="control-group">
+        <button id="generateVideo" class="generate-video-btn">
+          Generate Video
+        </button>
+      </div>
+
+      <div id="animationProgress" style="display: none;">
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-status" id="progressStatus">Initializing...</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       ADVANCED DEBUG SETTINGS
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="advanced-debug">
+      <span>Advanced Debug</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="advanced-debug-body">
+
+      <div class="control-group">
+        <label>Shadow Occlusion Expansion (%)
+          <span id="shadowExpansionValue">0.2</span>
+        </label>
+        <input type="range" id="shadowExpansion" min="0.05" max="5.0" step="0.05" value="0.2">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+          Minimal gap (0.1-0.3%) prevents leaks. Higher values if leaks occur.
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Shadow Line Inset (mm)
+          <span id="shadowInsetValue">0.05</span>
+        </label>
+        <input type="range" id="shadowInset" min="0.0" max="0.5" step="0.01" value="0.05">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+          Pulls shadow lines inward from cube edge for extra safety.
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label style="margin-bottom: 8px; display: block;">Quick Test Angles</label>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+          <button class="test-angle-btn" data-angle="0" style="padding: 4px 8px; font-size: 0.85rem; background: var(--bg-light); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">0°</button>
+          <button class="test-angle-btn" data-angle="45" style="padding: 4px 8px; font-size: 0.85rem; background: var(--bg-light); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">45°</button>
+          <button class="test-angle-btn" data-angle="90" style="padding: 4px 8px; font-size: 0.85rem; background: var(--bg-light); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">90°</button>
+          <button class="test-angle-btn" data-angle="135" style="padding: 4px 8px; font-size: 0.85rem; background: var(--bg-light); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">135°</button>
+          <button class="test-angle-btn" data-angle="180" style="padding: 4px 8px; font-size: 0.85rem; background: var(--bg-light); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">180°</button>
+          <button class="test-angle-btn" data-angle="225" style="padding: 4px 8px; font-size: 0.85rem; background: var(--bg-light); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">225°</button>
+          <button class="test-angle-btn" data-angle="270" style="padding: 4px 8px; font-size: 0.85rem; background: var(--bg-light); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">270°</button>
+          <button class="test-angle-btn" data-angle="315" style="padding: 4px 8px; font-size: 0.85rem; background: var(--bg-light); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">315°</button>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+          Click to snap to test angles for shadow leak verification
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+      <!-- =======================
+           DOWNLOAD & INFO
+      ======================= -->
+      <button id="download">Download SVG</button>
+
+    </aside>
+
+    <!-- =======================
+         SVG PREVIEW
+    ======================= -->
+    <section id="preview">
+      <div class="preview-header">
+        <span class="preview-title">Preview</span>
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <div class="line-count-badge">
+            <span class="line-count-label">Lines</span>
+            <span class="line-count-value" id="lineCount">0</span>
+          </div>
+          <div class="line-count-badge">
+            <span class="line-count-label">Est. Time</span>
+            <span class="line-count-value" id="plotTime">0:00</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Canvas Tools -->
+      <div class="canvas-tools">
+        <div class="tool-selector">
+          <button class="tool-button active" id="rotateTool" data-tool="rotate" title="Rotate Tool (R)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            <span>Rotate</span>
+          </button>
+          <button class="tool-button" id="moveTool" data-tool="move" title="Move Tool (V)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+            </svg>
+            <span>Move</span>
+          </button>
+        </div>
+        <div class="tool-info">
+          <span class="tool-hint" id="toolHint">Drag to rotate the cube around its axis</span>
+        </div>
+      </div>
+      
+      <div class="preview-content">
+        <svg id="svg" viewBox="0 0 420 297" preserveAspectRatio="xMidYMid meet" style="cursor: grab; width: 100%; height: 100%;"></svg>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<!-- Video Export Progress Modal -->
+<div id="videoExportModal" class="video-export-modal hidden">
+  <div class="video-export-modal-content">
+    <div class="video-export-modal-header">
+      <h2>Generating Video</h2>
+      <button id="cancelVideoExport" class="cancel-video-btn" title="Cancel">✕</button>
+    </div>
+    <div class="video-export-modal-body">
+      <div class="video-export-progress-container">
+        <div class="video-export-progress-bar">
+          <div class="video-export-progress-fill" id="videoExportProgressFill"></div>
+        </div>
+        <div class="video-export-progress-percent" id="videoExportProgressPercent">0%</div>
+      </div>
+      <div class="video-export-status" id="videoExportStatus">Initializing...</div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="3d-generator.js?v=3"></script>
+</body>
+</html>
+

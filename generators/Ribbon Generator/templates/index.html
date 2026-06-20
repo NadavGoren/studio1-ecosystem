@@ -1,0 +1,2139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Field Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <img src="{{ url_for('static', filename='assets/Magnet.svg') }}" alt="Magnet Logo" class="logo-img">
+                <h1>FLOW FIELD</h1>
+            </div>
+        </header>
+
+        <!-- Statistics Bar -->
+        <section class="stats-bar">
+            <div class="stat-card compact">
+                <span class="stat-label">Lines</span>
+                <span class="stat-value" id="stat-line-count">0</span>
+            </div>
+            <div class="stat-card compact">
+                <span class="stat-label">Distance</span>
+                <span class="stat-value" id="stat-line-distance">0m</span>
+            </div>
+        </section>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Floating Layers Toolbar -->
+            <aside class="layers-toolbar" id="layers-toolbar">
+                <div class="layers-toolbar-header">
+                    <div class="layers-title-group">
+                        <h2 class="section-title">Layers</h2>
+                        <p class="section-subtitle">Sync, overprint, and regenerate active stack</p>
+                    </div>
+                    <div class="layers-toolbar-actions">
+                        <div class="toolbar-toggle-stack">
+                            <label for="sync-all-layers" class="toolbar-checkbox">
+                                <input type="checkbox" id="sync-all-layers">
+                                <div class="checkbox-label">
+                                    <span class="checkbox-title">Sync All</span>
+                                    <span class="checkbox-hint">Keep every layer in lockstep</span>
+                                </div>
+                            </label>
+                            <label for="force-overprint" class="toolbar-checkbox">
+                                <input type="checkbox" id="force-overprint">
+                                <div class="checkbox-label">
+                                    <span class="checkbox-title">Force Overprint</span>
+                                    <span class="checkbox-hint">Ignore other layers when drawing</span>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="distribution-mode-control">
+                            <label for="distribution-mode" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: 2px; display: block;">Distribution</label>
+                            <select id="distribution-mode" style="width: 100%; padding: 3px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.65rem;">
+                                <option value="sequential" selected>Sequential Priority</option>
+                                <option value="fair">Fair Distribution</option>
+                                <option value="lottery">Simultaneous Lottery</option>
+                                <option value="striped">Striped Rows</option>
+                            </select>
+                        </div>
+                        <div class="control-group compact-group">
+                            <label for="gradient-enabled" style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 2px;">
+                                <input type="checkbox" id="gradient-enabled">
+                                <span style="font-family: var(--font-mono); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted);">Enable Gradient</span>
+                            </label>
+                            <div class="gradient-controls" id="gradient-controls" style="display: none; flex-direction: column; gap: 4px; margin-top: 4px;">
+                                <div>
+                                    <label for="gradient-direction" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: 2px; display: block;">Direction</label>
+                                    <select id="gradient-direction" style="width: 100%; padding: 3px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.65rem;">
+                                        <option value="vertical" selected>Vertical (Bottom→Top)</option>
+                                        <option value="horizontal">Horizontal (Left→Right)</option>
+                                        <option value="radial">Radial (Center→Out)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="gradient-easing" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: 2px; display: block;">Curve</label>
+                                    <select id="gradient-easing" style="width: 100%; padding: 3px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.65rem;">
+                                        <option value="linear" selected>Linear</option>
+                                        <option value="easeIn">Ease In</option>
+                                        <option value="easeOut">Ease Out</option>
+                                        <option value="sigmoid">Sigmoid</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-compact toolbar-regenerate" id="btn-regenerate-all">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6"/>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                            </svg>
+                            Regen All
+                        </button>
+                    </div>
+                </div>
+                <div class="resize-handle" id="layers-resize-handle" title="Drag to resize"></div>
+                <div class="layers-toolbar-body">
+                    <div class="layer-list" id="layer-list">
+                        <!-- Layers will be dynamically populated here -->
+                    </div>
+
+                    <div class="layers-toolbar-buttons">
+                        <div class="control-group" style="margin-bottom: 4px;">
+                            <div style="display: flex; gap: 4px;">
+                                <button class="btn btn-secondary" id="btn-sort-dark-to-bright" title="Sort layers from dark to bright" style="flex: 1;">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="5"/>
+                                        <line x1="12" y1="1" x2="12" y2="3"/>
+                                        <line x1="12" y1="21" x2="12" y2="23"/>
+                                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                        <line x1="1" y1="12" x2="3" y2="12"/>
+                                        <line x1="21" y1="12" x2="23" y2="12"/>
+                                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                                    </svg>
+                                    D→B
+                                </button>
+                                <button class="btn btn-secondary" id="btn-sort-bright-to-dark" title="Sort layers from bright to dark" style="flex: 1;">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                                    </svg>
+                                    B→D
+                                </button>
+                            </div>
+                        </div>
+                        <div class="control-group" style="margin-bottom: 4px;">
+                            <div style="display: flex; gap: 4px;">
+                                <input type="number" id="batch-layer-count" value="8" min="1" max="50" class="spinner-input" style="width: 48px; padding: 4px 6px; border: 1px solid var(--color-border); border-radius: 2px; font-family: var(--font-mono); font-size: 0.75rem;">
+                                <button class="btn btn-secondary btn-full" id="btn-add-batch-layers" style="flex: 1;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14"/>
+                                    </svg>
+                                    Batch
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-full" id="btn-add-layer">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Add Layer
+                        </button>
+                        <button class="btn btn-secondary btn-full" id="btn-regenerate-layer">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6"/>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                            </svg>
+                            Regen Active
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Canvas Area -->
+            <section class="canvas-section">
+                <div class="canvas-container">
+                    <canvas id="flow-canvas"></canvas>
+                    
+                    <!-- Canvas Toolbar -->
+                    <div class="canvas-toolbar">
+                        <button class="tool-btn" id="btn-fit" title="Fit to View">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                            </svg>
+                        </button>
+                        <div class="toolbar-separator"></div>
+                        <button class="tool-btn" id="btn-zoom-in" title="Zoom In">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="11" y1="8" x2="11" y2="14"/>
+                                <line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                        <button class="tool-btn" id="btn-zoom-out" title="Zoom Out">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="8" y1="11" x2="14" y2="11"/>
+                            </svg>
+                        </button>
+                        <div class="toolbar-separator"></div>
+                        <button class="tool-btn" id="btn-toggle-edit" title="Move Obstacles">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="5 9 2 12 5 15"/>
+                                <polyline points="9 5 12 2 15 5"/>
+                                <polyline points="15 19 12 22 9 19"/>
+                                <polyline points="19 9 22 12 19 15"/>
+                                <line x1="2" y1="12" x2="22" y2="12"/>
+                                <line x1="12" y1="2" x2="12" y2="22"/>
+                            </svg>
+                        </button>
+                        <button class="tool-btn" id="btn-toggle-obstacles-visibility" title="Toggle Obstacles Visibility">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                        <button class="tool-btn" id="btn-delete-obstacle" title="Delete Selected Obstacle" style="display: none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                <line x1="10" y1="11" x2="10" y2="17"/>
+                                <line x1="14" y1="11" x2="14" y2="17"/>
+                            </svg>
+                        </button>
+                        <button class="tool-btn" id="btn-add-obstacle" title="Add Random Obstacle">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="16"/>
+                                <line x1="8" y1="12" x2="16" y2="12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Controls Panel -->
+            <aside class="controls-panel">
+                <!-- Ribbon Architect Section -->
+                <section class="panel-section" data-section="ribbon-settings">
+                    <div class="section-header">
+                        <h2 class="section-title">Ribbon Architect</h2>
+                    </div>
+                    <div class="section-content">
+                        <div class="control-group">
+                            <label for="grid-spacing">Weave Spacing (mm)</label>
+                            <div class="slider-group">
+                                <input type="range" id="grid-spacing" min="1" max="50" value="17.5" step="0.5">
+                                <div class="slider-value-with-arrows">
+                                    <button class="fine-adjust-btn" data-target="grid-spacing" data-dir="-1" title="Decrease (fine)">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"/></svg>
+                                    </button>
+                                    <span class="slider-value" id="grid-spacing-value">17.5 mm</span>
+                                    <button class="fine-adjust-btn" data-target="grid-spacing" data-dir="1" title="Increase (fine)">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="ribbon-style">Ribbon Style</label>
+                            <select id="ribbon-style" style="width: 100%; padding: 4px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.7rem;">
+                                <option value="zigzag" selected>Zig-Zag Wave</option>
+                                <option value="braided">Braided Rope</option>
+                                <option value="fishbone">Fishbone</option>
+                                <option value="custom-svg">Custom SVG Stamp</option>
+                            </select>
+                        </div>
+                        <!-- Custom SVG Upload Zone - appears when custom-svg is selected -->
+                        <div class="control-group" id="svg-upload-group" style="display: none;">
+                            <label>Custom Stamp SVG</label>
+                            <div id="svg-drop-zone" class="svg-drop-zone">
+                                <input type="file" id="svg-file-input" accept=".svg" style="display: none;">
+                                <div class="drop-zone-content">
+                                    <svg class="drop-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                    <span class="drop-text">Drop SVG here</span>
+                                    <span class="drop-hint">or click to browse</span>
+                                </div>
+                                <div class="current-svg-info" id="current-svg-info">
+                                    <span class="svg-name" id="svg-file-name">Stamp.svg</span>
+                                    <span class="svg-shapes" id="svg-shape-count">6 shapes</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group" id="zigzag-wavelength-group">
+                            <label for="zigzag-wavelength">Zigzag Wavelength</label>
+                            <div class="slider-group">
+                                <input type="range" id="zigzag-wavelength" min="1" max="10" value="2" step="0.5">
+                                <span class="slider-value" id="zigzag-wavelength-value">2.0x</span>
+                            </div>
+                            <small class="control-hint">Spread out zigzag for thicker strokes</small>
+                        </div>
+                        <div class="control-group">
+                            <label for="brush-width">Ribbon Width (mm)</label>
+                            <div class="slider-group">
+                                <input type="range" id="brush-width" min="1" max="30" value="24.5" step="0.5">
+                                <div class="slider-value-with-arrows">
+                                    <button class="fine-adjust-btn" data-target="brush-width" data-dir="-1" title="Decrease (fine)">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"/></svg>
+                                    </button>
+                                    <span class="slider-value" id="brush-width-value">24.5 mm</span>
+                                    <button class="fine-adjust-btn" data-target="brush-width" data-dir="1" title="Increase (fine)">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="noise-scale">Turbulence (Noise Scale)</label>
+                            <div class="slider-group">
+                                <input type="range" id="noise-scale" min="0" max="1" value="0" step="0.001">
+                                <span class="slider-value" id="noise-scale-value">0.0010</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="line-length">Line Length (mm)</label>
+                            <div class="slider-group">
+                                <input type="range" id="line-length" min="1" max="400" value="5" step="1">
+                                <div class="slider-value-with-arrows">
+                                    <button class="fine-adjust-btn" data-target="line-length" data-dir="-1" title="Decrease (fine)">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"/></svg>
+                                    </button>
+                                    <span class="slider-value" id="line-length-value">5 mm</span>
+                                    <button class="fine-adjust-btn" data-target="line-length" data-dir="1" title="Increase (fine)">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="grid-jitter">Grid Jitter</label>
+                            <div class="slider-group">
+                                <input type="range" id="grid-jitter" min="0" max="1" value="0" step="0.01">
+                                <span class="slider-value" id="grid-jitter-value">0%</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="num-particles">Ribbon Count</label>
+                            <div class="slider-group">
+                                <input type="range" id="num-particles" min="10" max="5000" value="1000" step="10">
+                                <span class="slider-value" id="num-particles-value">1000</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="noise-seed">Seed</label>
+                            <div class="slider-group" style="display: flex; gap: 4px; align-items: center;">
+                                <input type="number" id="noise-seed" value="0" min="0" max="99999" style="flex: 1; padding: 4px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.75rem;">
+                                <button class="btn btn-secondary" id="btn-randomize-seed" title="Randomize seed" style="padding: 4px 8px; white-space: nowrap;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="2" y="2" width="20" height="20" rx="2"/>
+                                        <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+                                        <circle cx="16" cy="8" r="1.5" fill="currentColor"/>
+                                        <circle cx="8" cy="16" r="1.5" fill="currentColor"/>
+                                        <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+                                        <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Hidden inputs for hardcoded values -->
+                <input type="hidden" id="flow-mode" value="noise">
+                <input type="hidden" id="start-position-mode" value="grid">
+                <input type="hidden" id="render-style" value="ribbon-hatched">
+
+                <!-- Space Distortion Section -->
+                <section class="panel-section collapsible collapsed" data-section="space-distortion">
+                    <div class="section-header" onclick="toggleSection('space-distortion')">
+                        <h2 class="section-title">Space Distortion</h2>
+                        <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="control-group" style="display: flex; align-items: center; gap: 6px;">
+                            <label for="distortion-enabled" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="checkbox" id="distortion-enabled">
+                                <span style="font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase;">Enable</span>
+                            </label>
+                        </div>
+                        <div class="control-group">
+                            <label for="distortion-strength">Distortion Strength</label>
+                            <div class="slider-group">
+                                <input type="range" id="distortion-strength" min="0" max="300" value="40" step="0.1">
+                                <span class="slider-value" id="distortion-strength-value">40.0</span>
+                            </div>
+                            <small class="control-hint">How much to warp the space.</small>
+                        </div>
+                        <div class="control-group">
+                            <label for="distortion-scale">Distortion Scale</label>
+                            <div class="slider-group">
+                                <input type="range" id="distortion-scale" min="0.001" max="0.2" value="0.01" step="0.001">
+                                <span class="slider-value" id="distortion-scale-value">0.010</span>
+                            </div>
+                            <small class="control-hint">The size of the warp swirls.</small>
+                        </div>
+                        <div class="control-group">
+                            <label for="distortion-detail">Distortion Detail</label>
+                            <div class="slider-group">
+                                <input type="range" id="distortion-detail" min="1" max="5" value="2" step="1">
+                                <span class="slider-value" id="distortion-detail-value">2</span>
+                            </div>
+                            <small class="control-hint">Adds texture/roughness to the warp.</small>
+                        </div>
+                        <div class="control-group">
+                            <label for="distortion-phase">Distortion Speed / Phase</label>
+                            <div class="slider-group">
+                                <input type="range" id="distortion-phase" min="0" max="10" value="0" step="0.1">
+                                <span class="slider-value" id="distortion-phase-value">0.0</span>
+                            </div>
+                            <small class="control-hint">Shifts the distortion pattern.</small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Canvas Settings Section -->
+                <section class="panel-section collapsible" data-section="canvas-settings">
+                    <div class="section-header" onclick="toggleSection('canvas-settings')">
+                        <h2 class="section-title">Canvas Settings</h2>
+                        <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="control-group">
+                            <label for="paper-size">Paper Size</label>
+                            <select id="paper-size" style="width: 100%; padding: 4px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.7rem;">
+                                <option value="420x594">A2 (420 × 594 mm)</option>
+                                <option value="297x420" selected>A3 (297 × 420 mm)</option>
+                                <option value="210x297">A4 (210 × 297 mm)</option>
+                                <option value="148x210">A5 (148 × 210 mm)</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="stroke-width">Stroke Width</label>
+                            <div class="slider-group">
+                                <input type="range" id="stroke-width" min="0.1" max="25.0" value="0.4" step="0.05" style="flex: 2;">
+                                
+                                <div class="number-input-wrapper" style="flex: 0 0 60px;">
+                                    <input type="number" id="stroke-width-input" min="0.1" max="25.0" step="0.05" value="0.4">
+                                </div>
+                                <span style="font-size: 0.7rem; color: var(--color-text-muted); margin-left: 4px;">mm</span>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="margin">Margin</label>
+                            <div class="slider-group">
+                                <input type="range" id="margin" min="0" max="100" value="20" step="1">
+                                <span class="slider-value" id="margin-value">20 mm</span>
+                            </div>
+                            <small class="control-hint">Margin on all sides</small>
+                        </div>
+                        
+                        <div class="control-group" style="display: flex; align-items: center; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border);">
+                            <label for="ink-blend-mode" style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 0;">
+                                <input type="checkbox" id="ink-blend-mode">
+                                <div style="display: flex; flex-direction: column; gap: 1px;">
+                                    <span style="font-family: var(--font-mono); font-size: 0.7rem; text-transform: uppercase; color: var(--color-text);">Ink Blend Mode</span>
+                                    <span style="font-size: 0.6rem; color: var(--color-text-muted);">Simulate transparent ink layering (G-Tec)</span>
+                                </div>
+                            </label>
+                        </div>
+                        
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <section class="panel-section actions-section">
+                    <button class="btn btn-primary btn-full" id="btn-export">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        Export SVG
+                    </button>
+                    <button class="btn btn-secondary btn-full" id="btn-batch-export" title="Export multiple SVGs with different seeds" style="margin-top: 4px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="14" height="14" rx="1"/>
+                            <rect x="7" y="7" width="14" height="14" rx="1"/>
+                            <polyline points="14 11 11 8 8 11"/>
+                            <line x1="11" y1="8" x2="11" y2="16"/>
+                        </svg>
+                        Export Batch SVG
+                    </button>
+                    <button class="btn btn-secondary btn-full" id="btn-open-projects" title="Manage Projects (Cmd+S to quick save)" style="margin-top: 4px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                            <line x1="12" y1="11" x2="12" y2="17"/>
+                            <line x1="9" y1="14" x2="15" y2="14"/>
+                        </svg>
+                        Projects
+                    </button>
+                </section>
+            </aside>
+        </main>
+    </div>
+
+    <!-- Project Manager Modal -->
+    <div class="modal-overlay" id="project-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Projects</h2>
+                <button class="modal-close" id="btn-close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Storage Info -->
+                <div class="storage-section" id="storage-info">
+                    <!-- Will be populated by JS -->
+                </div>
+                
+                <!-- Save New Project -->
+                <div class="project-save-section">
+                    <label for="project-name-input">Save Current Project</label>
+                    <div style="display: flex; gap: 4px;">
+                        <input type="text" id="project-name-input" placeholder="Project name..." style="flex: 1; padding: 4px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.75rem;">
+                        <button class="btn btn-primary" id="btn-save-new-project" title="Save with all path data">Save</button>
+                        <button class="btn btn-secondary" id="btn-save-light" title="Save settings only (smaller, paths regenerate on load)">Lite</button>
+                    </div>
+                </div>
+                
+                <!-- Project List -->
+                <div class="project-list-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin: 0;">Saved Projects</label>
+                        <button class="btn btn-danger btn-compact" id="btn-clear-all-projects" title="Delete all projects" style="font-size: 0.6rem; padding: 2px 6px;">Clear All</button>
+                    </div>
+                    <div class="project-list" id="project-list">
+                        <!-- Projects will be populated here -->
+                        <div class="project-empty">No saved projects yet</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Export Modal -->
+    <div class="modal-overlay" id="batch-export-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 360px;">
+            <div class="modal-header">
+                <h2>Export Batch SVG</h2>
+                <button class="modal-close" id="btn-close-batch-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="control-group" style="margin-bottom: 12px;">
+                    <label for="batch-count">Number of frames</label>
+                    <input type="number" id="batch-count" value="30" min="2" max="100000" step="1" style="width: 100%; padding: 4px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.75rem;">
+                </div>
+                <div class="control-group" style="margin-bottom: 12px;">
+                    <label for="batch-prefix">File name prefix</label>
+                    <input type="text" id="batch-prefix" value="flowfield" style="width: 100%; padding: 4px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.75rem;">
+                    <span style="font-size: 0.65rem; color: var(--color-text-muted); margin-top: 2px; display: block;">Files: prefix_001.svg, prefix_002.svg, ...</span>
+                </div>
+                <div id="batch-progress-container" style="display: none; margin-bottom: 8px;">
+                    <div class="batch-progress-track">
+                        <div class="batch-progress-fill" id="batch-progress-bar"></div>
+                    </div>
+                    <div id="batch-progress-text" style="font-size: 0.65rem; color: var(--color-text-muted); margin-top: 4px; font-family: var(--font-mono);"></div>
+                </div>
+                <div style="display: flex; gap: 4px; margin-top: 8px;">
+                    <button class="btn btn-primary btn-full" id="btn-start-batch-export">Export Batch</button>
+                    <button class="btn btn-secondary" id="btn-cancel-batch-export" style="display: none; padding: 4px 12px;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/perlin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/flowfield.js') }}"></script>
+    <script>
+        // Debounce function for live updates
+        let updateTimeout = null;
+        function debounceUpdate(func, delay = 300) {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(func, delay);
+        }
+
+        function saveActiveLayerSettings() {
+            if (typeof persistSettingsToActiveLayer === 'function') {
+                persistSettingsToActiveLayer();
+            }
+        }
+        
+        // Noise scale helpers (shared with flowfield.js log mapping)
+        function formatNoiseScale(scale) {
+            return scale >= 0.01 ? scale.toFixed(3) : scale.toFixed(4);
+        }
+        function updateNoiseScaleDisplay(scale) {
+            const display = document.getElementById('noise-scale-value');
+            if (display) {
+                display.textContent = formatNoiseScale(scale);
+            }
+        }
+        function syncNoiseScaleSliderFromState() {
+            const slider = document.getElementById('noise-scale');
+            if (!slider) return;
+            const sliderValue = noiseScaleToSlider(flowState.noiseScale);
+            slider.value = sliderValue.toFixed(3);
+            updateNoiseScaleDisplay(flowState.noiseScale);
+        }
+        function applyNoiseScaleFromSlider(sliderValue) {
+            const actualScale = sliderToNoiseScale(sliderValue);
+            flowState.noiseScale = actualScale;
+            flowState.savedNoiseScale = actualScale;
+            updateNoiseScaleDisplay(actualScale);
+        }
+
+        function updateFlowModeVisibility(mode) {
+            const noiseGroup = document.getElementById('noise-settings-group');
+            const attractorGroup = document.getElementById('attractor-settings-group');
+            const terrainGroup = document.getElementById('terrain-settings-group');
+            const numParticlesGroup = document.getElementById('num-particles-group');
+            const lineLengthGroup = document.getElementById('line-length-group');
+            
+            if (noiseGroup) noiseGroup.style.display = mode === 'noise' ? 'block' : 'none';
+            if (attractorGroup) attractorGroup.style.display = mode === 'attractor' ? 'block' : 'none';
+            if (terrainGroup) terrainGroup.style.display = mode === 'isometric' ? 'block' : 'none';
+            
+            // Hide num-particles and line-length when in isometric mode
+            if (numParticlesGroup) numParticlesGroup.style.display = mode === 'isometric' ? 'none' : 'block';
+            if (lineLengthGroup) lineLengthGroup.style.display = mode === 'isometric' ? 'none' : 'block';
+        }
+        
+        // Update flow field with debouncing
+        function updateFlowField() {
+            // Use smartRegenerate which handles distribution mode routing automatically
+            // For sync mode or non-sequential distributions, it regenerates all layers
+            // For sequential mode without sync, it only regenerates the active layer
+            if (typeof smartRegenerate === 'function') {
+                smartRegenerate({ activeOnly: !flowState.syncAllLayers });
+            } else if (typeof generateAllLayersWithDistribution === 'function') {
+                generateAllLayersWithDistribution();
+            } else {
+                console.warn('smartRegenerate not available');
+            }
+        }
+        
+        // Setup all event handlers when DOM is ready
+        function setupEventHandlers() {
+            // UI Event Handlers with live updates
+            // Global sync toggle
+            const syncAllLayersEl = document.getElementById('sync-all-layers');
+            if (syncAllLayersEl) {
+                syncAllLayersEl.checked = !!flowState.syncAllLayers;
+                syncAllLayersEl.addEventListener('change', (e) => {
+                    flowState.syncAllLayers = e.target.checked;
+                    if (flowState.syncAllLayers && typeof syncAllLayersFromFlowState === 'function') {
+                        syncAllLayersFromFlowState();
+                    }
+                    saveActiveLayerSettings();
+                    // Refresh immediately so all layers stay in lockstep when enabling sync
+                    updateFlowField();
+                });
+            }
+            
+            // Flow mode selector - hardcoded to 'noise' for ribbon mode
+            flowState.flowMode = 'noise';
+            updateFlowModeVisibility('noise');
+            const flowModeEl = document.getElementById('flow-mode');
+            if (flowModeEl) {
+                flowModeEl.value = 'noise';
+            }
+
+            const bindAttractorSlider = (id, key, displayId) => {
+                const slider = document.getElementById(id);
+                const display = document.getElementById(displayId);
+                if (!slider) return;
+                const current = flowState.attractorParams?.[key];
+                if (typeof current === 'number') {
+                    slider.value = current;
+                    if (display) display.textContent = current.toFixed(2);
+                }
+                slider.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.attractorParams[key] = val;
+                    if (display) display.textContent = val.toFixed(2);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            };
+
+            bindAttractorSlider('attractor-a', 'a', 'attractor-a-value');
+            bindAttractorSlider('attractor-b', 'b', 'attractor-b-value');
+            bindAttractorSlider('attractor-c', 'c', 'attractor-c-value');
+            bindAttractorSlider('attractor-d', 'd', 'attractor-d-value');
+
+            // Noise enabled toggle
+            const noiseEnabledEl = document.getElementById('noise-enabled');
+            const noiseScaleEl = document.getElementById('noise-scale');
+            if (noiseEnabledEl) {
+                noiseEnabledEl.addEventListener('change', (e) => {
+                    flowState.noiseEnabled = e.target.checked;
+                    
+                    if (e.target.checked) {
+                        // Re-enable noise: restore saved scale or use default
+                        flowState.noiseScale = clampNoiseScale(flowState.savedNoiseScale || flowState.noiseScale || NOISE_SCALE_MIN);
+                        flowState.savedNoiseScale = flowState.noiseScale;
+                        if (noiseScaleEl) {
+                            noiseScaleEl.disabled = false;
+                            noiseScaleEl.value = noiseScaleToSlider(flowState.noiseScale).toFixed(3);
+                            updateNoiseScaleDisplay(flowState.noiseScale);
+                        }
+                    } else {
+                        // Disable noise: save current scale and set to 0
+                        if (flowState.noiseScale > 0) {
+                            flowState.savedNoiseScale = flowState.noiseScale;
+                        }
+                        flowState.noiseScale = 0;
+                        if (noiseScaleEl) {
+                            noiseScaleEl.disabled = true;
+                            noiseScaleEl.value = 0;
+                            updateNoiseScaleDisplay(0);
+                        }
+                    }
+                    
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Noise scale slider
+            if (noiseScaleEl) {
+                noiseScaleEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    applyNoiseScaleFromSlider(value);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+                // Align slider with clamped noise scale on load
+                syncNoiseScaleSliderFromState();
+            }
+            
+            // Noise seed input
+            const noiseSeedEl = document.getElementById('noise-seed');
+            if (noiseSeedEl) {
+                noiseSeedEl.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    flowState.noiseSeed = value;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Randomize seed button
+            const randomizeSeedBtn = document.getElementById('btn-randomize-seed');
+            if (randomizeSeedBtn) {
+                randomizeSeedBtn.addEventListener('click', () => {
+                    const newSeed = Math.floor(Math.random() * 10000);
+                    flowState.noiseSeed = newSeed;
+                    document.getElementById('noise-seed').value = newSeed;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Noise octaves slider
+            const noiseOctavesEl = document.getElementById('noise-octaves');
+            if (noiseOctavesEl) {
+                noiseOctavesEl.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    flowState.noiseOctaves = value;
+                    document.getElementById('noise-octaves-value').textContent = value;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Noise persistence slider
+            const noisePersistenceEl = document.getElementById('noise-persistence');
+            if (noisePersistenceEl) {
+                noisePersistenceEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.noisePersistence = value;
+                    document.getElementById('noise-persistence-value').textContent = value.toFixed(2);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Angle offset slider
+            const angleOffsetEl = document.getElementById('angle-offset');
+            if (angleOffsetEl) {
+                angleOffsetEl.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    flowState.angleOffset = value;
+                    document.getElementById('angle-offset-value').textContent = value + '°';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Flow strength slider
+            const flowStrengthEl = document.getElementById('flow-strength');
+            if (flowStrengthEl) {
+                flowStrengthEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.flowStrength = value;
+                    document.getElementById('flow-strength-value').textContent = Math.round(value * 100) + '%';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Curl amount slider
+            const curlAmountEl = document.getElementById('curl-amount');
+            if (curlAmountEl) {
+                curlAmountEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.curlAmount = value;
+                    document.getElementById('curl-amount-value').textContent = Math.round(value * 100) + '%';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Magnet controls
+            const magnetStrengthEl = document.getElementById('magnet-strength');
+            const magnetRadiusEl = document.getElementById('magnet-radius');
+            const magnetRotationEl = document.getElementById('magnet-rotation');
+            const magnetToggleEl = document.getElementById('toggle-magnet-placement');
+            const clearMagnetsBtn = document.getElementById('btn-clear-magnets');
+            const magnetsEnabledEl = document.getElementById('magnets-enabled');
+            const magnetsVisibleEl = document.getElementById('magnets-visible');
+            const distortionEnabledEl = document.getElementById('distortion-enabled');
+            const distortionStrengthEl = document.getElementById('distortion-strength');
+            const distortionScaleEl = document.getElementById('distortion-scale');
+            const distortionPhaseEl = document.getElementById('distortion-phase');
+            const distortionDetailEl = document.getElementById('distortion-detail');
+            const symmetryModeEl = document.getElementById('symmetry-mode');
+            const radialSegmentsEl = document.getElementById('radial-segments');
+            const angleSnappingEl = document.getElementById('angle-snapping');
+            const snappingStrengthEl = document.getElementById('snapping-strength');
+
+            function updateRadialVisibility(mode) {
+                const group = document.getElementById('radial-segments-group');
+                if (group) group.style.display = mode === 'radial' ? 'block' : 'none';
+            }
+
+            if (magnetToggleEl) {
+                magnetToggleEl.checked = !!flowState.isPlacingMagnets;
+                magnetToggleEl.addEventListener('change', (e) => {
+                    flowState.isPlacingMagnets = e.target.checked;
+                    if (typeof updateCanvasCursor === 'function') updateCanvasCursor();
+                });
+            }
+
+            if (magnetsEnabledEl) {
+                magnetsEnabledEl.checked = flowState.magnetConfig?.enabled ?? true;
+                magnetsEnabledEl.addEventListener('change', (e) => {
+                    flowState.magnetConfig.enabled = e.target.checked;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (magnetsVisibleEl) {
+                magnetsVisibleEl.checked = flowState.magnetConfig?.visible ?? true;
+                magnetsVisibleEl.addEventListener('change', (e) => {
+                    flowState.magnetConfig.visible = e.target.checked;
+                    saveActiveLayerSettings();
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+
+            if (clearMagnetsBtn) {
+                clearMagnetsBtn.addEventListener('click', () => {
+                    flowState.magnets = [];
+                    debounceUpdate(updateFlowField);
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+
+            if (magnetStrengthEl) {
+                magnetStrengthEl.value = flowState.magnetConfig?.strength ?? 50;
+                const display = document.getElementById('magnet-strength-value');
+                if (display) display.textContent = magnetStrengthEl.value;
+                magnetStrengthEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.magnetConfig.strength = val;
+                    if (display) display.textContent = val;
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (magnetRadiusEl) {
+                magnetRadiusEl.value = flowState.magnetConfig?.radius ?? 100;
+                const display = document.getElementById('magnet-radius-value');
+                if (display) display.textContent = magnetRadiusEl.value;
+                magnetRadiusEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.magnetConfig.radius = val;
+                    if (display) display.textContent = val;
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (magnetRotationEl) {
+                magnetRotationEl.value = flowState.magnetConfig?.rotation ?? 0;
+                const display = document.getElementById('magnet-rotation-value');
+                if (display) display.textContent = `${magnetRotationEl.value}°`;
+                magnetRotationEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.magnetConfig.rotation = val;
+                    if (display) display.textContent = `${val}°`;
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Distortion controls
+            if (distortionEnabledEl) {
+                distortionEnabledEl.checked = !!flowState.distortion.enabled;
+                distortionEnabledEl.addEventListener('change', (e) => {
+                    flowState.distortion.enabled = e.target.checked;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (distortionStrengthEl) {
+                distortionStrengthEl.value = flowState.distortion?.strength ?? 0;
+                const display = document.getElementById('distortion-strength-value');
+                if (display) display.textContent = parseFloat(distortionStrengthEl.value).toFixed(1);
+                distortionStrengthEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.distortion.strength = val;
+                    if (display) display.textContent = val.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (distortionScaleEl) {
+                distortionScaleEl.value = flowState.distortion?.scale ?? 0.01;
+                const display = document.getElementById('distortion-scale-value');
+                if (display) display.textContent = parseFloat(distortionScaleEl.value).toFixed(3);
+                distortionScaleEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.distortion.scale = val;
+                    if (display) display.textContent = val.toFixed(3);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (distortionPhaseEl) {
+                distortionPhaseEl.value = flowState.distortion?.phase ?? 0;
+                const display = document.getElementById('distortion-phase-value');
+                if (display) display.textContent = parseFloat(distortionPhaseEl.value).toFixed(1);
+                distortionPhaseEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.distortion.phase = val;
+                    if (display) display.textContent = val.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (distortionDetailEl) {
+                distortionDetailEl.value = flowState.distortion?.detail ?? 2;
+                const display = document.getElementById('distortion-detail-value');
+                if (display) display.textContent = `${distortionDetailEl.value}`;
+                distortionDetailEl.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value, 10);
+                    flowState.distortion.detail = val;
+                    if (display) display.textContent = `${val}`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (symmetryModeEl) {
+                symmetryModeEl.value = flowState.geometry?.symmetry ?? 'none';
+                updateRadialVisibility(symmetryModeEl.value);
+                symmetryModeEl.addEventListener('change', (e) => {
+                    flowState.geometry.symmetry = e.target.value;
+                    updateRadialVisibility(e.target.value);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (radialSegmentsEl) {
+                radialSegmentsEl.value = flowState.geometry?.segments ?? 6;
+                const display = document.getElementById('radial-segments-value');
+                if (display) display.textContent = radialSegmentsEl.value;
+                radialSegmentsEl.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value, 10);
+                    flowState.geometry.segments = val;
+                    if (display) display.textContent = `${val}`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (angleSnappingEl) {
+                angleSnappingEl.value = flowState.geometry?.snapping ?? 0;
+                angleSnappingEl.addEventListener('change', (e) => {
+                    flowState.geometry.snapping = parseInt(e.target.value, 10);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            if (snappingStrengthEl) {
+                snappingStrengthEl.value = (flowState.geometry?.snappingStrength ?? 1) * 100;
+                const display = document.getElementById('snapping-strength-value');
+                if (display) display.textContent = `${snappingStrengthEl.value}%`;
+                snappingStrengthEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.geometry.snappingStrength = val / 100;
+                    if (display) display.textContent = `${Math.round(val)}%`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Number of particles slider
+            const numParticlesEl = document.getElementById('num-particles');
+            if (numParticlesEl) {
+                numParticlesEl.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    flowState.numParticles = value;
+                    document.getElementById('num-particles-value').textContent = value;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Starting position mode - hardcoded to 'grid' for ribbon mode
+            flowState.startPositionMode = 'grid';
+            const startPositionModeEl = document.getElementById('start-position-mode');
+            if (startPositionModeEl) {
+                startPositionModeEl.value = 'grid';
+            }
+            // Show grid settings section (already visible in Ribbon Architect)
+            const gridSettingsSection = document.getElementById('grid-settings-section');
+            if (gridSettingsSection) {
+                gridSettingsSection.style.display = 'none'; // Hide the old grid settings section since we have Ribbon Architect
+            }
+
+            // Spiral Spread
+            const spiralTightnessEl = document.getElementById('spiral-tightness');
+            if (spiralTightnessEl) {
+                spiralTightnessEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.phyllotaxisConfig.spread = val;
+                    document.getElementById('spiral-tightness-value').textContent = val.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Spiral Radius
+            const spiralMinRadiusEl = document.getElementById('spiral-min-radius');
+            if (spiralMinRadiusEl) {
+                spiralMinRadiusEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.phyllotaxisConfig.minRadius = val;
+                    document.getElementById('spiral-min-radius-value').textContent = val + ' mm';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Cloud Threshold
+            const cloudThresholdEl = document.getElementById('cloud-threshold');
+            if (cloudThresholdEl) {
+                cloudThresholdEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.cloudConfig.threshold = val;
+                    document.getElementById('cloud-threshold-value').textContent = val.toFixed(2);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Cloud Scale
+            const cloudScaleEl = document.getElementById('cloud-scale');
+            if (cloudScaleEl) {
+                cloudScaleEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    flowState.cloudConfig.scale = val;
+                    document.getElementById('cloud-scale-value').textContent = val.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Grid auto spacing toggle
+            const gridAutoSpacingEl = document.getElementById('grid-auto-spacing');
+            if (gridAutoSpacingEl) {
+                gridAutoSpacingEl.addEventListener('change', (e) => {
+                    flowState.gridConfig.spacingMode = e.target.checked ? 'auto' : 'manual';
+                    const manualGroup = document.getElementById('grid-spacing-manual-group');
+                    if (manualGroup) {
+                        manualGroup.style.display = e.target.checked ? 'none' : 'block';
+                    }
+                    updateGridSizeDisplay();
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Grid spacing slider
+            const gridSpacingEl = document.getElementById('grid-spacing');
+            if (gridSpacingEl) {
+                gridSpacingEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.gridConfig.spacing = value;
+                    document.getElementById('grid-spacing-value').textContent = `${value.toFixed(1)} mm`;
+                    updateGridSizeDisplay();
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Hex grid toggle
+            const gridHexEl = document.getElementById('grid-hex');
+            if (gridHexEl) {
+                gridHexEl.addEventListener('change', (e) => {
+                    flowState.gridConfig.hexGrid = e.target.checked;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Grid jitter slider
+            const gridJitterEl = document.getElementById('grid-jitter');
+            if (gridJitterEl) {
+                gridJitterEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.gridConfig.jitter = value;
+                    document.getElementById('grid-jitter-value').textContent = Math.round(value * 100) + '%';
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Function to update grid size display
+            function updateGridSizeDisplay() {
+                const displayEl = document.getElementById('grid-size-display');
+                if (!displayEl || flowState.startPositionMode !== 'grid') return;
+                
+                const margin = flowState.margin;
+                const drawWidth = flowState.widthMm - 2 * margin;
+                const drawHeight = flowState.heightMm - 2 * margin;
+                
+                if (drawWidth <= 0 || drawHeight <= 0) {
+                    displayEl.textContent = '-';
+                    return;
+                }
+                
+                const numPoints = flowState.numParticles;
+                let cols, rows;
+                
+                if (flowState.gridConfig.spacingMode === 'manual') {
+                    const spacing = Math.max(0.1, flowState.gridConfig.spacing);
+                    cols = Math.max(1, Math.ceil(drawWidth / spacing));
+                    rows = Math.max(1, Math.ceil(drawHeight / spacing));
+                } else {
+                    cols = Math.ceil(Math.sqrt(numPoints * (drawWidth / drawHeight)));
+                    rows = Math.ceil(numPoints / cols);
+                }
+                
+                displayEl.textContent = `${cols} × ${rows} (${cols * rows} points)`;
+            }
+            
+            // Initialize grid settings visibility on page load - hardcoded to grid mode
+            flowState.startPositionMode = 'grid';
+            flowState.gridConfig.spacingMode = 'manual';
+            // gridSettingsSection already declared and hidden above
+            // Set manual spacing group to visible (since we're using manual mode)
+            const manualGroup = document.getElementById('grid-spacing-manual-group');
+            const autoSpacingEl = document.getElementById('grid-auto-spacing');
+            if (manualGroup && autoSpacingEl) {
+                autoSpacingEl.checked = false; // Manual mode
+                manualGroup.style.display = 'block';
+            }
+            updateGridSizeDisplay();
+            
+            // Line length slider
+            const lineLengthEl = document.getElementById('line-length');
+            if (lineLengthEl) {
+                lineLengthEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.lineLength = value;
+                    document.getElementById('line-length-value').textContent = `${value} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Step size slider
+            const stepSizeEl = document.getElementById('step-size');
+            if (stepSizeEl) {
+                stepSizeEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.stepSize = value;
+                    document.getElementById('step-size-value').textContent = value.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Minimum distance slider
+            const minDistanceEl = document.getElementById('min-distance');
+            if (minDistanceEl) {
+                minDistanceEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.minDistance = value;
+                    document.getElementById('min-distance-value').textContent = `${value.toFixed(1)} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+
+            // Force overprint toggle
+            const forceOverprintEl = document.getElementById('force-overprint');
+            if (forceOverprintEl) {
+                forceOverprintEl.addEventListener('change', (e) => {
+                    const checked = e.target.checked;
+                    flowState.forceOverprint = checked;
+                    if (typeof getActiveLayer === 'function') {
+                        const activeLayer = getActiveLayer();
+                        if (activeLayer) {
+                            ensureLayerDefaults(activeLayer);
+                            activeLayer.settings.forceOverprint = checked;
+                            activeLayer.forceOverprint = checked;
+                        }
+                    }
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Distribution mode selector
+            const distributionModeEl = document.getElementById('distribution-mode');
+            if (distributionModeEl) {
+                distributionModeEl.value = flowState.distributionMode || 'sequential';
+                distributionModeEl.addEventListener('change', (e) => {
+                    flowState.distributionMode = e.target.value;
+                    // When changing distribution mode, regenerate all layers
+                    if (typeof generateAllLayersWithDistribution === 'function') {
+                        generateAllLayersWithDistribution();
+                    } else if (typeof generateAllLayers === 'function') {
+                        generateAllLayers();
+                    }
+                });
+            }
+            
+            // Gradient Distribution controls
+            const gradientEnabledEl = document.getElementById('gradient-enabled');
+            const gradientDirectionEl = document.getElementById('gradient-direction');
+            const gradientEasingEl = document.getElementById('gradient-easing');
+            const gradientControlsEl = document.getElementById('gradient-controls');
+            
+            // Initialize gradient config state
+            if (!flowState.gradientConfig) {
+                flowState.gradientConfig = {
+                    enabled: false,
+                    direction: 'vertical',
+                    easing: 'linear'
+                };
+            }
+            
+            // Update UI to match state
+            if (gradientEnabledEl) {
+                gradientEnabledEl.checked = !!flowState.gradientConfig.enabled;
+                if (gradientControlsEl) {
+                    gradientControlsEl.style.display = flowState.gradientConfig.enabled ? 'flex' : 'none';
+                }
+            }
+            if (gradientDirectionEl) {
+                gradientDirectionEl.value = flowState.gradientConfig.direction || 'vertical';
+            }
+            if (gradientEasingEl) {
+                gradientEasingEl.value = flowState.gradientConfig.easing || 'linear';
+            }
+            
+            // Enable Gradient checkbox
+            if (gradientEnabledEl) {
+                gradientEnabledEl.addEventListener('change', (e) => {
+                    flowState.gradientConfig.enabled = e.target.checked;
+                    if (gradientControlsEl) {
+                        gradientControlsEl.style.display = e.target.checked ? 'flex' : 'none';
+                    }
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Gradient Direction select
+            if (gradientDirectionEl) {
+                gradientDirectionEl.addEventListener('change', (e) => {
+                    flowState.gradientConfig.direction = e.target.value;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Gradient Easing select
+            if (gradientEasingEl) {
+                gradientEasingEl.addEventListener('change', (e) => {
+                    flowState.gradientConfig.easing = e.target.value;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Stroke width slider and manual input
+            const strokeWidthEl = document.getElementById('stroke-width');
+            const strokeWidthInput = document.getElementById('stroke-width-input');
+            
+            function updateStrokeWidthState(value) {
+                const val = parseFloat(value);
+                if (isNaN(val)) return;
+                
+                flowState.strokeWidth = val;
+                
+                // Sync both inputs without triggering infinite loops
+                if (strokeWidthEl && parseFloat(strokeWidthEl.value) !== val) {
+                    strokeWidthEl.value = val;
+                }
+                if (strokeWidthInput && parseFloat(strokeWidthInput.value) !== val) {
+                    strokeWidthInput.value = val;
+                }
+                
+                if (typeof renderCanvas === 'function') renderCanvas();
+                saveActiveLayerSettings();
+            }
+
+            if (strokeWidthEl) {
+                strokeWidthEl.addEventListener('input', (e) => updateStrokeWidthState(e.target.value));
+            }
+            
+            if (strokeWidthInput) {
+                strokeWidthInput.addEventListener('change', (e) => updateStrokeWidthState(e.target.value));
+                // Allow "Enter" key to confirm input
+                strokeWidthInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') updateStrokeWidthState(e.target.value);
+                });
+            }
+            
+            // Ink Blend Mode toggle (simulates transparent ink layering like G-Tec pens)
+            const inkBlendModeEl = document.getElementById('ink-blend-mode');
+            if (inkBlendModeEl) {
+                inkBlendModeEl.checked = !!flowState.inkBlendMode;
+                inkBlendModeEl.addEventListener('change', (e) => {
+                    flowState.inkBlendMode = e.target.checked;
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+            
+            // Margin slider (unified)
+            const marginEl = document.getElementById('margin');
+            if (marginEl) {
+                marginEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.margin = value;
+                    document.getElementById('margin-value').textContent = `${value} mm`;
+                    debounceUpdate(() => {
+                        updateFlowField();
+                        if (typeof renderCanvas === 'function') renderCanvas();
+                    });
+                    saveActiveLayerSettings();
+                });
+            }
+
+            // Paper size selector
+            const paperSizeEl = document.getElementById('paper-size');
+            if (paperSizeEl) {
+                // Initialize selected value based on current state
+                const sizeValue = `${flowState.widthMm}x${flowState.heightMm}`;
+                if (paperSizeEl.querySelector(`option[value="${sizeValue}"]`)) {
+                    paperSizeEl.value = sizeValue;
+                }
+
+                paperSizeEl.addEventListener('change', (e) => {
+                    const [wStr, hStr] = String(e.target.value || '').split('x');
+                    const nextWidth = parseFloat(wStr);
+                    const nextHeight = parseFloat(hStr);
+                    if (!isFinite(nextWidth) || !isFinite(nextHeight)) return;
+
+                    flowState.widthMm = nextWidth;
+                    flowState.heightMm = nextHeight;
+
+                    if (typeof initCanvas === 'function') {
+                        initCanvas();
+                    }
+
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Render style selector - hardcoded to 'ribbon-hatched' for ribbon mode
+            flowState.renderStyle = 'ribbon-hatched';
+            const renderStyleEl = document.getElementById('render-style');
+            if (renderStyleEl) {
+                renderStyleEl.value = 'ribbon-hatched';
+            }
+            
+            // Ribbon style selector
+            const ribbonStyleEl = document.getElementById('ribbon-style');
+            if (ribbonStyleEl) {
+                ribbonStyleEl.value = flowState.ribbonStyle || 'zigzag';
+                ribbonStyleEl.addEventListener('change', (e) => {
+                    flowState.ribbonStyle = e.target.value;
+                    // Show/hide zigzag wavelength control based on style
+                    const wavelengthGroup = document.getElementById('zigzag-wavelength-group');
+                    if (wavelengthGroup) {
+                        wavelengthGroup.style.display = e.target.value === 'zigzag' ? 'block' : 'none';
+                    }
+                    // Show/hide SVG upload zone based on style
+                    const svgUploadGroup = document.getElementById('svg-upload-group');
+                    if (svgUploadGroup) {
+                        svgUploadGroup.style.display = e.target.value === 'custom-svg' ? 'block' : 'none';
+                    }
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+                // Initialize visibility based on current style
+                const wavelengthGroup = document.getElementById('zigzag-wavelength-group');
+                if (wavelengthGroup) {
+                    wavelengthGroup.style.display = (flowState.ribbonStyle || 'zigzag') === 'zigzag' ? 'block' : 'none';
+                }
+                // Initialize SVG upload zone visibility
+                const svgUploadGroup = document.getElementById('svg-upload-group');
+                if (svgUploadGroup) {
+                    svgUploadGroup.style.display = (flowState.ribbonStyle || 'zigzag') === 'custom-svg' ? 'block' : 'none';
+                    // Update current SVG info if loaded
+                    if (flowState.customStamp && flowState.customStamp.loaded) {
+                        document.getElementById('svg-drop-zone').classList.add('has-file');
+                        document.getElementById('svg-shape-count').textContent = `${flowState.customStamp.shapes.length} shapes`;
+                    }
+                }
+            }
+            
+            // SVG Upload Drop Zone handlers
+            const svgDropZone = document.getElementById('svg-drop-zone');
+            const svgFileInput = document.getElementById('svg-file-input');
+            
+            if (svgDropZone && svgFileInput) {
+                // Click to open file browser
+                svgDropZone.addEventListener('click', () => {
+                    svgFileInput.click();
+                });
+                
+                // Handle file selection
+                svgFileInput.addEventListener('change', (e) => {
+                    if (e.target.files && e.target.files[0]) {
+                        handleSVGFile(e.target.files[0]);
+                    }
+                });
+                
+                // Drag and drop events
+                svgDropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    svgDropZone.classList.add('drag-over');
+                });
+                
+                svgDropZone.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    svgDropZone.classList.remove('drag-over');
+                });
+                
+                svgDropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    svgDropZone.classList.remove('drag-over');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files && files[0]) {
+                        if (files[0].type === 'image/svg+xml' || files[0].name.endsWith('.svg')) {
+                            handleSVGFile(files[0]);
+                        } else {
+                            showSVGError('Please drop an SVG file');
+                        }
+                    }
+                });
+            }
+            
+            // Handle SVG file upload
+            function handleSVGFile(file) {
+                const dropZone = document.getElementById('svg-drop-zone');
+                dropZone.classList.add('loading');
+                dropZone.classList.remove('error', 'success');
+                
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const svgContent = e.target.result;
+                        await parseAndLoadCustomSVG(svgContent, file.name);
+                        
+                        // Update UI
+                        dropZone.classList.remove('loading');
+                        dropZone.classList.add('has-file', 'success');
+                        document.getElementById('svg-file-name').textContent = file.name;
+                        document.getElementById('svg-shape-count').textContent = `${flowState.customStamp.shapes.length} shapes`;
+                        
+                        // Flash success then remove
+                        setTimeout(() => dropZone.classList.remove('success'), 500);
+                        
+                        // Regenerate canvas
+                        if (flowState.ribbonStyle === 'custom-svg') {
+                            updateFlowField();
+                        }
+                    } catch (err) {
+                        console.error('Failed to parse SVG:', err);
+                        showSVGError('Failed to parse SVG');
+                    }
+                };
+                reader.onerror = () => {
+                    showSVGError('Failed to read file');
+                };
+                reader.readAsText(file);
+            }
+            
+            function showSVGError(message) {
+                const dropZone = document.getElementById('svg-drop-zone');
+                dropZone.classList.remove('loading');
+                dropZone.classList.add('error');
+                setTimeout(() => dropZone.classList.remove('error'), 1500);
+                console.warn(message);
+            }
+            
+            // Zigzag wavelength slider
+            const zigzagWavelengthEl = document.getElementById('zigzag-wavelength');
+            if (zigzagWavelengthEl) {
+                zigzagWavelengthEl.value = flowState.zigzagWavelength ?? 2;
+                const display = document.getElementById('zigzag-wavelength-value');
+                if (display) display.textContent = `${parseFloat(zigzagWavelengthEl.value).toFixed(1)}x`;
+                zigzagWavelengthEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.zigzagWavelength = value;
+                    if (display) display.textContent = `${value.toFixed(1)}x`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Brush width slider
+            const brushWidthEl = document.getElementById('brush-width');
+            if (brushWidthEl) {
+                brushWidthEl.value = flowState.brushWidth ?? 5;
+                const display = document.getElementById('brush-width-value');
+                if (display) display.textContent = `${parseFloat(brushWidthEl.value).toFixed(1)} mm`;
+                brushWidthEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.brushWidth = value;
+                    if (display) display.textContent = `${value.toFixed(1)} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Fine adjustment buttons and keyboard support for sliders
+            const fineAdjustConfig = {
+                'grid-spacing': { stateKey: 'gridConfig.spacing', displayId: 'grid-spacing-value', unit: ' mm', decimals: 1, fineStep: 0.1 },
+                'brush-width': { stateKey: 'brushWidth', displayId: 'brush-width-value', unit: ' mm', decimals: 1, fineStep: 0.1 },
+                'line-length': { stateKey: 'lineLength', displayId: 'line-length-value', unit: ' mm', decimals: 1, fineStep: 0.5 }
+            };
+            
+            function getStateValue(stateKey) {
+                if (stateKey.includes('.')) {
+                    const [obj, key] = stateKey.split('.');
+                    return flowState[obj]?.[key];
+                }
+                return flowState[stateKey];
+            }
+            
+            function setStateValue(stateKey, value) {
+                if (stateKey.includes('.')) {
+                    const [obj, key] = stateKey.split('.');
+                    flowState[obj][key] = value;
+                } else {
+                    flowState[stateKey] = value;
+                }
+            }
+            
+            function applyFineAdjust(targetId, direction) {
+                const config = fineAdjustConfig[targetId];
+                if (!config) return;
+                
+                const slider = document.getElementById(targetId);
+                if (!slider) return;
+                
+                const min = parseFloat(slider.min);
+                const max = parseFloat(slider.max);
+                // Read from state, not slider (slider snaps to step)
+                const currentValue = getStateValue(config.stateKey) ?? parseFloat(slider.value);
+                const newValue = Math.min(max, Math.max(min, currentValue + direction * config.fineStep));
+                
+                // Round to avoid floating point issues
+                const roundedValue = Math.round(newValue * 1000) / 1000;
+                
+                slider.value = roundedValue;
+                
+                // Update display
+                const display = document.getElementById(config.displayId);
+                if (display) {
+                    display.textContent = config.decimals > 0 ? roundedValue.toFixed(config.decimals) + config.unit : Math.round(roundedValue) + config.unit;
+                }
+                
+                // Update state
+                setStateValue(config.stateKey, roundedValue);
+                
+                saveActiveLayerSettings();
+                if (config.renderOnly) {
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                } else {
+                    debounceUpdate(updateFlowField);
+                }
+            }
+            
+            // Arrow button clicks
+            document.querySelectorAll('.fine-adjust-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = btn.dataset.target;
+                    const direction = parseInt(btn.dataset.dir);
+                    applyFineAdjust(targetId, direction);
+                });
+            });
+            
+            // Keyboard arrow keys on sliders use fine adjustments
+            Object.keys(fineAdjustConfig).forEach(sliderId => {
+                const slider = document.getElementById(sliderId);
+                if (slider) {
+                    slider.addEventListener('keydown', (e) => {
+                        if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            applyFineAdjust(sliderId, -1);
+                        } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            applyFineAdjust(sliderId, 1);
+                        }
+                    });
+                }
+            });
+            
+            // Terrain controls
+            const terrainVerticalGapEl = document.getElementById('terrain-vertical-gap');
+            if (terrainVerticalGapEl) {
+                terrainVerticalGapEl.value = flowState.terrainVerticalGap ?? 5;
+                const display = document.getElementById('terrain-vertical-gap-value');
+                if (display) display.textContent = `${terrainVerticalGapEl.value} mm`;
+                terrainVerticalGapEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.terrainVerticalGap = value;
+                    if (display) display.textContent = `${value.toFixed(1)} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            const terrainAltitudeEl = document.getElementById('terrain-altitude');
+            if (terrainAltitudeEl) {
+                terrainAltitudeEl.value = flowState.terrainAltitude ?? 30;
+                const display = document.getElementById('terrain-altitude-value');
+                if (display) display.textContent = `${terrainAltitudeEl.value} mm`;
+                terrainAltitudeEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.terrainAltitude = value;
+                    if (display) display.textContent = `${value} mm`;
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            const terrainDetailEl = document.getElementById('terrain-detail');
+            if (terrainDetailEl) {
+                terrainDetailEl.value = flowState.terrainDetail ?? 1;
+                const display = document.getElementById('terrain-detail-value');
+                if (display) display.textContent = parseFloat(terrainDetailEl.value).toFixed(1);
+                terrainDetailEl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    flowState.terrainDetail = value;
+                    if (display) display.textContent = value.toFixed(1);
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                });
+            }
+            
+            // Export button
+            const exportBtn = document.getElementById('btn-export');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    if (typeof exportSVG === 'function') exportSVG();
+                });
+            }
+            
+            // Batch Export SVG button
+            const batchExportBtn = document.getElementById('btn-batch-export');
+            if (batchExportBtn) {
+                batchExportBtn.addEventListener('click', () => {
+                    if (typeof openBatchExportModal === 'function') openBatchExportModal();
+                });
+            }
+            
+            // Batch Export modal close
+            const closeBatchModalBtn = document.getElementById('btn-close-batch-modal');
+            if (closeBatchModalBtn) {
+                closeBatchModalBtn.addEventListener('click', () => {
+                    if (typeof closeBatchExportModal === 'function') closeBatchExportModal();
+                });
+            }
+            
+            // Start batch export
+            const startBatchExportBtn = document.getElementById('btn-start-batch-export');
+            if (startBatchExportBtn) {
+                startBatchExportBtn.addEventListener('click', () => {
+                    if (typeof startBatchExport === 'function') startBatchExport();
+                });
+            }
+            
+            // Cancel batch export
+            const cancelBatchExportBtn = document.getElementById('btn-cancel-batch-export');
+            if (cancelBatchExportBtn) {
+                cancelBatchExportBtn.addEventListener('click', () => {
+                    batchExportCancelled = true;
+                });
+            }
+            
+            // Close batch modal on overlay click
+            const batchModal = document.getElementById('batch-export-modal');
+            if (batchModal) {
+                batchModal.addEventListener('click', (e) => {
+                    if (e.target === batchModal) {
+                        if (typeof closeBatchExportModal === 'function') closeBatchExportModal();
+                    }
+                });
+            }
+            
+            // Project Manager Modal
+            const openProjectsBtn = document.getElementById('btn-open-projects');
+            if (openProjectsBtn) {
+                openProjectsBtn.addEventListener('click', () => {
+                    if (typeof openProjectModal === 'function') openProjectModal();
+                });
+            }
+            
+            // Modal close button
+            const closeModalBtn = document.getElementById('btn-close-modal');
+            if (closeModalBtn) {
+                closeModalBtn.addEventListener('click', () => {
+                    if (typeof closeProjectModal === 'function') closeProjectModal();
+                });
+            }
+            
+            // Close modal on overlay click
+            const projectModal = document.getElementById('project-modal');
+            if (projectModal) {
+                projectModal.addEventListener('click', (e) => {
+                    if (e.target === projectModal) {
+                        if (typeof closeProjectModal === 'function') closeProjectModal();
+                    }
+                });
+            }
+            
+            // Save new project button
+            const saveNewProjectBtn = document.getElementById('btn-save-new-project');
+            const saveLightBtn = document.getElementById('btn-save-light');
+            const clearAllProjectsBtn = document.getElementById('btn-clear-all-projects');
+            const projectNameInput = document.getElementById('project-name-input');
+            
+            if (saveNewProjectBtn && projectNameInput) {
+                saveNewProjectBtn.addEventListener('click', () => {
+                    const name = projectNameInput.value.trim() || 'Untitled Project';
+                    if (typeof saveProjectToStorage === 'function') {
+                        const id = saveProjectToStorage(name, null, true); // Include paths
+                        if (id) {
+                            if (typeof renderProjectList === 'function') renderProjectList();
+                            projectNameInput.value = '';
+                            if (typeof showSaveNotification === 'function') {
+                                showSaveNotification('Project saved!');
+                            }
+                        }
+                    }
+                });
+                
+                // Enter key to save
+                projectNameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        saveNewProjectBtn.click();
+                    }
+                });
+            }
+            
+            // Save light (without paths) button
+            if (saveLightBtn && projectNameInput) {
+                saveLightBtn.addEventListener('click', () => {
+                    const name = projectNameInput.value.trim() || 'Untitled Project';
+                    if (typeof saveProjectToStorage === 'function') {
+                        const id = saveProjectToStorage(name, null, false); // No paths
+                        if (id) {
+                            if (typeof renderProjectList === 'function') renderProjectList();
+                            projectNameInput.value = '';
+                            if (typeof showSaveNotification === 'function') {
+                                showSaveNotification('Project saved (lite)!');
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Clear all projects button
+            if (clearAllProjectsBtn) {
+                clearAllProjectsBtn.addEventListener('click', () => {
+                    if (typeof clearAllProjects === 'function') {
+                        clearAllProjects();
+                    }
+                });
+            }
+            
+            // Project list click handlers (delegation)
+            const projectList = document.getElementById('project-list');
+            if (projectList) {
+                projectList.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.project-item-btn');
+                    const item = e.target.closest('.project-item');
+                    
+                    if (btn && item) {
+                        const projectId = item.dataset.projectId;
+                        const action = btn.dataset.action;
+                        
+                        if (action === 'load' && typeof loadProjectById === 'function') {
+                            loadProjectById(projectId);
+                        } else if (action === 'delete' && typeof deleteProject === 'function') {
+                            if (confirm('Delete this project?')) {
+                                deleteProject(projectId);
+                                if (typeof renderProjectList === 'function') renderProjectList();
+                            }
+                        }
+                    } else if (item && !btn) {
+                        // Click on item itself loads the project
+                        const projectId = item.dataset.projectId;
+                        if (projectId && typeof loadProjectById === 'function') {
+                            loadProjectById(projectId);
+                        }
+                    }
+                });
+            }
+            
+            // Canvas toolbar buttons
+            const fitBtn = document.getElementById('btn-fit');
+            if (fitBtn) {
+                fitBtn.addEventListener('click', () => {
+                    if (typeof fitToView === 'function') fitToView();
+                });
+            }
+            
+            const zoomInBtn = document.getElementById('btn-zoom-in');
+            if (zoomInBtn) {
+                zoomInBtn.addEventListener('click', () => {
+                    flowState.zoom *= 1.2;
+                    flowState.zoom = Math.min(10, flowState.zoom);
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+            
+            const zoomOutBtn = document.getElementById('btn-zoom-out');
+            if (zoomOutBtn) {
+                zoomOutBtn.addEventListener('click', () => {
+                    flowState.zoom *= 0.8;
+                    flowState.zoom = Math.max(0.1, flowState.zoom);
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+            
+            const toggleEditBtn = document.getElementById('btn-toggle-edit');
+            if (toggleEditBtn) {
+                toggleEditBtn.addEventListener('click', () => {
+                    flowState.isEditingObstacles = !flowState.isEditingObstacles;
+                    flowState.draggedObstacle = null; // Reset dragged obstacle when toggling
+                    
+                    // Deselect obstacle when exiting edit mode
+                    if (!flowState.isEditingObstacles) {
+                        flowState.selectedObstacle = null;
+                        updateDeleteButtonVisibility();
+                    }
+                    
+                    // Update button style to show active state
+                    if (flowState.isEditingObstacles) {
+                        toggleEditBtn.classList.add('active');
+                    } else {
+                        toggleEditBtn.classList.remove('active');
+                    }
+                    
+                    // Update cursor and render
+                    if (typeof updateCanvasCursor === 'function') updateCanvasCursor();
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+            }
+            
+            const toggleVisibilityBtn = document.getElementById('btn-toggle-obstacles-visibility');
+            if (toggleVisibilityBtn) {
+                toggleVisibilityBtn.addEventListener('click', () => {
+                    flowState.obstaclesVisible = !flowState.obstaclesVisible;
+                    
+                    // Update button style to show active state (visible = active)
+                    if (flowState.obstaclesVisible) {
+                        toggleVisibilityBtn.classList.add('active');
+                    } else {
+                        toggleVisibilityBtn.classList.remove('active');
+                    }
+                    
+                    // Re-render canvas to show/hide obstacles
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                });
+                
+                // Initialize button state based on current visibility
+                if (flowState.obstaclesVisible) {
+                    toggleVisibilityBtn.classList.add('active');
+                }
+            }
+            
+            const deleteObstacleBtn = document.getElementById('btn-delete-obstacle');
+            if (deleteObstacleBtn) {
+                deleteObstacleBtn.addEventListener('click', () => {
+                    if (flowState.selectedObstacle) {
+                        // Find and remove the selected obstacle
+                        const index = flowState.obstacles.indexOf(flowState.selectedObstacle);
+                        if (index > -1) {
+                            flowState.obstacles.splice(index, 1);
+                            flowState.selectedObstacle = null;
+                            updateDeleteButtonVisibility();
+                            
+                            // Regenerate flow field and render
+                            if (typeof debounceUpdate === 'function' && typeof updateFlowField === 'function') {
+                                debounceUpdate(updateFlowField);
+                            }
+                            if (typeof renderCanvas === 'function') renderCanvas();
+                        }
+                    }
+                });
+            }
+            
+            // Function to update delete button visibility (called from flowfield.js)
+            window.updateDeleteButtonVisibility = function() {
+                const deleteBtn = document.getElementById('btn-delete-obstacle');
+                if (deleteBtn) {
+                    if (flowState.selectedObstacle) {
+                        deleteBtn.style.display = 'block';
+                    } else {
+                        deleteBtn.style.display = 'none';
+                    }
+                }
+            };
+            
+            const addObstacleBtn = document.getElementById('btn-add-obstacle');
+            if (addObstacleBtn) {
+                addObstacleBtn.addEventListener('click', () => {
+                    const margin = flowState.margin || 20;
+                    const x = margin + Math.random() * (flowState.widthMm - 2 * margin);
+                    const y = margin + Math.random() * (flowState.heightMm - 2 * margin);
+                    const radius = 20 + Math.random() * 40; // 20-60mm range
+                    
+                    if (!flowState.obstacles) {
+                        flowState.obstacles = [];
+                    }
+                    flowState.obstacles.push({ x, y, radius });
+                    
+                    // Regenerate flow field to apply obstacle immediately
+                    if (typeof renderCanvas === 'function') renderCanvas();
+                    if (typeof debounceUpdate === 'function' && typeof updateFlowField === 'function') {
+                        debounceUpdate(updateFlowField);
+                    }
+                });
+            }
+            
+            // === Layer Panel Event Handlers ===
+            
+            // Add Layer button
+            const addLayerBtn = document.getElementById('btn-add-layer');
+            if (addLayerBtn) {
+                addLayerBtn.addEventListener('click', () => {
+                    if (typeof addNewLayer === 'function') {
+                        addNewLayer();
+                    }
+                });
+            }
+            
+            // Sort Layers by Luminance
+            const sortDarkToBrightBtn = document.getElementById('btn-sort-dark-to-bright');
+            if (sortDarkToBrightBtn) {
+                sortDarkToBrightBtn.addEventListener('click', () => {
+                    if (typeof sortLayersByLuminance === 'function') {
+                        sortLayersByLuminance(true); // ascending: dark to bright
+                    }
+                });
+            }
+            
+            const sortBrightToDarkBtn = document.getElementById('btn-sort-bright-to-dark');
+            if (sortBrightToDarkBtn) {
+                sortBrightToDarkBtn.addEventListener('click', () => {
+                    if (typeof sortLayersByLuminance === 'function') {
+                        sortLayersByLuminance(false); // descending: bright to dark
+                    }
+                });
+            }
+            
+            // Batch Add Layers
+            const addBatchBtn = document.getElementById('btn-add-batch-layers');
+            const batchCountInput = document.getElementById('batch-layer-count');
+            if (addBatchBtn && batchCountInput) {
+                addBatchBtn.addEventListener('click', () => {
+                    if (typeof addNewLayer !== 'function') return;
+                    const count = Math.max(1, parseInt(batchCountInput.value, 10) || 8);
+                    const batchColors = [
+                        '#00008B', // Dark Blue
+                        '#00BFFF', // Light Blue
+                        '#FF0000', // Red
+                        '#FFA500', // Orange
+                        '#FFD700', // Yellow
+                        '#008000', // Green
+                        '#FF69B4', // Pink
+                        '#8B00FF'  // Purple
+                    ];
+                    for (let i = 0; i < count; i++) {
+                        const color = batchColors[i % batchColors.length];
+                        addNewLayer(color);
+                    }
+                });
+            }
+            
+            // Regenerate Active Layer button
+            const regenerateLayerBtn = document.getElementById('btn-regenerate-layer');
+            if (regenerateLayerBtn) {
+                regenerateLayerBtn.addEventListener('click', () => {
+                    if (typeof regenerateActiveLayer === 'function') {
+                        regenerateActiveLayer();
+                    }
+                });
+            }
+
+            // Regenerate All button
+            const regenerateAllBtn = document.getElementById('btn-regenerate-all');
+            if (regenerateAllBtn) {
+                regenerateAllBtn.addEventListener('click', () => {
+                    // Use smartRegenerate which respects gradient mode and distribution mode
+                    if (typeof smartRegenerate === 'function') {
+                        smartRegenerate();
+                    } else if (typeof generateAllLayersWithDistribution === 'function') {
+                        generateAllLayersWithDistribution();
+                    } else if (typeof generateAllLayers === 'function') {
+                        generateAllLayers();
+                    }
+                });
+            }
+            
+            // Initialize layer list display
+            if (typeof renderLayerList === 'function') {
+                renderLayerList();
+            }
+            
+            // Initialize statistics display
+            if (typeof updateStatistics === 'function') {
+                updateStatistics();
+            }
+        }
+        
+        // Section collapse/expand
+        function toggleSection(sectionId) {
+            const section = document.querySelector(`[data-section="${sectionId}"]`);
+            if (section) {
+                section.classList.toggle('collapsed');
+            }
+        }
+
+        // Simple resizable handle for the floating layers toolbar
+        function setupLayersToolbarResize() {
+            const toolbar = document.getElementById('layers-toolbar');
+            const handle = document.getElementById('layers-resize-handle');
+            if (!toolbar || !handle) return;
+
+            let isDragging = false;
+
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                const minWidth = 220;
+                const maxWidth = 420;
+                const newWidth = Math.min(maxWidth, Math.max(minWidth, e.clientX - toolbar.getBoundingClientRect().left));
+                document.documentElement.style.setProperty('--layers-toolbar-width', `${newWidth}px`);
+            }
+
+            function onMouseUp() {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            handle.addEventListener('mousedown', () => {
+                isDragging = true;
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        }
+
+        // Make toggleSection available globally
+        window.toggleSection = toggleSection;
+        
+        // Generate initial flow field on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup all event handlers
+            setupEventHandlers();
+            setupLayersToolbarResize();
+            
+            // Ensure canvas is initialized first
+            if (typeof initCanvas === 'function') {
+                initCanvas();
+            }
+            if (typeof setupCanvasEvents === 'function') {
+                setupCanvasEvents();
+            }
+            // Initialize layers system
+            if (typeof initLayers === 'function') {
+                initLayers();
+            }
+            // Generate flow field after a short delay to ensure everything is ready
+            // Use smartRegenerate to respect the current distribution mode from the start
+            setTimeout(() => {
+                if (typeof smartRegenerate === 'function') {
+                    smartRegenerate();
+                } else if (typeof generateFlowField === 'function') {
+                    generateFlowField();
+                }
+            }, 100);
+            
+            // Keyboard shortcut: Cmd+S / Ctrl+S to save project
+            document.addEventListener('keydown', (e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                    e.preventDefault();
+                    if (typeof saveProject === 'function') {
+                        saveProject();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

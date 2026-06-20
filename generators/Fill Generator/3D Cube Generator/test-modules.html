@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Module Test</title>
+</head>
+<body>
+  <h1>Module Loading Test</h1>
+  <div id="status">Testing...</div>
+  <svg id="svg" width="400" height="400" style="border: 1px solid black;"></svg>
+  
+  <!-- Minimal UI elements needed for the modules -->
+  <input type="number" id="canvasWidth" value="210" />
+  <input type="number" id="canvasHeight" value="297" />
+  <input type="range" id="cubeSize" value="50" min="20" max="200" />
+  <input type="number" id="cubeSizeInput" value="50" />
+  <select id="viewMode"><option value="isometric">Isometric</option></select>
+  <select id="canvasPreset"><option>A4</option></select>
+  <div id="canvasPresetLabel"></div>
+  <div id="canvasWidthValue"></div>
+  <div id="canvasHeightValue"></div>
+  <div id="marginValue"></div>
+  <div id="strokeWidthValue"></div>
+  <div id="viewModeLabel"></div>
+  <div id="perspectiveStrengthValue"></div>
+  <div id="singleColorValue"></div>
+  <div id="cubeSizeValue"></div>
+  <div id="lightAngleValue"></div>
+  <div id="lightElevationValue"></div>
+  <div id="lightBrightnessValue"></div>
+  <div id="ambientLightValue"></div>
+  <div id="hatchSpacingValue"></div>
+  <div id="minSpacingValue"></div>
+  <div id="hatchAngleValue"></div>
+  <input type="color" id="singleColor" value="#000000" />
+  <input type="color" id="faceTopColor" value="#000000" />
+  <input type="color" id="faceFrontColor" value="#000000" />
+  <input type="color" id="faceBackColor" value="#000000" />
+  <input type="color" id="faceLeftColor" value="#000000" />
+  <input type="color" id="faceRightColor" value="#000000" />
+  <input type="color" id="faceBottomColor" value="#000000" />
+  <div id="faceTopColorValue"></div>
+  <div id="faceFrontColorValue"></div>
+  <div id="faceBackColorValue"></div>
+  <div id="faceLeftColorValue"></div>
+  <div id="faceRightColorValue"></div>
+  <div id="faceBottomColorValue"></div>
+  <input type="range" id="margin" value="10" />
+  <input type="range" id="strokeWidth" value="0.5" />
+  <input type="range" id="lightAngle" value="45" />
+  <input type="range" id="lightElevation" value="30" />
+  <input type="range" id="lightBrightness" value="1" />
+  <input type="range" id="ambientLight" value="0.3" />
+  <input type="range" id="hatchSpacing" value="3" />
+  <input type="range" id="minSpacing" value="1" />
+  <input type="range" id="hatchAngle" value="45" />
+  <input type="range" id="perspectiveStrength" value="0.5" />
+  <div id="perspectiveControls" style="display:none;"></div>
+  
+  <script type="module">
+    console.log('Test script loading...');
+    
+    try {
+      // Test importing draw function
+      const { draw } = await import('./src/rendering/renderer.js');
+      console.log('✓ renderer.js loaded, draw function:', typeof draw);
+      
+      // Test draw with orbit = 0
+      console.log('Attempting to draw...');
+      draw(0);
+      console.log('✓ Draw succeeded!');
+      
+      document.getElementById('status').textContent = '✓ All modules loaded successfully!';
+      document.getElementById('status').style.color = 'green';
+    } catch (error) {
+      console.error('✗ Error:', error);
+      console.error('Stack:', error.stack);
+      document.getElementById('status').textContent = '✗ Error: ' + error.message;
+      document.getElementById('status').style.color = 'red';
+    }
+  </script>
+</body>
+</html>
+
+
+

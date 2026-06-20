@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOME Generator - Plotter-Ready Generative Art</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #fafafa;
+      --panel: #ffffff;
+      --border: #ececec;
+      --border-strong: #e0e0e0;
+      --text: #1a1a1a;
+      --text-muted: #888;
+      --text-soft: #555;
+      --accent: #1a1a1a;
+      --accent-soft: #f0f0f0;
+      --radius: 6px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.4;
+      font-size: 13px;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    header {
+      background: transparent;
+      padding: 4px 4px 12px;
+      margin-bottom: 12px;
+      box-shadow: none;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 280px;
+      gap: 12px;
+      position: relative;
+      width: 100%;
+      align-items: flex-start;
+      transition: grid-template-columns 0.3s ease;
+    }
+
+    body:has(.gallery-sidebar.collapsed) .main-content {
+      grid-template-columns: 280px minmax(0, 1fr) 0;
+    }
+
+    body:has(.gallery-sidebar.collapsed) .gallery-sidebar {
+      position: fixed;
+      right: 18px;
+      top: 70px;
+      width: 44px;
+      max-width: 44px;
+      transform: none;
+    }
+
+    .controls {
+      background: var(--panel);
+      padding: 14px 14px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: none;
+      height: fit-content;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+    }
+
+    .controls::-webkit-scrollbar { width: 6px; }
+    .controls::-webkit-scrollbar-track { background: transparent; }
+    .controls::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+    .controls::-webkit-scrollbar-thumb:hover { background: #bbb; }
+
+    .preview-panel {
+      background: var(--panel);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: none;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: calc(100vh - 100px);
+      min-width: 0;
+    }
+
+    .preview-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel);
+    }
+
+    .preview-title {
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+    }
+
+    .stats-badges {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .stat-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      background: var(--accent-soft);
+      border-radius: 12px;
+      border: none;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .preview {
+      background: var(--panel);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+      flex: 1 1 0;
+    }
+
+    .svg-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+    }
+
+    .preview svg {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      border: 1px solid var(--border-strong);
+      display: block;
+    }
+
+    .control-group {
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .control-group:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .control-group > h3 {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .form-field {
+      margin-bottom: 8px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 400;
+      margin-bottom: 3px;
+      color: var(--text-soft);
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      padding: 5px 7px;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: inherit;
+      background: var(--panel);
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+
+    select:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .slider-field {
+      margin-bottom: 7px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 2px;
+    }
+
+    .slider-label label {
+      margin-bottom: 0;
+      font-size: 11.5px;
+    }
+
+    .slider-value {
+      font-weight: 500;
+      color: var(--text);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      background: var(--accent-soft);
+      padding: 1px 6px;
+      border-radius: 3px;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 3px;
+      border-radius: 2px;
+      background: #e8e8e8;
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+    }
+
+    .checkbox-field {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+      padding: 2px 0;
+    }
+
+    .checkbox-field input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      margin-right: 7px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    .checkbox-field label {
+      margin: 0;
+      cursor: pointer;
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    button {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #000;
+    }
+
+    .btn-secondary {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border-strong);
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent-soft);
+      border-color: #ccc;
+    }
+
+    .btn-tertiary {
+      background: var(--panel);
+      color: var(--text-soft);
+      border: 1px solid var(--border-strong);
+    }
+
+    .btn-tertiary:hover {
+      background: var(--accent-soft);
+    }
+
+    .seed-input-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .seed-input-group input {
+      flex: 1;
+    }
+
+    .seed-input-group button {
+      flex: 0 0 auto;
+      padding: 5px 10px;
+      font-size: 11px;
+    }
+
+    #custom-size-group {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    .category-section {
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      margin-bottom: 0;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+
+    .category-section:last-of-type {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .category-header {
+      cursor: pointer;
+      padding: 4px 0 8px;
+      margin: 0;
+      background: transparent;
+      border-radius: 0;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px !important;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+
+    .category-header:hover {
+      background: transparent;
+      color: var(--text);
+    }
+
+    .collapse-icon {
+      font-size: 8px;
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+
+    .category-header.collapsed .collapse-icon {
+      transform: rotate(-90deg);
+    }
+
+    .category-content {
+      padding: 4px 0 0;
+      max-height: 1200px;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+
+    .category-content.collapsed {
+      max-height: 0;
+      padding: 0;
+    }
+
+    /* Toggle Switch Styling */
+    .toggle-switch-container {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      padding: 2px 0;
+    }
+
+    .toggle-label {
+      font-size: 11.5px;
+      font-weight: 400;
+      color: var(--text-muted);
+      transition: color 0.3s;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ddd;
+      transition: 0.25s;
+      border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.25s;
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: var(--accent);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(16px);
+    }
+
+    .toggle-switch input:focus + .toggle-slider {
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.08);
+    }
+
+    /* Update label colors based on toggle state */
+    .toggle-switch-container:has(input:not(:checked)) .toggle-label:first-child {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .toggle-switch-container:has(input:checked) .toggle-label:last-child {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* Gallery Sidebar Styles */
+    .gallery-sidebar {
+      width: 100%;
+      max-width: 280px;
+      height: calc(100vh - 100px);
+      background: var(--panel);
+      box-shadow: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s ease;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .gallery-sidebar.collapsed {
+      transform: translateX(calc(100% - 44px));
+    }
+
+    .gallery-sidebar.collapsed .gallery-content,
+    .gallery-sidebar.collapsed .gallery-header-content {
+      display: none;
+    }
+
+    .gallery-sidebar.collapsed .gallery-header {
+      padding: 4px;
+      border-bottom: none;
+      background: transparent;
+      justify-content: center;
+      align-items: center;
+      min-height: 40px;
+    }
+
+    .gallery-header {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      min-height: 40px;
+    }
+
+    .gallery-header-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .gallery-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .gallery-toggle-btn {
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      padding: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      color: #666;
+    }
+
+    .gallery-toggle-btn:hover {
+      background: var(--accent-soft);
+      color: var(--text);
+    }
+
+    /* The above .gallery-sidebar.collapsed .gallery-header and .gallery-sidebar.collapsed .gallery-toggle-btn rules are replaced above. */
+
+    .gallery-sidebar.collapsed .gallery-toggle-btn {
+      margin: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      box-shadow: none;
+      background: white;
+    }
+
+    .gallery-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      min-height: 0;
+    }
+
+    .gallery-thumbnails {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .gallery-thumbnail-wrapper {
+      position: relative;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+      background: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .gallery-thumbnail-wrapper:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .gallery-thumbnail-wrapper:hover .gallery-thumbnail-actions {
+      opacity: 1;
+    }
+
+    .gallery-thumbnail {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      cursor: pointer;
+      background: #f8f9fa;
+    }
+
+    .gallery-thumbnail svg {
+      max-width: 100%;
+      max-height: 80%;
+      border: 1px solid #ddd;
+      background: white;
+    }
+
+    .gallery-thumbnail-label {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .gallery-thumbnail-actions {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 4px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    .gallery-action-btn {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      background: #f0f0f0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: background 0.2s;
+      padding: 0;
+    }
+
+    .gallery-action-btn:hover {
+      background: #e0e0e0;
+    }
+
+    .gallery-action-btn.preview-btn:hover {
+      background: #0066cc;
+      color: white;
+    }
+
+    .gallery-action-btn.download-btn:hover {
+      background: #28a745;
+      color: white;
+    }
+
+    .gallery-action-btn.delete-btn:hover {
+      background: #dc3545;
+      color: white;
+    }
+
+    .gallery-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+      font-size: 13px;
+      line-height: 1.6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Download All button in gallery header */
+    #batch-download-saved-btn {
+      width: 100%;
+      font-size: 12px;
+      padding: 8px 12px;
+      margin: 0;
+      font-weight: 600;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    #batch-download-saved-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #batch-download-saved-btn:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        max-height: none;
+      }
+
+      header {
+        margin-right: 0;
+        padding-right: 20px;
+      }
+
+      .gallery-sidebar {
+        max-width: 100%;
+        height: auto;
+      }
+
+      .gallery-sidebar.collapsed {
+        width: 56px;
+        min-width: 56px;
+      }
+
+      .container {
+        padding-right: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>HOME Generator</h1>
+      <p class="subtitle">Plotter-ready generative art system for archetypal houses</p>
+    </header>
+
+    <div class="main-content">
+      <div class="controls">
+        <!-- Canvas Configuration -->
+        <div class="control-group">
+          <h3>Canvas</h3>
+          
+          <div class="form-field">
+            <label for="canvas-preset">Paper Size</label>
+            <select id="canvas-preset">
+              <option value="A2">A2 (420 × 594 mm)</option>
+              <option value="A3" selected>A3 (297 × 420 mm)</option>
+              <option value="A4">A4 (210 × 297 mm)</option>
+              <option value="A5">A5 (148 × 210 mm)</option>
+              <option value="CUSTOM">Custom</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>Orientation</label>
+            <div class="toggle-switch-container">
+              <span class="toggle-label">Portrait</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="orientation-toggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label">Landscape</span>
+            </div>
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-label">
+              <label for="margin">Margin (mm)</label>
+              <span class="slider-value" id="margin-value">15</span>
+            </div>
+            <input type="range" id="margin" min="5" max="50" step="1" value="15">
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-label">
+              <label for="stroke-width">Stroke Width (mm)</label>
+              <span class="slider-value" id="stroke-width-value">0.4</span>
+            </div>
+            <input type="range" id="stroke-width" min="0.1" max="4.0" step="0.1" value="0.4">
+          </div>
+
+          <div id="custom-size-group" style="display: none;">
+            <div class="form-field">
+              <label for="custom-width">Width (mm)</label>
+              <input type="number" id="custom-width" value="210" min="50" max="1000">
+            </div>
+            <div class="form-field">
+              <label for="custom-height">Height (mm)</label>
+              <input type="number" id="custom-height" value="297" min="50" max="1000">
+            </div>
+          </div>
+        </div>
+
+        <!-- Style Configuration -->
+        <div class="control-group">
+          <h3>Style</h3>
+          
+          <div class="slider-field">
+            <div class="slider-label">
+              <label for="corner-radius">Corner Radius (mm)</label>
+              <span class="slider-value" id="corner-radius-value">3.00</span>
+            </div>
+            <input type="range" id="corner-radius" min="0" max="10" step="0.5" value="3">
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-label">
+              <label for="fill-pattern-randomness">Fill Pattern (Clean ← → Messy)</label>
+              <span class="slider-value" id="fill-pattern-randomness-value">0.05</span>
+            </div>
+            <input type="range" id="fill-pattern-randomness" min="0" max="1" step="0.01" value="0.05">
+          </div>
+        </div>
+
+        <!-- HOUSE SETTINGS CATEGORY -->
+        <div class="control-group category-section">
+          <h3 class="category-header" data-category="house-settings">
+            <span class="collapse-icon">▼</span> House Settings
+          </h3>
+          <div class="category-content" id="house-settings-category">
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="house-width">House Width</label>
+                <span class="slider-value" id="house-width-value">0.45</span>
+              </div>
+              <input type="range" id="house-width" min="0.2" max="0.7" step="0.01" value="0.45">
+            </div>
+
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="house-height">House Height</label>
+                <span class="slider-value" id="house-height-value">0.35</span>
+              </div>
+              <input type="range" id="house-height" min="0.2" max="0.6" step="0.01" value="0.35">
+            </div>
+
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="roof-height">Roof Height</label>
+                <span class="slider-value" id="roof-height-value">0.40</span>
+              </div>
+              <input type="range" id="roof-height" min="0.2" max="0.7" step="0.01" value="0.40">
+            </div>
+
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="window-count">Window Count</label>
+                <span class="slider-value" id="window-count-value">3</span>
+              </div>
+              <input type="range" id="window-count" min="0" max="4" step="1" value="3">
+            </div>
+
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="brick-density">Wall Texture Density</label>
+                <span class="slider-value" id="brick-density-value">1.00</span>
+              </div>
+              <input type="range" id="brick-density" min="0" max="2" step="0.1" value="1.0">
+            </div>
+            
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="tile-density">Roof Tile Density</label>
+                <span class="slider-value" id="tile-density-value">1.00</span>
+              </div>
+              <input type="range" id="tile-density" min="0" max="2" step="0.1" value="1.0">
+            </div>
+          </div>
+        </div>
+
+        <!-- SKY CATEGORY -->
+        <div class="control-group category-section">
+          <h3 class="category-header" data-category="sky">
+            <span class="collapse-icon">▼</span> Sky Elements
+          </h3>
+          <div class="category-content" id="sky-category">
+            <!-- Visibility toggles -->
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-sky" checked>
+              <label for="show-sky">Sky Fill Lines</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-sun" checked>
+              <label for="show-sun">Sun/Moon</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-clouds" checked>
+              <label for="show-clouds">Clouds</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-birds" checked>
+              <label for="show-birds">Birds</label>
+            </div>
+            
+            <!-- Category controls -->
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="sky-density">Sky Density</label>
+                <span class="slider-value" id="sky-density-value">0.85</span>
+              </div>
+              <input type="range" id="sky-density" min="0" max="1" step="0.05" value="0.85">
+            </div>
+            
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="sky-size">Sky Element Size</label>
+                <span class="slider-value" id="sky-size-value">1.00</span>
+              </div>
+              <input type="range" id="sky-size" min="0.5" max="2.0" step="0.1" value="1.0">
+            </div>
+            
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="sky-jitter">Sky Jitter</label>
+                <span class="slider-value" id="sky-jitter-value">2.50</span>
+              </div>
+              <input type="range" id="sky-jitter" min="0" max="3" step="0.1" value="2.5">
+            </div>
+
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="sky-fill-density">Sky Fill Density</label>
+                <span class="slider-value" id="sky-fill-density-value">1.20</span>
+              </div>
+              <input type="range" id="sky-fill-density" min="0" max="2" step="0.1" value="1.2">
+            </div>
+
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="sky-height">Sky Height</label>
+                <span class="slider-value" id="sky-height-value">0.35</span>
+              </div>
+              <input type="range" id="sky-height" min="0.10" max="0.60" step="0.01" value="0.35">
+            </div>
+          </div>
+        </div>
+
+        <!-- GROUND CATEGORY -->
+        <div class="control-group category-section">
+          <h3 class="category-header" data-category="ground">
+            <span class="collapse-icon">▼</span> Ground Elements
+          </h3>
+          <div class="category-content" id="ground-category">
+            <!-- Visibility toggles -->
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-ground" checked>
+              <label for="show-ground">Ground Line & Fill</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-path" checked>
+              <label for="show-path">Path to Door</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-tree" checked>
+              <label for="show-tree">Trees</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-bushes" checked>
+              <label for="show-bushes">Bushes</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-flowers" checked>
+              <label for="show-flowers">Flowers</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-rocks" checked>
+              <label for="show-rocks">Rocks</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-dog" checked>
+              <label for="show-dog">Dog</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-human" checked>
+              <label for="show-human">Human</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-fence" checked>
+              <label for="show-fence">Fence</label>
+            </div>
+            
+            <!-- Category controls -->
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="ground-density">Ground Density</label>
+                <span class="slider-value" id="ground-density-value">0.85</span>
+              </div>
+              <input type="range" id="ground-density" min="0" max="1" step="0.05" value="0.85">
+            </div>
+            
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="ground-size">Ground Element Size</label>
+                <span class="slider-value" id="ground-size-value">1.00</span>
+              </div>
+              <input type="range" id="ground-size" min="0.5" max="2.0" step="0.05" value="1.0">
+            </div>
+            
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="ground-jitter">Ground Jitter</label>
+                <span class="slider-value" id="ground-jitter-value">2.50</span>
+              </div>
+              <input type="range" id="ground-jitter" min="0" max="3" step="0.1" value="2.5">
+            </div>
+
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="ground-fill-density">Ground Fill Density</label>
+                <span class="slider-value" id="ground-fill-density-value">1.40</span>
+              </div>
+              <input type="range" id="ground-fill-density" min="0" max="2" step="0.1" value="1.4">
+            </div>
+          </div>
+        </div>
+
+        <!-- HOUSE CATEGORY -->
+        <div class="control-group category-section">
+          <h3 class="category-header" data-category="house">
+            <span class="collapse-icon">▼</span> House Elements
+          </h3>
+          <div class="category-content" id="house-category">
+            <!-- Visibility toggles -->
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-bricks" checked>
+              <label for="show-bricks">Wall Siding/Bricks</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-tiles" checked>
+              <label for="show-tiles">Roof Tiles</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-windows" checked>
+              <label for="show-windows">Windows</label>
+            </div>
+            <div class="checkbox-field">
+              <input type="checkbox" id="show-door-details" checked>
+              <label for="show-door-details">Door Details</label>
+            </div>
+            
+            <!-- Category controls -->
+            <div class="slider-field">
+              <div class="slider-label">
+                <label for="house-jitter">House Jitter</label>
+                <span class="slider-value" id="house-jitter-value">2.50</span>
+              </div>
+              <input type="range" id="house-jitter" min="0" max="3" step="0.1" value="2.5">
+            </div>
+          </div>
+        </div>
+
+        <!-- Random Seed -->
+        <div class="control-group">
+          <h3>Random Seed</h3>
+          <div class="seed-input-group">
+            <input type="number" id="random-seed" value="12345">
+            <button id="random-seed-btn" class="btn-tertiary">Random</button>
+          </div>
+          <div style="margin-top: 8px;">
+            <button id="save-btn" class="btn-secondary" style="width: 100%;">Save</button>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="button-group">
+          <button id="generate-btn" class="btn-primary">Generate</button>
+          <button id="download-btn" class="btn-secondary">Download SVG</button>
+          <button id="batch-generate-btn" class="btn-tertiary">Batch Generate (30)</button>
+        </div>
+      </div>
+
+      <div class="preview-panel">
+        <div class="preview-header">
+          <span class="preview-title">Preview</span>
+          <div class="stats-badges">
+            <div class="stat-badge">
+              <span class="stat-label">Paper</span>
+              <span class="stat-value" id="paper-size">A4</span>
+            </div>
+            <div class="stat-badge">
+              <span class="stat-label">Lines</span>
+              <span class="stat-value" id="line-count">0</span>
+            </div>
+            <div class="stat-badge">
+              <span class="stat-label">Length</span>
+              <span class="stat-value" id="total-length">0m</span>
+            </div>
+          </div>
+        </div>
+        <div class="preview" id="preview-container">
+          <div class="svg-wrapper">
+            <!-- House will render here automatically on load -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Gallery Sidebar -->
+      <div id="gallery-sidebar" class="gallery-sidebar">
+        <div class="gallery-header">
+          <div class="gallery-header-content">
+            <h3 class="gallery-title">Saved Gallery (<span id="gallery-count">0</span>)</h3>
+            <button id="batch-download-saved-btn" class="btn-secondary" disabled>Download All (0)</button>
+          </div>
+          <button id="gallery-toggle" class="gallery-toggle-btn">
+            <span class="collapse-icon">▶</span>
+          </button>
+        </div>
+        <div class="gallery-content">
+          <div id="gallery-thumbnails" class="gallery-thumbnails">
+            <!-- Thumbnails will be rendered here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/index.ts"></script>
+</body>
+</html>
+

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>3D Isometric Generator</title>
+<link rel="stylesheet" href="3d-generator.css">
+</head>
+
+<body>
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">3D</div>
+      <h1>Isometric Generator</h1>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- =======================
+         SIDEBAR CONTROLS
+    ======================= -->
+    <aside id="controls">
+
+  <!-- =======================
+       CANVAS SETTINGS
+  ======================= -->
+  <div class="section collapsible-section" data-default-open>
+    <div class="section-header collapsible-header" data-section="canvas">
+      <span>Canvas</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="canvas-body">
+
+      <div class="control-group">
+        <label>Preset
+          <span id="canvasPresetLabel">A3</span>
+        </label>
+        <select id="canvasPreset">
+          <option value="A2">A2 (594 × 420 mm)</option>
+          <option value="A3" selected>A3 (420 × 297 mm)</option>
+          <option value="A4">A4 (297 × 210 mm)</option>
+          <option value="A5">A5 (210 × 148 mm)</option>
+          <option value="A6">A6 (148 × 105 mm)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <label>Width
+            <span id="canvasWidthValue">420</span>
+          </label>
+          <input type="number" id="canvasWidth" min="20" max="1000" value="420">
+        </div>
+        <div class="control-group">
+          <label>Height
+            <span id="canvasHeightValue">297</span>
+          </label>
+          <input type="number" id="canvasHeight" min="20" max="1000" value="297">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="row-label">
+          <span>Orientation</span>
+          <span id="orientationLabel" class="muted">Portrait</span>
+        </label>
+        <div class="orientation-toggle-wrapper">
+          <span class="orientation-label-left">Landscape</span>
+          <label class="orientation-toggle">
+            <input type="checkbox" id="toggleOrientation">
+            <span class="orientation-slider"></span>
+          </label>
+          <span class="orientation-label-right">Portrait</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Margin (mm)
+          <span id="marginValue">10</span>
+        </label>
+        <input type="range" id="margin" min="0" max="60" step="1" value="10">
+      </div>
+
+      <div class="control-group">
+        <label>Stroke (mm)
+          <span id="strokeWidthValue">0.4</span>
+        </label>
+        <input type="range" id="strokeWidth" min="0.1" max="4" step="0.1" value="0.4">
+      </div>
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="lineJitterEnabled"> Line Jitter
+        </label>
+      </div>
+
+      <div class="control-group jitter-control" style="display: none;">
+        <label>Intensity
+          <span id="lineJitterValue">50</span>
+        </label>
+        <input type="range" id="lineJitter" min="0" max="100" step="1" value="50">
+      </div>
+
+      <div class="control-group jitter-control" style="display: none;">
+        <label>Wave Frequency
+          <span id="jitterFrequencyValue">50</span>
+        </label>
+        <input type="range" id="jitterFrequency" min="0" max="100" step="1" value="50">
+      </div>
+
+      <div class="control-group jitter-control" style="display: none;">
+        <label>Randomness
+          <span id="jitterRandomnessValue">50</span>
+        </label>
+        <input type="range" id="jitterRandomness" min="0" max="100" step="1" value="50">
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       3D OBJECT SETTINGS
+  ======================= -->
+  <div class="section collapsible-section" data-default-open>
+    <div class="section-header collapsible-header" data-section="object">
+      <span>Object</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="object-body">
+
+      <div class="control-group">
+        <label>Cube Size (mm)
+          <span id="cubeSizeValue">50</span>
+        </label>
+        <div class="size-row">
+          <input type="range" id="cubeSize" min="20" max="200" step="0.5" value="120">
+          <input type="number" id="cubeSizeInput" min="20" max="200" step="0.5" value="120">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="hint-label">Drag the preview to orbit the view</label>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       PROJECTION MODE
+  ======================= -->
+  <div class="section collapsible-section" data-default-open>
+    <div class="section-header collapsible-header" data-section="projection">
+      <span>Projection</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="projection-body">
+
+      <div class="control-group">
+        <label>View Mode
+          <span id="viewModeLabel">Isometric</span>
+        </label>
+        <select id="viewMode">
+          <option value="isometric">Isometric</option>
+          <option value="perspective">Perspective</option>
+        </select>
+      </div>
+
+      <div id="perspectiveControls" style="display: none;">
+        <div class="control-group">
+          <label>Strength
+            <span id="perspectiveStrengthValue">2</span>
+          </label>
+          <input type="range" id="perspectiveStrength" min="0" max="4" step="0.5" value="2">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       LAYERS (FACES)
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="layers">
+      <span>Layers</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="layers-body">
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="useFaceColors" checked> Different color per face
+        </label>
+      </div>
+      <div class="control-group" id="singleColorGroup" style="display: none;">
+        <label>Color
+          <span id="singleColorValue">#000000</span>
+        </label>
+        <input type="color" id="singleColor" value="#000000">
+      </div>
+      <div class="face-color-grid">
+        <div class="control-group">
+          <label>Top<span id="faceTopColorValue">#FF6B6B</span></label>
+          <input type="color" id="faceTopColor" value="#FF6B6B">
+        </div>
+        <div class="control-group">
+          <label>Front<span id="faceFrontColorValue">#4ECDC4</span></label>
+          <input type="color" id="faceFrontColor" value="#4ECDC4">
+        </div>
+        <div class="control-group">
+          <label>Back<span id="faceBackColorValue">#45B7D1</span></label>
+          <input type="color" id="faceBackColor" value="#45B7D1">
+        </div>
+        <div class="control-group">
+          <label>Left<span id="faceLeftColorValue">#96CEB4</span></label>
+          <input type="color" id="faceLeftColor" value="#96CEB4">
+        </div>
+        <div class="control-group">
+          <label>Right<span id="faceRightColorValue">#FFEAA7</span></label>
+          <input type="color" id="faceRightColor" value="#FFEAA7">
+        </div>
+        <div class="control-group">
+          <label>Bottom<span id="faceBottomColorValue">#DDA15E</span></label>
+          <input type="color" id="faceBottomColor" value="#DDA15E">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================
+       LIGHTING SETTINGS
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="lighting">
+      <span>Lighting</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="lighting-body">
+
+      <div class="control-group">
+        <label>Angle (°)
+          <span id="lightAngleValue">110</span>
+        </label>
+        <input type="range" id="lightAngle" min="0" max="360" step="1" value="110">
+      </div>
+
+      <div class="control-group">
+        <label>Elevation (°)
+          <span id="lightElevationValue">64</span>
+        </label>
+        <input type="range" id="lightElevation" min="0" max="90" step="1" value="64">
+      </div>
+
+      <div class="control-group">
+        <label>Brightness
+          <span id="lightBrightnessValue">1.0</span>
+        </label>
+        <input type="range" id="lightBrightness" min="0" max="2" step="0.1" value="1.0">
+      </div>
+
+      <div class="control-group">
+        <label>Ambient
+          <span id="ambientLightValue">0.15</span>
+        </label>
+        <input type="range" id="ambientLight" min="0" max="1" step="0.05" value="0.15">
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       SHADING SETTINGS
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="shading">
+      <span>Shading</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="shading-body">
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="advancedShading" checked> Advanced shading
+        </label>
+      </div>
+
+      <div class="control-group" id="shadowFalloffGroup" style="display: none;">
+        <label>Shadow Falloff
+          <span id="shadowFalloffValue">6.2</span>
+        </label>
+        <input type="range" id="shadowFalloff" min="0.1" max="10" step="0.1" value="6.2">
+      </div>
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="crossHatch" checked> Cross-hatch
+        </label>
+      </div>
+
+      <div class="control-group" id="crossHatchDensityGroup" style="display: none;">
+        <label>Cross-hatch density
+          <span id="crossHatchDensityValue">100</span>
+        </label>
+        <input type="range" id="crossHatchDensity" min="0" max="100" step="5" value="100">
+      </div>
+
+      <div class="control-group">
+        <label>Hatch spacing (mm)
+          <span id="hatchSpacingValue">2.0</span>
+        </label>
+        <input type="range" id="hatchSpacing" min="0.5" max="10" step="0.1" value="2.0">
+      </div>
+
+      <div class="control-group">
+        <label>Min spacing (mm)
+          <span id="minSpacingValue">0.5</span>
+        </label>
+        <input type="range" id="minSpacing" min="0.1" max="5" step="0.1" value="0.5">
+      </div>
+
+      <div class="control-group">
+        <label>Hatch angle (°)
+          <span id="hatchAngleValue">45</span>
+        </label>
+        <input type="range" id="hatchAngle" min="0" max="180" step="1" value="45">
+      </div>
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="showShadow" checked> Floor shadow
+        </label>
+      </div>
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="shadowSoftEdges"> Soft shadow edges
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       DISPLAY OPTIONS
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="display">
+      <span>Display</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="display-body">
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="showEdges"> Show edges
+        </label>
+      </div>
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="showGrid"> Show 3D grid
+        </label>
+      </div>
+
+      <div class="control-group">
+        <label class="inline-check">
+          <input type="checkbox" id="debugOcclusion"> Debug occlusion polygons
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       ANIMATION / TIME-LAPSE
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="animation">
+      <span>Animation</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="animation-body">
+
+      <div class="control-row">
+        <div class="control-group">
+          <label>Start (°)
+            <span id="animStartAngleValue">0</span>
+          </label>
+          <input type="number" id="animStartAngle" min="0" max="360" step="1" value="0">
+        </div>
+        <div class="control-group">
+          <label>End (°)
+            <span id="animEndAngleValue">360</span>
+          </label>
+          <input type="number" id="animEndAngle" min="0" max="360" step="1" value="360">
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <label>Frames
+            <span id="animFrameCountValue">120</span>
+          </label>
+          <input type="number" id="animFrameCount" min="12" max="360" step="1" value="120">
+        </div>
+        <div class="control-group">
+          <label>FPS
+            <span id="animFpsValue">30</span>
+          </label>
+          <select id="animFps">
+            <option value="12">12</option>
+            <option value="24">24</option>
+            <option value="30" selected>30</option>
+            <option value="60">60</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="control-group duration-row">
+        <label>Duration
+          <span id="animDurationValue">4.0s</span>
+        </label>
+      </div>
+
+      <div class="control-group">
+        <button id="playPreview" class="play-preview-btn">
+          <span class="play-icon">▶</span>
+          Play Preview
+        </button>
+      </div>
+
+      <div class="control-group">
+        <button id="generateVideo" class="generate-video-btn">
+          Generate Video
+        </button>
+      </div>
+
+      <div class="control-group">
+        <button id="exportSvgBatch" class="generate-video-btn">
+          Export Frames as SVGs
+        </button>
+        <div id="svgBatchStatus" class="batch-status"></div>
+      </div>
+
+      <div id="animationProgress" style="display: none;">
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-status" id="progressStatus">Initializing...</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================
+       ADVANCED DEBUG SETTINGS
+  ======================= -->
+  <div class="section collapsible-section">
+    <div class="section-header collapsible-header" data-section="advanced-debug">
+      <span>Advanced Debug</span>
+      <span class="collapse-icon">▼</span>
+    </div>
+    <div class="section-body" id="advanced-debug-body">
+
+      <div class="control-group">
+        <label>Shadow occlusion expansion (%)
+          <span id="shadowExpansionValue">0.2</span>
+        </label>
+        <input type="range" id="shadowExpansion" min="0.05" max="5.0" step="0.05" value="0.2">
+      </div>
+
+      <div class="control-group">
+        <label>Shadow line inset (mm)
+          <span id="shadowInsetValue">0.05</span>
+        </label>
+        <input type="range" id="shadowInset" min="0.0" max="0.5" step="0.01" value="0.05">
+      </div>
+
+      <div class="control-group">
+        <label>Quick test angles</label>
+        <div class="test-angle-grid">
+          <button class="test-angle-btn" data-angle="0">0°</button>
+          <button class="test-angle-btn" data-angle="45">45°</button>
+          <button class="test-angle-btn" data-angle="90">90°</button>
+          <button class="test-angle-btn" data-angle="135">135°</button>
+          <button class="test-angle-btn" data-angle="180">180°</button>
+          <button class="test-angle-btn" data-angle="225">225°</button>
+          <button class="test-angle-btn" data-angle="270">270°</button>
+          <button class="test-angle-btn" data-angle="315">315°</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+      <!-- =======================
+           DOWNLOAD & INFO
+      ======================= -->
+      <button id="download">Download SVG</button>
+
+    </aside>
+
+    <!-- =======================
+         SVG PREVIEW
+    ======================= -->
+    <section id="preview">
+      <div class="preview-header">
+        <span class="preview-title">Preview</span>
+        <div class="preview-meta">
+          <div class="line-count-badge">
+            <span class="line-count-label">Lines</span>
+            <span class="line-count-value" id="lineCount">0</span>
+          </div>
+          <div class="line-count-badge">
+            <span class="line-count-label">Est. Time</span>
+            <span class="line-count-value" id="plotTime">0:00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas Tools -->
+      <div class="canvas-tools">
+        <div class="tool-selector">
+          <button class="tool-button active" id="rotateTool" data-tool="rotate" title="Rotate Tool (R)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            <span>Rotate</span>
+          </button>
+          <button class="tool-button" id="moveTool" data-tool="move" title="Move Tool (V)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+            </svg>
+            <span>Move</span>
+          </button>
+        </div>
+        <span class="tool-hint" id="toolHint">Drag to rotate the cube around its axis</span>
+      </div>
+
+      <div class="preview-content">
+        <svg id="svg" viewBox="0 0 420 297" preserveAspectRatio="xMidYMid meet" style="cursor: grab; width: 100%; height: 100%;"></svg>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<!-- Video Export Progress Modal -->
+<div id="videoExportModal" class="video-export-modal hidden">
+  <div class="video-export-modal-content">
+    <div class="video-export-modal-header">
+      <h2>Generating Video</h2>
+      <button id="cancelVideoExport" class="cancel-video-btn" title="Cancel">✕</button>
+    </div>
+    <div class="video-export-modal-body">
+      <div class="video-export-progress-container">
+        <div class="video-export-progress-bar">
+          <div class="video-export-progress-fill" id="videoExportProgressFill"></div>
+        </div>
+        <div class="video-export-progress-percent" id="videoExportProgressPercent">0%</div>
+      </div>
+      <div class="video-export-status" id="videoExportStatus">Initializing...</div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="3d-generator.js?v=4"></script>
+</body>
+</html>
