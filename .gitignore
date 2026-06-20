@@ -18,3 +18,7 @@ studio1-tracker/cache/
 
 # ── Claude Code local state (worktrees, machine-local settings) ──
 .claude/
+
+# ── Standalone apps (each backed up in its own GitHub repo) ──
+/studio-os/Studio-OS/
+/plotter-slicer/plotter-ui/
