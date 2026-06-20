@@ -1,4 +1,5 @@
 import type { Axis, Box, Vec3 } from '../types'
+import { mulMatVec } from './mat'
 
 const OTHERS: Record<Axis, [Axis, Axis]> = {
   x: ['y', 'z'],
@@ -7,6 +8,15 @@ const OTHERS: Record<Axis, [Axis, Axis]> = {
 }
 const AXES: Axis[] = ['x', 'y', 'z']
 const IDX: Record<Axis, 0 | 1 | 2> = { x: 0, y: 1, z: 2 }
+
+/** local offset (about the box centre) → world point, applying any rotation */
+function l2w(box: Box, ox: number, oy: number, oz: number): Vec3 {
+  if (box.rot) {
+    const r = mulMatVec(box.rot, [ox, oy, oz])
+    return [box.center[0] + r[0], box.center[1] + r[1], box.center[2] + r[2]]
+  }
+  return [box.center[0] + ox, box.center[1] + oy, box.center[2] + oz]
+}
 
 export interface Face {
   axis: Axis // outward normal axis
@@ -20,11 +30,7 @@ export interface Face {
 }
 
 function corner(box: Box, sx: number, sy: number, sz: number): Vec3 {
-  return [
-    box.center[0] + sx * box.half[0],
-    box.center[1] + sy * box.half[1],
-    box.center[2] + sz * box.half[2],
-  ]
+  return l2w(box, sx * box.half[0], sy * box.half[1], sz * box.half[2])
 }
 
 export function boxCorners(box: Box): Vec3[] {
@@ -44,10 +50,11 @@ export function boxFaces(box: Box): Face[] {
         const t = { ...s }
         t[u] = su
         t[v] = sv
-        return [box.center[0] + t.x * box.half[0], box.center[1] + t.y * box.half[1], box.center[2] + t.z * box.half[2]]
+        return l2w(box, t.x * box.half[0], t.y * box.half[1], t.z * box.half[2])
       }
-      const normal: Vec3 = [0, 0, 0]
-      normal[IDX[axis]] = sign
+      const localNormal: Vec3 = [0, 0, 0]
+      localNormal[IDX[axis]] = sign
+      const normal: Vec3 = box.rot ? mulMatVec(box.rot, localNormal) : localNormal
       faces.push({
         axis,
         sign,

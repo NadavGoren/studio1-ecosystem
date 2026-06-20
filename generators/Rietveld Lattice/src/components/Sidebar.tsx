@@ -1,6 +1,6 @@
 import { useStore } from '../store'
 import { Section, SelectRow, Slider, Toggle } from './Controls'
-import type { ColourStrategy, Orientation, PaperSize } from '../types'
+import type { ColourStrategy, Orientation, PaperSize, StructureMode } from '../types'
 
 export default function Sidebar() {
   const p = useStore((s) => s.params)
@@ -20,7 +20,24 @@ export default function Sidebar() {
       </Section>
 
       <Section title="Composition">
-        <Slider label="Signature ↔ free lattice" value={p.dominance} min={0} max={1} step={0.01} onChange={(v) => set('dominance', v)} format={(v) => (v < 0.5 ? `free ${Math.round((1 - v) * 100)}%` : `signature ${Math.round(v * 100)}%`)} />
+        <SelectRow<StructureMode>
+          label="Structure"
+          value={p.structure}
+          onChange={(v) => set('structure', v)}
+          options={[
+            { value: 'lattice', label: 'Lattice' },
+            { value: 'chair', label: 'Chair' },
+            { value: 'architecture', label: 'Architecture' },
+          ]}
+        />
+        <p className="text-[10px] leading-relaxed text-neutral-500">
+          <b>Lattice</b> — open orthogonal thicket round the seat+back. <b>Chair</b> — Red-and-Blue chair: leg frame,
+          rails, reclined planes. <b>Architecture</b> — Schröder-house intersecting cantilevered planes.
+        </p>
+        <Slider label="Board tilt / recline" value={p.boardTilt} min={0} max={1} step={0.01} onChange={(v) => set('boardTilt', v)} format={(v) => (v < 0.02 ? 'flat' : `${Math.round(v * 100)}%`)} />
+        <Slider label="Verticality" value={p.verticality} min={0} max={1} step={0.01} onChange={(v) => set('verticality', v)} format={(v) => (v < 0.4 ? 'horizontal' : v > 0.6 ? 'upright' : 'balanced')} />
+        <Slider label="Asymmetry" value={p.asymmetry} min={0} max={1} step={0.01} onChange={(v) => set('asymmetry', v)} format={(v) => (v < 0.02 ? 'centred' : `${Math.round(v * 100)}%`)} />
+        <Slider label="Signature ↔ free" value={p.dominance} min={0} max={1} step={0.01} onChange={(v) => set('dominance', v)} format={(v) => (v < 0.5 ? `free ${Math.round((1 - v) * 100)}%` : `signature ${Math.round(v * 100)}%`)} />
         <Slider label="Board thickness" value={p.boardThickness} min={0.05} max={0.8} step={0.01} onChange={(v) => set('boardThickness', v)} format={(v) => v.toFixed(2)} />
         <Slider label="Extra colour boards" value={p.extraBoards} min={0} max={8} onChange={(v) => set('extraBoards', v)} />
       </Section>

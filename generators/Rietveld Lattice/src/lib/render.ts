@@ -155,10 +155,13 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
     bbox: BBox,
     boxId: number,
     covers: (sf: SolidFace) => boolean,
+    includeSameBox = false,
   ): SolidFace[] => {
     const cand: SolidFace[] = []
     for (const sf of solids) {
-      if (sf.boxId === boxId) continue // a box never hides its own lines
+      // a box may hide its OWN back edges (its front faces are genuinely nearer,
+      // and local-depth keeps coplanar front edges since g≈0); needed for edges
+      if (!includeSameBox && sf.boxId === boxId) continue
       if (sf.depthMax <= nearLimit + depthEps) continue // never nearer than the target
       if (!bboxOverlap(sf.bbox, bbox)) continue
       if (!covers(sf)) continue // drop bbox-only overlaps that don't actually cover
@@ -201,6 +204,7 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
       polyBBox([ed.a, ed.b]),
       ed.boxId,
       (sf) => segInsideConvex(ed.a, ed.b, sf.poly) !== null,
+      true, // let a box hide its own back edges
     )
     if (occ.length === 0) edgeSegs.push([ed.a, ed.b])
     else for (const k of clipByDepth(ed.a, ed.b, ed.da, ed.db, occ, hiddenLayers, depthEps)) edgeSegs.push(k)

@@ -8,6 +8,8 @@ export type PenColor = 'black' | 'red' | 'blue' | 'yellow'
 export type Vec3 = [number, number, number]
 export type Vec2 = [number, number]
 export type Segment = [Vec2, Vec2]
+/** row-major 3x3 rotation matrix */
+export type Mat3 = [number, number, number, number, number, number, number, number, number]
 
 /**
  * An axis-aligned rectangular prism. A `beam` is long on its `runAxis`; a
@@ -25,6 +27,8 @@ export interface Box {
   half: Vec3
   /** base ink for the element (beams = black structure, boards = red/blue) */
   color: PenColor
+  /** optional orientation about the centre (tilted boards); absent = axis-aligned */
+  rot?: Mat3
 }
 
 export interface BeamModel {
@@ -37,6 +41,8 @@ export interface BeamModel {
 export type ColourStrategy = 'alternating' | 'weighted' | 'positional'
 export type PaperSize = 'A2' | 'A3' | 'A4'
 export type Orientation = 'portrait' | 'landscape'
+/** composition archetype, each derived from a Rietveld work */
+export type StructureMode = 'lattice' | 'chair' | 'architecture'
 
 export interface Params {
   seed: number
@@ -53,6 +59,12 @@ export interface Params {
   boardThickness: number
   extraBoards: number
   dominance: number // 0 = free lattice rules, 1 = signature boards rule
+
+  // composition
+  structure: StructureMode
+  boardTilt: number // 0 = flat/upright boards, 1 = strongly reclined (Red-Blue chair)
+  verticality: number // 0 = mostly horizontal beams, 1 = mostly vertical uprights
+  asymmetry: number // 0 = centred, 1 = strongly off-balance (De Stijl asymmetry)
 
   // colour
   colourStrategy: ColourStrategy

@@ -17,6 +17,12 @@ export const DEFAULT_PARAMS: Params = {
   extraBoards: 3,
   dominance: 0.5,
 
+  // composition
+  structure: 'lattice',
+  boardTilt: 0.2,
+  verticality: 0.5,
+  asymmetry: 0.15,
+
   // colour
   colourStrategy: 'alternating',
   redShare: 0.5,
@@ -62,6 +68,6 @@ export const useStore = create<State>((set) => ({
   patch: (partial) => set((s) => ({ params: { ...s.params, ...partial } })),
   randomizeSeed: () => set((s) => ({ params: { ...s.params, seed: Math.floor(Math.random() * 1_000_000) } })),
   setSeed: (seed) => set((s) => ({ params: { ...s.params, seed: seed | 0 } })),
-  loadParams: (params) => set({ params: { ...params } }),
+  loadParams: (params) => set({ params: { ...DEFAULT_PARAMS, ...params } }),
   reset: () => set({ params: { ...DEFAULT_PARAMS } }),
 }))

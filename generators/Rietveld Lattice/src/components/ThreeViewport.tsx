@@ -1,14 +1,22 @@
 import { useEffect, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Edges, OrbitControls } from '@react-three/drei'
-import type { BeamModel, Box } from '../types'
+import { Euler, Matrix4 } from 'three'
+import type { BeamModel, Box, Mat3 } from '../types'
 import { PEN_HEX } from '../lib/palette'
+
+function eulerOf(rot?: Mat3): [number, number, number] | undefined {
+  if (!rot) return undefined
+  const m = new Matrix4().set(rot[0], rot[1], rot[2], 0, rot[3], rot[4], rot[5], 0, rot[6], rot[7], rot[8], 0, 0, 0, 0, 1)
+  const e = new Euler().setFromRotationMatrix(m)
+  return [e.x, e.y, e.z]
+}
 
 function BoxMesh({ box }: { box: Box }) {
   const color = box.kind === 'board' ? PEN_HEX[box.color] : '#3a3a3a'
   const size: [number, number, number] = [box.half[0] * 2, box.half[1] * 2, box.half[2] * 2]
   return (
-    <mesh position={box.center}>
+    <mesh position={box.center} rotation={eulerOf(box.rot)}>
       <boxGeometry args={size} />
       <meshStandardMaterial
         color={color}

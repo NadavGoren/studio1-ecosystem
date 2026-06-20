@@ -28,7 +28,7 @@ export default function Favorites({ refreshKey }: { refreshKey: number }) {
         <div key={f.id} className="relative w-16 shrink-0">
           <Thumbnail params={f.params} onClick={() => loadParams(f.params)} />
           <button
-            onClick={() => deleteFavorite(f.seed).then(refresh)}
+            onClick={() => deleteFavorite(f.id).then(refresh)}
             title="Remove"
             className="absolute -right-1.5 -top-1.5 rounded-full bg-black/75 p-1 text-neutral-300 hover:text-destijl-red"
           >
