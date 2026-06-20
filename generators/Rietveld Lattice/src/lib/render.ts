@@ -9,6 +9,7 @@ const PAPER: Record<string, [number, number]> = {
   A2: [420, 594],
   A3: [297, 420],
   A4: [210, 297],
+  A5: [148, 210],
 }
 
 export function pageSize(p: Params): { w: number; h: number } {
@@ -148,7 +149,6 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
   // in 2D. The exact front/back decision is made per-point later by clipByDepth;
   // here we only build a bounded candidate set. nearLimit = the target's farthest
   // depth — a face can occlude only if it reaches at least that near somewhere.
-  const K = 40
   const depthEps = dRange * 1.5e-3 + 1e-6
   const gatherOccluders = (
     nearLimit: number,
@@ -156,6 +156,7 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
     boxId: number,
     covers: (sf: SolidFace) => boolean,
     includeSameBox = false,
+    maxK = 40,
   ): SolidFace[] => {
     const cand: SolidFace[] = []
     for (const sf of solids) {
@@ -167,12 +168,14 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
       if (!covers(sf)) continue // drop bbox-only overlaps that don't actually cover
       cand.push(sf)
     }
-    if (cand.length > K) {
+    if (cand.length > maxK) {
       cand.sort((a, b) => b.depthMax - a.depthMax)
-      cand.length = K
+      cand.length = maxK
     }
     return cand
   }
+  const MIN_SEG = 0.25 // mm — drop occlusion-clip fragments too small to plot cleanly
+  const segLen = (s: Segment) => Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1])
 
   // ── edges with hidden-line removal (front objects hide back objects) ──────
   // Dedupe coincident projected edges keeping the NEAREST one, so an edge that
@@ -207,7 +210,7 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
       true, // let a box hide its own back edges
     )
     if (occ.length === 0) edgeSegs.push([ed.a, ed.b])
-    else for (const k of clipByDepth(ed.a, ed.b, ed.da, ed.db, occ, hiddenLayers, depthEps)) edgeSegs.push(k)
+    else for (const k of clipByDepth(ed.a, ed.b, ed.da, ed.db, occ, hiddenLayers, depthEps)) if (segLen(k) >= MIN_SEG) edgeSegs.push(k)
   }
   const edgeCount = edgeSegs.length // before any black fills are appended
 
@@ -228,8 +231,10 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
       if (p.crossHatch) segs = segs.concat(hatchPolygon(ff.poly, angle + Math.PI / 2, spacing))
       if (segs.length === 0) continue
 
+      // boards are few faces but heavily crossed → use a larger occluder cap so
+      // dense scenes never leak hatch through a dropped occluder
       const occ = isFinite(fillLayers)
-        ? gatherOccluders(ff.depthMin, ff.bbox, ff.boxId, (sf) => convexOverlap(sf.poly, ff.poly))
+        ? gatherOccluders(ff.depthMin, ff.bbox, ff.boxId, (sf) => convexOverlap(sf.poly, ff.poly), false, 96)
         : []
       const dest = layerMap[ff.color]
       if (occ.length === 0) {
@@ -239,7 +244,7 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
           // the hatch lies on this face's plane → its endpoint depths come from it
           const d0 = ff.dA * pq0[0] + ff.dB * pq0[1] + ff.dC
           const d1 = ff.dA * pq1[0] + ff.dB * pq1[1] + ff.dC
-          for (const k of clipByDepth(pq0, pq1, d0, d1, occ, fillLayers, depthEps)) dest.push(k)
+          for (const k of clipByDepth(pq0, pq1, d0, d1, occ, fillLayers, depthEps)) if (segLen(k) >= MIN_SEG) dest.push(k)
         }
       }
     }

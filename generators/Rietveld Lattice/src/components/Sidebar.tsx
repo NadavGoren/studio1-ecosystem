@@ -126,17 +126,25 @@ export default function Sidebar() {
                 { value: 'A2', label: 'A2 (max)' },
                 { value: 'A3', label: 'A3 (default)' },
                 { value: 'A4', label: 'A4' },
+                { value: 'A5', label: 'A5' },
               ]}
             />
-            <SelectRow<Orientation>
-              label="Orientation"
-              value={p.orientation}
-              onChange={(v) => set('orientation', v)}
-              options={[
-                { value: 'portrait', label: 'Portrait' },
-                { value: 'landscape', label: 'Landscape' },
-              ]}
-            />
+            <div>
+              <div className="mb-1.5 text-xs text-neutral-300">Orientation</div>
+              <div className="flex rounded border border-edge p-0.5">
+                {(['portrait', 'landscape'] as Orientation[]).map((o) => (
+                  <button
+                    key={o}
+                    onClick={() => set('orientation', o)}
+                    className={`flex-1 rounded px-2 py-1 text-[11px] capitalize transition ${
+                      p.orientation === o ? 'bg-panel2 text-destijl-yellow' : 'text-neutral-400 hover:text-neutral-200'
+                    }`}
+                  >
+                    {o}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Slider label="Margin" value={p.margin} min={0} max={40} onChange={(v) => set('margin', v)} format={(v) => `${v} mm`} />
             <Slider label="Stroke width" value={p.strokeWidth} min={0.1} max={1} step={0.05} onChange={(v) => set('strokeWidth', v)} format={(v) => `${v.toFixed(2)} mm`} />
             <p className="pt-1 text-[10px] leading-relaxed text-neutral-500">

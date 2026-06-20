@@ -39,7 +39,7 @@ export interface BeamModel {
 // ── Parameters ──────────────────────────────────────────────────────────────
 
 export type ColourStrategy = 'alternating' | 'weighted' | 'positional'
-export type PaperSize = 'A2' | 'A3' | 'A4'
+export type PaperSize = 'A2' | 'A3' | 'A4' | 'A5'
 export type Orientation = 'portrait' | 'landscape'
 /** composition archetype, each derived from a Rietveld work */
 export type StructureMode = 'lattice' | 'chair' | 'architecture'
