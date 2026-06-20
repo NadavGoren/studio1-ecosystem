@@ -27,14 +27,14 @@ export const DEFAULT_PARAMS: Params = {
   colourStrategy: 'alternating',
   redShare: 0.5,
   yellowCaps: true,
-  hatchBeams: false,
+  hatchBeams: true,
 
   // projection
   azimuth: 35,
   elevation: 28,
 
   // hatch
-  hatchSpacing: 1.4,
+  hatchSpacing: 0.5,
   angleX: 20,
   angleY: 80,
   angleZ: 140,
