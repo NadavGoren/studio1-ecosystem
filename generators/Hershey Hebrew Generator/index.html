@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מחולל גופן קו-יחיד · עברית — Studio 1</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside id="controls">
+    <header>
+      <h1>גופן קו-יחיד</h1>
+      <p class="sub">Miriam Libre → Hershey · עברית</p>
+    </header>
+
+    <fieldset>
+      <legend>טקסט</legend>
+      <textarea id="text" rows="3" spellcheck="false" dir="rtl">סטודיו 1
+שלום עולם
+2026</textarea>
+      <p id="missing" class="hint"></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>גופן</legend>
+      <label class="seg-label">סגנון</label>
+      <div class="seg" id="variant">
+        <button data-val="faithful" class="on">נאמן למקור</button>
+        <button data-val="clean">נקי (קו יחיד)</button>
+      </div>
+
+      <label>גודל גופן <output id="o-size">14</output> מ"מ</label>
+      <input type="range" id="fontSize" min="4" max="70" step="1" value="14">
+
+      <label>מרווח אותיות <output id="o-letter">0</output> מ"מ</label>
+      <input type="range" id="letterSpacing" min="-3" max="12" step="0.5" value="0">
+
+      <label>מרווח שורות <output id="o-line">1.5</output></label>
+      <input type="range" id="lineSpacing" min="0.8" max="3" step="0.1" value="1.5">
+
+      <label class="seg-label">יישור</label>
+      <div class="seg" id="align">
+        <button data-val="right" class="on">ימין</button>
+        <button data-val="center">מרכז</button>
+        <button data-val="left">שמאל</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>דף הפלוטר</legend>
+      <label class="seg-label">גודל</label>
+      <div class="seg" id="size">
+        <button data-val="A3" class="on">A3</button>
+        <button data-val="A2">A2</button>
+      </div>
+      <label class="seg-label">כיוון</label>
+      <div class="seg" id="orientation">
+        <button data-val="portrait" class="on">לאורך</button>
+        <button data-val="landscape">לרוחב</button>
+      </div>
+
+      <label>שוליים <output id="o-margin">15</output> מ"מ</label>
+      <input type="range" id="margin" min="0" max="40" step="1" value="15">
+
+      <label>עובי קו <output id="o-stroke">0.4</output> מ"מ</label>
+      <input type="range" id="strokeWidth" min="0.1" max="2" step="0.1" value="0.4">
+    </fieldset>
+
+    <div class="actions">
+      <a class="ghost" href="editor.html">✎ עריכת אותיות</a>
+      <button id="btn-export" class="primary">ייצוא SVG</button>
+    </div>
+    <p class="foot">פלוטר iDraw · קווי מרכז אוטומטיים</p>
+  </aside>
+
+  <main>
+    <div id="stage">
+      <svg id="artboard" xmlns="http://www.w3.org/2000/svg"
+           width="297mm" height="420mm" viewBox="0 0 297 420"
+           preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </main>
+
+  <script src="font-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

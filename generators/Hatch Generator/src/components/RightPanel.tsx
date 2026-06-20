@@ -124,6 +124,7 @@ export function RightPanel() {
                 <option value="A5">A5</option>
                 <option value="A4">A4</option>
                 <option value="A3">A3</option>
+                <option value="A2">A2</option>
                 <option value="Custom">Custom</option>
               </select>
               <button 
@@ -159,15 +160,18 @@ export function RightPanel() {
         </Section>
 
         <Section title="Global Appearance" defaultOpen={false}>
-           <Slider label="Master Stroke" min={0.1} max={5} step={0.1} value={paper.globalStrokeWidth} onChange={(v) => {
+           <Slider label="Master Stroke" min={0.05} max={5} step={0.05} value={paper.globalStrokeWidth} onChange={(v) => {
              if (isSliderActive.current) {
-               useAppStore.setState((prev: any) => ({ 
-                 paper: { ...prev.paper, globalStrokeWidth: v } 
+               // Live drag: update the default and every shape's width at once.
+               useAppStore.setState((prev: any) => ({
+                 paper: { ...prev.paper, globalStrokeWidth: v },
+                 shapes: prev.shapes.map((sh: any) => ({ ...sh, strokeWidth: v }))
                }));
              } else {
-               store.setPaper({ globalStrokeWidth: v });
+               store.setAllStrokeWidth(v);
              }
            }} onMouseDown={handleSliderStart} onMouseUp={handleSliderEnd} suffix="mm" />
+           <p className="text-[11px] text-gray-400 -mt-1">Sets every shape's line width. Select a shape to fine-tune just that one.</p>
            <div className="mt-4 pt-4 border-t border-gray-200">
              <Label>Canvas Color</Label>
              <div className="flex gap-2 items-center mt-2">
@@ -281,6 +285,12 @@ export function RightPanel() {
             <input type="color" value={firstShape?.color || '#000000'} onChange={(e) => handleUpdate({ color: e.target.value })} className="w-8 h-8 rounded border-0 cursor-pointer" />
             <Input type="text" value={firstShape?.color || '#000000'} onChange={(e) => handleUpdate({ color: e.target.value })} className="flex-1" />
           </div>
+        </div>
+        <div className="mb-3">
+          <Slider label="Stroke Width" min={0.05} max={5} step={0.05}
+            value={firstShape?.strokeWidth ?? paper.globalStrokeWidth}
+            onChange={(v) => isSliderActive.current ? handleUpdateSilent({ strokeWidth: v }) : handleUpdate({ strokeWidth: v })}
+            onMouseDown={handleSliderStart} onMouseUp={handleSliderEnd} suffix="mm" />
         </div>
         {commonHatch && (
            <Switch label="Show Outline" checked={commonHatch.renderOutline} onChange={(v) => handleHatchUpdate({ renderOutline: v })} />

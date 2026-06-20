@@ -1,0 +1,7 @@
+node_modules/
+.env
+credentials.json
+token.json
+dashboard.html
+cache/
+*.pdf

@@ -1,9 +1,18 @@
 /**
  * flowfield.js
- * 
+ *
  * Flow field generation and canvas rendering logic.
  * Handles particle path generation, canvas display, and SVG export.
  */
+
+function paperSizeLabel(widthMm, heightMm) {
+    const sizes = { A2: [420, 594], A3: [297, 420], A4: [210, 297], A5: [148, 210] };
+    const w = Math.round(widthMm), h = Math.round(heightMm);
+    for (const [name, [pw, ph]] of Object.entries(sizes)) {
+        if ((w === pw && h === ph) || (w === ph && h === pw)) return name;
+    }
+    return `${w}x${h}mm`;
+}
 
 // Application state
 const flowState = {
@@ -83,6 +92,24 @@ flowState.currentNoiseSeed = flowState.noiseSeed;
 
 // Conversion: mm to pixels at 96 DPI
 const MM_TO_PX = 96 / 25.4;
+
+/** Stroke width slider range (mm); enforced in JS so cached HTML still gets correct limits. */
+const STROKE_WIDTH_MM_MIN = 0.2;
+const STROKE_WIDTH_MM_MAX = 15;
+
+function clampStrokeWidthMm(w) {
+    const n = Number(w);
+    if (Number.isNaN(n)) return 0.4;
+    return Math.max(STROKE_WIDTH_MM_MIN, Math.min(STROKE_WIDTH_MM_MAX, n));
+}
+
+function configureStrokeWidthSlider() {
+    const el = document.getElementById('stroke-width');
+    if (!el) return;
+    el.min = String(STROKE_WIDTH_MM_MIN);
+    el.max = String(STROKE_WIDTH_MM_MAX);
+    el.step = '0.05';
+}
 
 // Noise scale controls (log-mapped for smooth slider response)
 const NOISE_SCALE_MIN = 0.001;
@@ -507,7 +534,7 @@ function applySettingsToFlowState(settings) {
     flowState.stepSize = settings.stepSize ?? flowState.stepSize;
     flowState.minDistance = settings.minDistance ?? flowState.minDistance;
     flowState.forceOverprint = settings.forceOverprint ?? flowState.forceOverprint ?? false;
-    flowState.strokeWidth = settings.strokeWidth ?? flowState.strokeWidth;
+    flowState.strokeWidth = clampStrokeWidthMm(settings.strokeWidth ?? flowState.strokeWidth);
     flowState.margin = settings.margin ?? flowState.margin;
     flowState.renderStyle = settings.renderStyle ?? flowState.renderStyle ?? 'default';
     flowState.brushWidth = settings.brushWidth ?? flowState.brushWidth ?? 5;
@@ -711,8 +738,9 @@ function applySettingsToUI(settings) {
     setText('min-distance-value', `${(settings.minDistance ?? 0).toFixed(1)} mm`);
 
     // Canvas/display
-    setSliderValue('stroke-width', settings.strokeWidth ?? '');
-    setText('stroke-width-value', `${(settings.strokeWidth ?? 0).toFixed(2)} mm`);
+    const strokeMm = clampStrokeWidthMm(settings.strokeWidth ?? flowState.strokeWidth);
+    setSliderValue('stroke-width', strokeMm);
+    setText('stroke-width-value', `${strokeMm.toFixed(2)} mm`);
     setSliderValue('margin', settings.margin ?? '');
     setText('margin-value', `${settings.margin ?? 0} mm`);
     setCheckboxValue('force-overprint', !!settings.forceOverprint);
@@ -736,11 +764,20 @@ function applySettingsToUI(settings) {
     
     const paperSizeEl = document.getElementById('paper-size');
     if (paperSizeEl) {
-        const paperValue = `${settings.widthMm ?? flowState.widthMm}x${settings.heightMm ?? flowState.heightMm}`;
+        const w = Math.min(settings.widthMm ?? flowState.widthMm, settings.heightMm ?? flowState.heightMm);
+        const h = Math.max(settings.widthMm ?? flowState.widthMm, settings.heightMm ?? flowState.heightMm);
+        const paperValue = `${w}x${h}`;
         if (paperSizeEl.querySelector(`option[value="${paperValue}"]`)) {
             paperSizeEl.value = paperValue;
         }
     }
+
+    // Sync orientation buttons
+    const isLandscape = (settings.widthMm ?? flowState.widthMm) > (settings.heightMm ?? flowState.heightMm);
+    const portraitBtn = document.getElementById('btn-portrait');
+    const landscapeBtn = document.getElementById('btn-landscape');
+    if (portraitBtn) portraitBtn.classList.toggle('active', !isLandscape);
+    if (landscapeBtn) landscapeBtn.classList.toggle('active', isLandscape);
 
     const advContainer = document.getElementById('advanced-settings-container');
     const spiralControls = document.getElementById('phyllotaxis-controls');
@@ -2341,7 +2378,7 @@ async function exportSVG() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'flowfield.svg';
+        a.download = `flowfield-${paperSizeLabel(flowState.widthMm, flowState.heightMm)}.svg`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -2367,6 +2404,7 @@ function fitToView() {
  * Sets the first layer's color from the palette and renders the layer list
  */
 function initLayers() {
+    configureStrokeWidthSlider();
     // Set the first layer's color based on the palette
     if (flowState.layers.length > 0) {
         const firstLayer = flowState.layers[0];

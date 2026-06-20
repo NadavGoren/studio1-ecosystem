@@ -10,7 +10,7 @@
  * - Integration of weaver and SVG exporter modules
  */
 
-import { generateWeave, A3_WIDTH, A3_HEIGHT, getWeaveStats } from './weaver.js';
+import { generateWeave, paperWidth, paperHeight, setPaperFormat, PAPER_SIZES, getWeaveStats } from './weaver.js';
 import { exportSVG, downloadSVG, generateFilename, getSVGStats } from './svg-exporter.js';
 
 // ============================================
@@ -152,22 +152,22 @@ function resizeCanvas() {
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
     
-    // Calculate scale to fit A3 in container
-    const scaleX = containerWidth / A3_WIDTH;
-    const scaleY = containerHeight / A3_HEIGHT;
+    // Calculate scale to fit paper in container
+    const scaleX = containerWidth / paperWidth;
+    const scaleY = containerHeight / paperHeight;
     scale = Math.min(scaleX, scaleY);
-    
+
     // Set canvas size in pixels (with device pixel ratio for sharpness)
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = A3_WIDTH * scale * dpr;
-    canvas.height = A3_HEIGHT * scale * dpr;
-    
+    canvas.width = paperWidth * scale * dpr;
+    canvas.height = paperHeight * scale * dpr;
+
     // Scale context for device pixel ratio
     ctx.scale(dpr, dpr);
-    
+
     // Set display size
-    canvas.style.width = `${A3_WIDTH * scale}px`;
-    canvas.style.height = `${A3_HEIGHT * scale}px`;
+    canvas.style.width = `${paperWidth * scale}px`;
+    canvas.style.height = `${paperHeight * scale}px`;
     
     // Re-render after resize
     render();
@@ -478,6 +478,18 @@ function initUI() {
         render();
     });
     
+    // Paper size selector
+    const paperSizeEl = document.getElementById('paper-size');
+    if (paperSizeEl) {
+        paperSizeEl.addEventListener('change', e => {
+            setPaperFormat(e.target.value);
+            const dims = document.getElementById('output-dimensions');
+            if (dims) dims.textContent = `Output: ${paperWidth}mm × ${paperHeight}mm`;
+            resizeCanvas();
+            regenerate();
+        });
+    }
+
     // Action buttons
     document.getElementById('generate-btn').addEventListener('click', () => {
         generate();

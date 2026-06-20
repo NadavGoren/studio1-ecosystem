@@ -640,7 +640,7 @@ Claude will:
 | Snake | Standalone HTML | — | `index.html` | |
 | Weaving Generator | Standalone HTML | — | `index.html` | |
 | Hershey Hebrew Generator | Python HTTP | 8095 | `python3 server.py` | Single-line Miriam Libre Hebrew font; type Hebrew → plotter SVG. Glyph editor saves to `font/overrides.json`. Font built by `tools/build_font.py` |
-| Modular Generator | Standalone HTML | — | `index.html` | Modular geometric riso/Bauhaus compositions. 4 modes (Modular Pack, Motif Grid, Pixel Field, Grid Composition), fixed 10-pen Pilot palette (per-pen on/off), stroke-only multi-pen layers, A6–A2 (A2 default) |
+| Modular Generator | Standalone HTML | — | `index.html` | Geometric riso/Bauhaus compositions. 2 modes (Grid Composition w/ per-element colour + field/bar/accent counts + cell-fill-spacing controls, Motif Grid), fixed 10-pen Pilot palette (per-pen on/off), stroke-only multi-pen layers, A6–A2 (A2 default) |
 | Rietveld Lattice | Vite+React | 6060 | `npm run dev` | Axonometric 3D lattice (Rietveld-derived) → plotter SVG; Three.js viewport + custom SVG projector; seeded, IndexedDB favourites |
 | Ribbon Generator | Flask + JS | 8000 | `python3 app.py` | Shares port with Flow Field |
 | Music Viz (Data Weaver) | Tkinter Desktop | — | `python3 Buu.py` | |

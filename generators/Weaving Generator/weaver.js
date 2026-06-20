@@ -11,9 +11,28 @@
  * - Thread grouping (basket weave effect)
  */
 
-// A3 dimensions in millimeters
-export const A3_WIDTH = 297;
-export const A3_HEIGHT = 420;
+// Paper dimensions in millimeters (mutable — selected by user)
+export const PAPER_SIZES = {
+    A2: { width: 420, height: 594 },
+    A3: { width: 297, height: 420 },
+    A4: { width: 210, height: 297 },
+    A5: { width: 148, height: 210 },
+};
+
+export let paperWidth = 297;
+export let paperHeight = 420;
+export let paperFormat = 'A3';
+
+export function setPaperFormat(format) {
+    const size = PAPER_SIZES[format];
+    if (!size) return;
+    paperFormat = format;
+    paperWidth = size.width;
+    paperHeight = size.height;
+}
+
+// Backward-compatible aliases (still referenced in places)
+export { paperWidth as A3_WIDTH, paperHeight as A3_HEIGHT };
 
 // Safety limits to prevent infinite loops
 const MAX_THREADS_PER_AXIS = 300;
@@ -277,9 +296,9 @@ export function generateWeave(config) {
 
     // Calculate drawable area
     const drawStartX = margins;
-    const drawEndX = A3_WIDTH - margins;
+    const drawEndX = paperWidth - margins;
     const drawStartY = margins;
-    const drawEndY = A3_HEIGHT - margins;
+    const drawEndY = paperHeight - margins;
 
     // Convert modulation intensity from 0-100 to 0-1
     const modIntensity = modulationIntensity / 100;
@@ -338,8 +357,8 @@ export function generateWeave(config) {
     );
 
     // Calculate center point for rotation
-    const centerX = A3_WIDTH / 2;
-    const centerY = A3_HEIGHT / 2;
+    const centerX = paperWidth / 2;
+    const centerY = paperHeight / 2;
 
     weftPositions.forEach((y, index) => {
         // Start and end points for horizontal line

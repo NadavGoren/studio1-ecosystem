@@ -30,6 +30,15 @@
             <fieldset class="control-group">
                 <legend>Grid</legend>
                 <div class="control">
+                    <label for="paper-size">Paper Size</label>
+                    <select id="paper-size">
+                        <option value="A2">A2 (420 × 594 mm)</option>
+                        <option value="A3" selected>A3 (297 × 420 mm)</option>
+                        <option value="A4">A4 (210 × 297 mm)</option>
+                        <option value="A5">A5 (148 × 210 mm)</option>
+                    </select>
+                </div>
+                <div class="control">
                     <label for="margins">Margins (mm)</label>
                     <div class="input-row">
                         <input type="range" id="margins" min="5" max="100" value="15" step="1">
@@ -186,8 +195,8 @@
             </div>
 
             <footer class="sidebar-footer">
-                <p>Optimized for iDraw H SE A3</p>
-                <p class="dimensions">Output: 297mm × 420mm</p>
+                <p>Optimized for iDraw H SE</p>
+                <p class="dimensions" id="output-dimensions">Output: 297mm × 420mm</p>
             </footer>
         </aside>
 

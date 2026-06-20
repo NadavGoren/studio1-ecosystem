@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100mm" height="100mm">
+  <style>
+    .css-stroke { stroke: red !important; stroke-width: 4 !important; fill: pink !important; }
+    rect { stroke: green; fill: yellow; }
+  </style>
+  <g stroke="blue" stroke-width="3" fill="orange">
+    <circle cx="30" cy="30" r="14"/>
+    <rect x="55" y="15" width="30" height="30"/>
+  </g>
+  <g style="stroke: purple; stroke-width: 5; fill: cyan;">
+    <ellipse cx="30" cy="70" rx="14" ry="10"/>
+  </g>
+  <polyline class="css-stroke" points="55,55 70,80 85,55"/>
+  <line x1="10" y1="90" x2="90" y2="90" style="stroke: magenta !important; stroke-width: 6 !important;"/>
+</svg>

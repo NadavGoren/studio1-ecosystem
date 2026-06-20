@@ -112,6 +112,7 @@ interface AppState extends ProjectState {
   setPaperOrientation: (orientation: PaperOrientation) => void;
   setPaperMargin: (margin: number) => void;
   setPaperSize: (width: number, height: number) => void;
+  setAllStrokeWidth: (width: number) => void;
   addShape: (shape: Shape) => void;
   updateShape: (id: string, updates: Partial<Shape>) => void;
   deleteShape: (id: string) => void;
@@ -260,6 +261,21 @@ export const useAppStore = create<AppState>((set, get) => ({
             const newState = { ...state, paper: { ...state.paper, margin: m } };
             return {
                 paper: newState.paper,
+                history: { ...state.history, present: createStateSnapshot(newState) }
+            };
+        });
+    },
+    // Master stroke: set every shape's width at once and remember it as the default for new shapes.
+    setAllStrokeWidth: (w) => {
+        const s = get();
+        s.pushState();
+        set(state => {
+            const newShapes = state.shapes.map(sh => ({ ...sh, strokeWidth: w }));
+            const newPaper = { ...state.paper, globalStrokeWidth: w };
+            const newState = { ...state, shapes: newShapes, paper: newPaper };
+            return {
+                shapes: newShapes,
+                paper: newPaper,
                 history: { ...state.history, present: createStateSnapshot(newState) }
             };
         });
@@ -912,6 +928,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (!resultData || resultData.length === 0) return {};
 
         const parentColor = selectedShapes[0].color || '#000000';
+        const parentStroke = selectedShapes[0].strokeWidth ?? state.paper.globalStrokeWidth;
         const parentHatch = state.hatchParams[selectedShapes[0].id];
         // Don't preserve cornerRadius for boolean results because:
         // 1. Input shapes with rounded corners already have geometry sampled (baked in)
@@ -927,7 +944,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           rotation: 0,
           visible: true,
           locked: false,
-          strokeWidth: 0.2,
+          strokeWidth: parentStroke,
           color: parentColor,
           points: data.points,
           holes: data.holes,

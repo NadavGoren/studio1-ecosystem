@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Studio 1 · GIF Generator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ░░ SIDEBAR ░░ -->
+    <aside id="sidebar">
+      <header class="brand">
+        <h1>GIF Generator</h1>
+        <span class="sub">Studio 1 · SVG → GIF / Video</span>
+      </header>
+
+      <!-- Frames -->
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Frames</h2>
+          <span id="frame-count" class="count">0</span>
+        </div>
+        <div id="frame-list" class="frame-list"></div>
+        <div class="row">
+          <button id="add-btn" class="btn ghost">＋ Add SVGs</button>
+          <button id="clear-btn" class="btn ghost danger">Clear</button>
+        </div>
+        <input id="file-input" type="file" accept=".svg,image/svg+xml" multiple hidden />
+      </section>
+
+      <!-- Timing -->
+      <section class="panel">
+        <div class="panel-head"><h2>Timing</h2></div>
+
+        <label class="ctl">
+          <span class="lbl">Frame rate <em id="fps-val">12 fps</em></span>
+          <input id="fps" type="range" min="1" max="60" step="1" value="12" />
+        </label>
+
+        <p class="ctl"><span class="lbl">Duration <em id="dur-val">—</em></span></p>
+        <p class="hint">1 SVG = 1 output frame. Duration is computed from SVG count ÷ frame rate.</p>
+
+        <label class="check">
+          <input id="loop" type="checkbox" checked />
+          <span>Loop playback &amp; GIF</span>
+        </label>
+        <label class="check">
+          <input id="pingpong" type="checkbox" />
+          <span>Ping-pong (boomerang)</span>
+        </label>
+      </section>
+
+      <!-- Stroke -->
+      <section class="panel">
+        <div class="panel-head"><h2>Stroke &amp; Color</h2></div>
+
+        <label class="ctl">
+          <span class="lbl">Stroke width <em id="stroke-val">0.5 mm</em></span>
+          <input id="stroke" type="range" min="0.1" max="3" step="0.05" value="0.5" />
+        </label>
+        <p class="hint">True millimetres — matches real pen widths on the plotter.</p>
+
+        <div class="row tight">
+          <label class="swatch">
+            <span class="lbl">Stroke</span>
+            <input id="stroke-color" type="color" value="#111111" />
+          </label>
+          <label class="swatch">
+            <span class="lbl">Background</span>
+            <input id="bg-color" type="color" value="#ffffff" />
+          </label>
+        </div>
+        <label class="check">
+          <input id="override-stroke" type="checkbox" checked />
+          <span>Override stroke colour on all SVGs</span>
+        </label>
+        <p class="hint">Stroke width above is applied to every SVG regardless of this checkbox.</p>
+        <label class="check">
+          <input id="no-fill" type="checkbox" checked />
+          <span>Strip fills (outline only)</span>
+        </label>
+      </section>
+
+      <!-- Ink -->
+      <section class="panel">
+        <div class="panel-head"><h2>Ink simulation</h2></div>
+        <label class="check">
+          <input id="ink" type="checkbox" />
+          <span>Overprint ink (multiply blend)</span>
+        </label>
+        <p class="hint">Mimics transparent gel-pen ink layering — overlapping strokes darken, exactly like the Ribbon Generator.</p>
+        <label class="ctl" id="ink-opacity-ctl" hidden>
+          <span class="lbl">Ink opacity <em id="ink-op-val">70%</em></span>
+          <input id="ink-opacity" type="range" min="0.3" max="1" step="0.01" value="0.7" />
+        </label>
+      </section>
+
+      <!-- Canvas size -->
+      <section class="panel">
+        <div class="panel-head"><h2>Canvas</h2></div>
+        <label class="check">
+          <input id="auto-size" type="checkbox" checked />
+          <span>Use SVG's native size</span>
+        </label>
+        <label class="ctl" id="width-ctl">
+          <span class="lbl">Width <em id="width-val">150 mm</em></span>
+          <input id="width-mm" type="range" min="20" max="600" step="1" value="150" />
+        </label>
+        <label class="ctl">
+          <span class="lbl">Resolution <em id="res-val">10 px/mm</em></span>
+          <input id="res" type="range" min="2" max="20" step="1" value="10" />
+        </label>
+        <p class="hint" id="dims-hint">—</p>
+      </section>
+    </aside>
+
+    <!-- ░░ STAGE ░░ -->
+    <main id="stage">
+      <div id="dropzone" class="dropzone">
+        <div class="dz-inner">
+          <div class="dz-icon">⬇</div>
+          <p class="dz-title">Drop your SVGs here</p>
+          <p class="dz-sub">Drag a whole batch in at once — each file becomes a frame</p>
+        </div>
+      </div>
+
+      <div id="viewer" class="viewer" hidden>
+        <div class="canvas-wrap">
+          <canvas id="preview"></canvas>
+        </div>
+        <div class="transport">
+          <button id="play-btn" class="btn">▶ Play</button>
+          <div class="scrub-wrap">
+            <input id="scrub" type="range" min="0" max="0" step="1" value="0" />
+            <span id="scrub-label" class="scrub-label">0 / 0</span>
+          </div>
+          <div class="exports">
+            <button id="export-gif" class="btn primary">Export GIF</button>
+            <button id="export-vid" class="btn primary">Export Video</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="overlay" class="overlay" hidden>
+        <div class="overlay-card">
+          <div class="spinner"></div>
+          <p id="overlay-msg">Working…</p>
+          <div class="bar"><div id="overlay-bar"></div></div>
+        </div>
+      </div>
+
+      <div id="toast" class="toast" hidden></div>
+    </main>
+  </div>
+
+  <script src="vendor/gif.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

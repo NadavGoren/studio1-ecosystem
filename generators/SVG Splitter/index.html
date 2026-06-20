@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SVG Splitter</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+  <aside class="controls">
+    <h1>SVG Splitter</h1>
+
+    <label class="upload">
+      <span>Upload SVG</span>
+      <input type="file" id="file" accept=".svg,image/svg+xml" />
+    </label>
+
+    <div class="row">
+      <label>Groups</label>
+      <input type="number" id="groupCount" min="2" max="6" value="3" />
+    </div>
+
+    <div class="row">
+      <label>Stroke (mm)</label>
+      <input type="range" id="strokeWidth" min="0.1" max="5" step="0.1" value="0.5" />
+      <span id="strokeWidthVal">0.5 mm</span>
+    </div>
+
+    <div id="groupsPanel"></div>
+
+    <div class="row buttons">
+      <button id="reshuffle">Reshuffle</button>
+      <button id="export">Export SVG</button>
+    </div>
+
+    <p id="stats" class="stats"></p>
+  </aside>
+
+  <main class="preview" id="preview">
+    <p class="placeholder">Upload or drag an SVG here to begin.</p>
+  </main>
+  <div id="dropOverlay" class="drop-overlay"><span>Drop SVG to load</span></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

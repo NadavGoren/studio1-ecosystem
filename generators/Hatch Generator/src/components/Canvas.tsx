@@ -69,7 +69,7 @@ export function Canvas() {
        drawingTool.current = tool;
        hasDragged.current = false;
        
-       const base = { id, x: start.x, y: start.y, rotation: 0, visible: true, locked: false, strokeWidth: 0.2, color: '#000000' };
+       const base = { id, x: start.x, y: start.y, rotation: 0, visible: true, locked: false, strokeWidth: paper.globalStrokeWidth, color: '#000000' };
        if (tool === 'rectangle') addShape({ ...base, type: 'rectangle', width: 0, height: 0 });
        else if (tool === 'ellipse') addShape({ ...base, type: 'ellipse', radiusX: 0, radiusY: 0 });
        else if (tool === 'line') addShape({ ...base, type: 'line', width: 0, height: 0 });
@@ -639,15 +639,17 @@ export function Canvas() {
              const showOutline = s.type !== 'group' && (!hatch?.enabled || hatch?.renderOutline || s.type === 'line');
              // Use global color if override is enabled, otherwise use shape's color
              const strokeColor = paper.globalColorOverride ? paper.globalColor : s.color;
-             
+             // Each shape carries its own stroke width; fall back to the global default if unset.
+             const strokeWidth = s.strokeWidth ?? paper.globalStrokeWidth;
+
              return (
                <g key={s.id}>
                  {/* Hatching */}
-                 {lines.map((d, i) => <path key={i} d={d} stroke={strokeColor} strokeWidth={paper.globalStrokeWidth} fill="none" />)}
-                 
+                 {lines.map((d, i) => <path key={i} d={d} stroke={strokeColor} strokeWidth={strokeWidth} fill="none" />)}
+
                  {/* Outline - FIX: fillRule="evenodd" allows holes to render correctly */}
                  {/* Groups don't render their bounding box outline */}
-                 {showOutline && <path d={shapeToPath(s, shapes)} stroke={strokeColor} strokeWidth={paper.globalStrokeWidth} fill="none" fillRule="evenodd" />}
+                 {showOutline && <path d={shapeToPath(s, shapes)} stroke={strokeColor} strokeWidth={strokeWidth} fill="none" fillRule="evenodd" />}
                  
                  {/* Hit Target */}
                  <path 

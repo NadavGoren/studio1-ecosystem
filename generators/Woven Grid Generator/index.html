@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Woven Grid — Parametric Textile Pattern</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <aside id="sidebar">
+
+    <div id="sidebar-header">
+      <h1>Woven Grid</h1>
+      <p class="subtitle">Parametric Textile Pattern · SVG</p>
+    </div>
+
+    <div id="controls">
+
+      <!-- ─── GRID ─── -->
+      <div class="section">
+        <div class="section-header" data-section="grid">
+          <span>Grid</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Columns</span>
+              <span class="control-value" id="val-cols">7</span>
+            </div>
+            <input type="range" id="cols" min="1" max="120" step="1" value="7" data-param="cols" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Rows</span>
+              <span class="control-value" id="val-rows">10</span>
+            </div>
+            <input type="range" id="rows" min="1" max="160" step="1" value="10" data-param="rows" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Width Variation</span>
+              <span class="control-value" id="val-width-var">40%</span>
+            </div>
+            <input type="range" id="width-var" min="0" max="100" step="1" value="40" data-param="widthVar" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Height Variation</span>
+              <span class="control-value" id="val-height-var">30%</span>
+            </div>
+            <input type="range" id="height-var" min="0" max="100" step="1" value="30" data-param="heightVar" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Cell Gutter (mm)</span>
+              <span class="control-value" id="val-cell-gutter">0</span>
+            </div>
+            <input type="range" id="cell-gutter" min="0" max="4" step="0.05" value="0" data-param="cellGutter" />
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── STRIPES ─── -->
+      <div class="section">
+        <div class="section-header" data-section="stripes">
+          <span>Stripes</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Stripe Height (mm)</span>
+              <span class="control-value" id="val-stripe-height">1.5</span>
+            </div>
+            <input type="range" id="stripe-height" min="0.1" max="30" step="0.1" value="1.5" data-param="stripeHeight" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Gap Height (mm)</span>
+              <span class="control-value" id="val-gap-height">0.7</span>
+            </div>
+            <input type="range" id="gap-height" min="0" max="8" step="0.01" value="0.7" data-param="gapHeight" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Phase Shift (mm)</span>
+              <span class="control-value" id="val-stripe-offset">0</span>
+            </div>
+            <input type="range" id="stripe-offset" min="0" max="20" step="0.1" value="0" data-param="stripeOffset" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Warp Weight</span>
+              <span class="control-value" id="val-warp-weight">50</span>
+            </div>
+            <input type="range" id="warp-weight" min="10" max="90" step="1" value="50" data-param="warpWeight" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label"><span>Fill Shape</span></div>
+            <select id="fill-shape" data-param="fillShape">
+              <option value="rect" selected>Rectangles</option>
+              <option value="roundRect">Rounded Rectangles</option>
+              <option value="circle">Circles</option>
+              <option value="diamond">Diamonds</option>
+              <option value="triangle">Triangles</option>
+              <option value="chevron">Chevrons</option>
+              <option value="diagonal">Diagonal Lines</option>
+            </select>
+          </div>
+
+          <div class="control-row shape-opt" data-show-shape="roundRect" style="display:none">
+            <div class="control-label">
+              <span>Corner Radius (mm)</span>
+              <span class="control-value" id="val-corner-radius">1</span>
+            </div>
+            <input type="range" id="corner-radius" min="0" max="5" step="0.1" value="1" data-param="cornerRadius" />
+          </div>
+
+          <div class="control-row shape-opt" data-show-shape="diagonal" style="display:none">
+            <div class="control-label">
+              <span>Diagonal Angle</span>
+              <span class="control-value" id="val-diagonal-angle">30°</span>
+            </div>
+            <input type="range" id="diagonal-angle" min="-45" max="45" step="1" value="30" data-param="diagonalAngle" />
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── PATTERN ─── -->
+      <div class="section">
+        <div class="section-header" data-section="pattern">
+          <span>Pattern</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="invert-rows" data-param="invertRows" />
+            <label for="invert-rows">Invert alternating rows</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="auto-phase" data-param="autoPhase" />
+            <label for="auto-phase">Auto-stagger columns</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="mirror-cols" data-param="mirrorCols" />
+            <label for="mirror-cols">Mirror columns</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="mirror-zones" data-param="mirrorZones" />
+            <label for="mirror-zones">Mirror zones</label>
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Density Variation</span>
+              <span class="control-value" id="val-density-var">0%</span>
+            </div>
+            <input type="range" id="density-var" min="0" max="80" step="1" value="0" data-param="densityVar" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label"><span>Pattern Mode</span></div>
+            <select id="pattern-mode" data-param="patternMode">
+              <option value="classic" selected>Classic Weave</option>
+              <option value="brick">Brick Offset</option>
+              <option value="checkerboard">Checkerboard</option>
+              <option value="gradient">Gradient Blend</option>
+              <option value="scatter">Random Scatter</option>
+              <option value="wave">Wave Phase</option>
+            </select>
+          </div>
+
+          <div class="control-row pattern-opt" data-show-pattern="wave" style="display:none">
+            <div class="control-label">
+              <span>Wave Amplitude (mm)</span>
+              <span class="control-value" id="val-wave-amplitude">5</span>
+            </div>
+            <input type="range" id="wave-amplitude" min="0" max="20" step="0.5" value="5" data-param="waveAmplitude" />
+          </div>
+
+          <div class="control-row pattern-opt" data-show-pattern="wave" style="display:none">
+            <div class="control-label">
+              <span>Wave Frequency</span>
+              <span class="control-value" id="val-wave-frequency">1.0</span>
+            </div>
+            <input type="range" id="wave-frequency" min="0.1" max="5" step="0.1" value="1" data-param="waveFrequency" />
+          </div>
+
+          <div class="control-row pattern-opt" data-show-pattern="scatter" style="display:none">
+            <div class="control-label">
+              <span>Scatter Probability</span>
+              <span class="control-value" id="val-scatter-prob">50%</span>
+            </div>
+            <input type="range" id="scatter-prob" min="0" max="100" step="1" value="50" data-param="scatterProb" />
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── EFFECTS ─── -->
+      <div class="section collapsed">
+        <div class="section-header" data-section="effects">
+          <span>Effects</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Opacity</span>
+              <span class="control-value" id="val-opacity">100%</span>
+            </div>
+            <input type="range" id="opacity" min="10" max="100" step="1" value="100" data-param="opacity" />
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="enable-stroke" data-param="enableStroke" />
+            <label for="enable-stroke">Stroke outline</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="merge-shapes" data-param="mergeShapes" />
+            <label for="merge-shapes">Merge same-color shapes (export)</label>
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Stroke Width (mm)</span>
+              <span class="control-value" id="val-stroke-width">0.10</span>
+            </div>
+            <input type="range" id="stroke-width" min="0.05" max="1" step="0.05" value="0.1" data-param="strokeWidth" />
+          </div>
+
+          <div class="color-row">
+            <label for="stroke-color">Stroke Color</label>
+            <input type="color" id="stroke-color" value="#000000" data-param="strokeColor" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Cell Rotation</span>
+              <span class="control-value" id="val-cell-rotation">0°</span>
+            </div>
+            <input type="range" id="cell-rotation" min="-180" max="180" step="1" value="0" data-param="cellRotation" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Scale Variation</span>
+              <span class="control-value" id="val-scale-var">0%</span>
+            </div>
+            <input type="range" id="scale-var" min="0" max="50" step="1" value="0" data-param="scaleVar" />
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── TRANSFORM ─── -->
+      <div class="section collapsed">
+        <div class="section-header" data-section="transform">
+          <span>Transform</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <div class="control-row">
+            <div class="control-label"><span>Global Rotation</span></div>
+            <select id="global-rotation" data-param="globalRotation">
+              <option value="0" selected>0°</option>
+              <option value="90">90°</option>
+              <option value="180">180°</option>
+              <option value="270">270°</option>
+            </select>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="h-flip" data-param="hFlip" />
+            <label for="h-flip">Horizontal flip</label>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="v-flip" data-param="vFlip" />
+            <label for="v-flip">Vertical flip</label>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── CELL OVERRIDE ─── -->
+      <div id="cell-override-panel" style="display:none">
+        <div class="section">
+          <div class="section-header">
+            <span class="cell-label">Cell (–, –)</span>
+            <span class="arrow">▾</span>
+          </div>
+          <div class="section-body">
+            <div class="color-row">
+              <label for="cell-warp-color">Warp</label>
+              <input type="color" id="cell-warp-color" value="#ffffff" />
+            </div>
+            <div class="color-row">
+              <label for="cell-weft-color">Weft</label>
+              <input type="color" id="cell-weft-color" value="#ffffff" />
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-clear-cell">Clear Override</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── COLORS ─── -->
+      <div class="section">
+        <div class="section-header" data-section="colors">
+          <span>Colors</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <div class="control-row">
+            <div class="control-label"><span>Preset</span></div>
+            <select id="preset" data-param="preset">
+              <optgroup label="Earth & Warm">
+                <option value="autumn" selected>Autumn Weave</option>
+                <option value="terra">Terra</option>
+                <option value="desert">Mojave</option>
+                <option value="sahel">Sahel</option>
+                <option value="navajo">Navajo</option>
+              </optgroup>
+              <optgroup label="Bold & Primary">
+                <option value="bauhaus">Bauhaus</option>
+                <option value="mondrian">Mondrian</option>
+                <option value="matisse">Matisse</option>
+                <option value="marimekko">Marimekko</option>
+                <option value="memphis">Memphis</option>
+              </optgroup>
+              <optgroup label="Cool & Muted">
+                <option value="nordic">Scandinavian</option>
+                <option value="shibori">Shibori</option>
+                <option value="forest">Forest</option>
+                <option value="winter">Nordic Winter</option>
+                <option value="pacific">Pacific</option>
+              </optgroup>
+              <optgroup label="Textile & Vibrant">
+                <option value="kente">Kente</option>
+                <option value="kilim">Kilim</option>
+                <option value="ikat">Ikat</option>
+                <option value="sunset">Sunset</option>
+                <option value="indigo">Indigo</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="color-row">
+            <label for="bg-color">Background</label>
+            <input type="color" id="bg-color" value="#F0E6D0" data-param="bgColor" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Column Colors</span>
+              <span class="control-value" id="val-num-col-colors">5</span>
+            </div>
+            <input type="range" id="num-col-colors" min="1" max="32" step="1" value="5" data-param="numColColors" />
+          </div>
+          <div id="col-palette" class="palette-grid"></div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Color Zones</span>
+              <span class="control-value" id="val-num-zones">3</span>
+            </div>
+            <input type="range" id="num-zones" min="1" max="16" step="1" value="3" data-param="numZones" />
+          </div>
+          <div id="zone-palette" class="palette-grid"></div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="swap-axis" data-param="swapAxis" />
+            <label for="swap-axis">Swap color axis</label>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── PAPER ─── -->
+      <div class="section">
+        <div class="section-header" data-section="paper">
+          <span>Paper</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <div class="control-row">
+            <div class="control-label"><span>Size</span></div>
+            <select id="paper-size" data-param="paperSize">
+              <option value="A2">A2  420 × 594 mm</option>
+              <option value="A3" selected>A3  297 × 420 mm</option>
+              <option value="A4">A4  210 × 297 mm</option>
+              <option value="A5">A5  148 × 210 mm</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </div>
+
+          <div class="control-row custom-paper-row" style="display:none">
+            <div class="control-label"><span>Width (mm)</span></div>
+            <input type="number" id="custom-paper-w" min="50" max="1200" step="1" value="297" data-param="customPaperW" />
+          </div>
+          <div class="control-row custom-paper-row" style="display:none">
+            <div class="control-label"><span>Height (mm)</span></div>
+            <input type="number" id="custom-paper-h" min="50" max="1200" step="1" value="420" data-param="customPaperH" />
+          </div>
+
+          <div class="control-row">
+            <div class="control-label"><span>Orientation</span></div>
+            <select id="orientation" data-param="orientation">
+              <option value="portrait" selected>Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <div id="sidebar-footer">
+
+      <div class="footer-btn-row">
+        <button class="btn btn-primary" id="btn-generate">Generate</button>
+        <button class="btn btn-accent" id="btn-surprise" title="Randomize parameters">Surprise Me</button>
+      </div>
+
+      <div class="footer-btn-row">
+        <button class="btn btn-secondary" id="btn-export" disabled>Export SVG</button>
+        <button class="btn btn-secondary" id="btn-export-png" disabled>Export PNG</button>
+      </div>
+
+      <div class="footer-btn-row">
+        <button class="btn-icon" id="btn-undo" title="Undo (⌘Z)" disabled>↩</button>
+        <button class="btn-icon" id="btn-redo" title="Redo (⌘⇧Z)" disabled>↪</button>
+        <button class="btn-icon" id="btn-save-preset" title="Save preset">💾</button>
+        <button class="btn-icon" id="btn-preview-merge" title="Preview merged shapes">⬓</button>
+        <button class="btn-icon" id="btn-reset-layout" title="Reset manual layout">⊞</button>
+        <button class="btn-icon" id="btn-clear-overrides" title="Clear cell overrides">✕</button>
+        <button class="btn-icon" id="btn-zoom-fit" title="Fit to view">⊡</button>
+      </div>
+
+      <div class="seed-row">
+        <input type="text" id="seed-input" placeholder="Seed (hex)" maxlength="8" />
+        <button class="btn-icon" id="btn-randomize" title="Random seed">⟳</button>
+        <button class="btn-icon" id="btn-apply-seed" title="Apply seed">↵</button>
+      </div>
+
+      <p class="kbd-hint">
+        <kbd>Space</kbd> generate &nbsp; <kbd>⌘S</kbd> export &nbsp; <kbd>⌘Z</kbd> undo
+      </p>
+
+    </div>
+
+  </aside>
+
+  <main id="main">
+    <div id="preview-wrap">
+      <div id="preview">
+        <div id="preview-empty">
+          <div class="icon">⊞</div>
+          <p>Press Space to generate</p>
+        </div>
+      </div>
+    </div>
+    <div id="status-bar">
+      <div class="dot"></div>
+      <span id="status-text">ready</span>
+      <span id="zoom-level" class="zoom-indicator">100%</span>
+    </div>
+  </main>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

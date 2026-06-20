@@ -343,18 +343,54 @@ button {
   background: rgba(15, 155, 142, 0.15);
 }
 
-/* ─── SEED ─── */
+/* ─── SEED ROW ─── */
 
-.seed-display {
-  text-align: center;
-  font-size: 0.75rem;
-  opacity: 0.5;
+.seed-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-top: auto;
+  padding-top: 8px;
 }
 
-.seed-display code {
-  color: var(--accent);
+.seed-label {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.seed-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  font-size: 0.8rem;
   font-family: "SF Mono", "Fira Code", monospace;
+  color: var(--accent);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.seed-row input[type="text"]:focus {
+  outline: 1px solid var(--accent);
+}
+
+.seed-row button {
+  flex: none;
+  width: 28px;
+  padding: 4px 0;
+  font-size: 0.85rem;
+  background: var(--input-bg);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.seed-row button:hover {
+  background: var(--accent);
+  color: #fff;
 }
 
 /* ─── SCROLLBAR ─── */

@@ -2,6 +2,7 @@ export const PAPER_PRESETS = {
   A5: { width: 148, height: 210 },
   A4: { width: 210, height: 297 },
   A3: { width: 297, height: 420 },
+  A2: { width: 420, height: 594 },
   Custom: { width: 210, height: 297 },
 } as const;
 

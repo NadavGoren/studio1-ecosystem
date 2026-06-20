@@ -7,6 +7,11 @@ Provides API endpoints for generating flow fields and exporting SVG.
 
 from flask import Flask, render_template, request, jsonify, send_file
 import io
+import os
+import json
+import uuid
+import re
+from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
@@ -17,6 +22,48 @@ A3_HEIGHT_MM = 420
 
 # Conversion: mm to pixels at 96 DPI
 MM_TO_PX = 96 / 25.4
+
+# Directory where saved projects live (one JSON file per project)
+PROJECTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'projects')
+
+# Fields returned to the project browser (everything except the heavy "state" blob)
+PROJECT_META_FIELDS = ('id', 'name', 'createdAt', 'updatedAt', 'thumbnail',
+                       'lineCount', 'layerCount')
+
+
+def _ensure_projects_dir():
+    """Make sure the projects directory exists."""
+    os.makedirs(PROJECTS_DIR, exist_ok=True)
+
+
+def _is_valid_project_id(project_id):
+    """Only allow ids we generate to avoid path traversal."""
+    return bool(re.fullmatch(r'proj-[a-zA-Z0-9]+', project_id or ''))
+
+
+def _project_path(project_id):
+    return os.path.join(PROJECTS_DIR, f'{project_id}.json')
+
+
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _read_project(project_id):
+    path = _project_path(project_id)
+    if not os.path.exists(path):
+        return None
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def _write_project(project):
+    with open(_project_path(project['id']), 'w', encoding='utf-8') as f:
+        json.dump(project, f)
+
+
+def _project_meta(project):
+    return {k: project.get(k) for k in PROJECT_META_FIELDS}
 
 
 @app.route('/')
@@ -143,6 +190,93 @@ def export_svg():
         as_attachment=True,
         download_name='flowfield.svg'
     )
+
+
+@app.route('/api/projects', methods=['GET'])
+def list_projects():
+    """Return metadata (incl. thumbnail) for every saved project, newest first."""
+    _ensure_projects_dir()
+    projects = []
+    for fname in os.listdir(PROJECTS_DIR):
+        if not fname.endswith('.json'):
+            continue
+        try:
+            with open(os.path.join(PROJECTS_DIR, fname), 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            projects.append(_project_meta(data))
+        except (json.JSONDecodeError, OSError):
+            # Skip corrupt/unreadable files rather than failing the whole list
+            continue
+    projects.sort(key=lambda p: p.get('updatedAt') or '', reverse=True)
+    return jsonify({'projects': projects})
+
+
+@app.route('/api/projects', methods=['POST'])
+def create_project():
+    """Create a new saved project from the posted state + thumbnail."""
+    _ensure_projects_dir()
+    data = request.get_json() or {}
+    name = (data.get('name') or 'Untitled').strip() or 'Untitled'
+    project_id = 'proj-' + uuid.uuid4().hex[:12]
+    now = _now_iso()
+    project = {
+        'id': project_id,
+        'name': name,
+        'createdAt': now,
+        'updatedAt': now,
+        'thumbnail': data.get('thumbnail'),
+        'lineCount': data.get('lineCount', 0),
+        'layerCount': data.get('layerCount', 0),
+        'state': data.get('state') or {},
+    }
+    _write_project(project)
+    return jsonify({'success': True, 'project': _project_meta(project)})
+
+
+@app.route('/api/projects/<project_id>', methods=['GET'])
+def get_project(project_id):
+    """Return a full project (including state) for loading into the editor."""
+    if not _is_valid_project_id(project_id):
+        return jsonify({'error': 'Invalid project id'}), 400
+    project = _read_project(project_id)
+    if project is None:
+        return jsonify({'error': 'Project not found'}), 404
+    return jsonify(project)
+
+
+@app.route('/api/projects/<project_id>', methods=['PUT'])
+def update_project(project_id):
+    """Update an existing project's name/state/thumbnail."""
+    if not _is_valid_project_id(project_id):
+        return jsonify({'error': 'Invalid project id'}), 400
+    project = _read_project(project_id)
+    if project is None:
+        return jsonify({'error': 'Project not found'}), 404
+    data = request.get_json() or {}
+    if data.get('name'):
+        project['name'] = data['name'].strip()
+    if 'state' in data:
+        project['state'] = data['state']
+    if 'thumbnail' in data:
+        project['thumbnail'] = data['thumbnail']
+    if 'lineCount' in data:
+        project['lineCount'] = data['lineCount']
+    if 'layerCount' in data:
+        project['layerCount'] = data['layerCount']
+    project['updatedAt'] = _now_iso()
+    _write_project(project)
+    return jsonify({'success': True, 'project': _project_meta(project)})
+
+
+@app.route('/api/projects/<project_id>', methods=['DELETE'])
+def delete_project(project_id):
+    """Delete a saved project."""
+    if not _is_valid_project_id(project_id):
+        return jsonify({'error': 'Invalid project id'}), 400
+    path = _project_path(project_id)
+    if os.path.exists(path):
+        os.remove(path)
+    return jsonify({'success': True})
 
 
 if __name__ == '__main__':

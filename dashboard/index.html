@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Studio 1 — Dashboard</title>
+<link rel="icon" href="/logo.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Studio 1 brand */
+    --brand:       #56a2bf;   /* studio teal (from logo) */
+    --brand-dark:  #4490ad;
+    --brand-700:   #3a7d97;
+    --brand-50:    #ecf5f8;
+    --brand-100:   #d7eaf1;
+    --ink-brand:   #2d2d2d;   /* logo charcoal */
+
+    /* Neutrals */
+    --bg:          #f6f7f9;
+    --surface:     #ffffff;
+    --surface-2:   #fafbfc;
+    --border:      #e6e8ec;
+    --border-2:    #edeef1;
+    --ink:         #14181c;
+    --ink-2:       #353b42;
+    --muted:       #6b7280;
+    --muted-2:     #9ca3af;
+
+    /* Status */
+    --green:       #16a34a;
+    --green-soft:  #dcfce7;
+    --amber:       #d97706;
+    --amber-soft:  #fef3c7;
+    --red:         #dc2626;
+    --red-soft:    #fee2e2;
+
+    --radius:      14px;
+    --radius-sm:   10px;
+    --shadow-sm:   0 1px 2px rgba(16,24,40,0.04);
+    --shadow-md:   0 6px 20px rgba(16,24,40,0.08);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
+
+  /* ── Top bar ─────────────────────────────────────────── */
+  .topbar {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 13px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 5;
+  }
+  .brand { display: flex; align-items: center; gap: 13px; }
+  .logo {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid var(--border);
+    display: grid; place-items: center;
+    padding: 5px;
+    box-shadow: var(--shadow-sm);
+  }
+  .logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .brand-text { line-height: 1.15; }
+  .brand-title { font-weight: 600; font-size: 15px; color: var(--ink); letter-spacing: -0.01em; }
+  .brand-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+
+  .search { position: relative; margin-right: 4px; }
+  .search input {
+    width: 260px;
+    padding: 8px 12px 8px 34px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+  }
+  .search input::placeholder { color: var(--muted-2); }
+  .search input:focus { border-color: var(--brand); background: #fff; box-shadow: 0 0 0 4px rgba(86,162,191,0.14); }
+  .search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted-2); }
+
+  .btn {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 13px;
+    border-radius: 9px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+    transition: background .12s ease, border-color .12s ease, color .12s ease;
+  }
+  .btn:hover { background: var(--surface-2); border-color: #d7dae0; }
+  .btn:active { transform: translateY(0.5px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-ghost { background: transparent; border-color: transparent; color: var(--muted); }
+  .btn-ghost:hover { background: var(--surface-2); color: var(--ink-2); }
+  .btn-primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .btn-primary:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
+  .btn-danger { color: var(--red); }
+  .btn-danger:hover { background: var(--red-soft); border-color: #fbc0c0; }
+
+  /* ── Page ────────────────────────────────────────────── */
+  main { max-width: 1240px; margin: 0 auto; padding: 26px 28px 64px; }
+
+  .page-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+  .page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .summary {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    margin-bottom: 28px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .stat-row { display: flex; align-items: baseline; gap: 8px; }
+  .stat-value { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
+  .stat-value.sm { font-size: 15px; font-weight: 500; }
+  .stat-unit { font-size: 12px; color: var(--muted); }
+  .stat-bar { height: 4px; background: var(--border-2); border-radius: 4px; overflow: hidden; margin-top: 1px; }
+  .stat-bar > div { height: 100%; background: var(--brand); border-radius: 4px; transition: width .4s ease; }
+
+  /* ── Group section ───────────────────────────────────── */
+  .group { margin-bottom: 26px; }
+  .group.hidden { display: none; }
+  .group-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; }
+  .group-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .group-title .count {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted-2);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  /* ── Card ────────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 14px;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    position: relative;
+  }
+  .card.hidden { display: none; }
+  .card:hover { border-color: #d7dae0; box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+  .card.running { border-color: var(--brand-100); background: linear-gradient(180deg, #fafdff 0%, #ffffff 100%); }
+  .card.running::before {
+    content: ""; position: absolute; left: 0; top: 14px; bottom: 14px;
+    width: 3px; background: var(--brand); border-radius: 0 3px 3px 0;
+  }
+
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .card-lead { display: flex; gap: 12px; align-items: flex-start; flex: 1; min-width: 0; }
+  .card-id {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: var(--brand-50);
+    color: var(--brand-700);
+    display: grid; place-items: center;
+    font-weight: 600; font-size: 12px;
+    flex-shrink: 0;
+  }
+  .card-id.alt { background: #f1f2f6; color: var(--ink-2); }
+  .card-title-wrap { flex: 1; min-width: 0; }
+  .card-name { font-weight: 600; font-size: 14px; color: var(--ink); line-height: 1.25; overflow-wrap: anywhere; }
+  .card-meta { color: var(--muted); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+  .pill {
+    font-size: 10.5px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 5px;
+    line-height: 1;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill.running  { color: var(--green); background: var(--green-soft); }
+  .pill.ready    { color: var(--amber); background: var(--amber-soft); }
+  .pill.stopped  { color: var(--muted); background: #f1f2f6; }
+  .pill.running .dot { box-shadow: 0 0 0 3px rgba(22,163,74,0.18); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+  .card-actions { display: flex; gap: 6px; margin-top: 2px; }
+  .card-actions .btn { flex: 1; justify-content: center; padding: 8px 10px; font-size: 12.5px; font-weight: 500; }
+
+  .empty {
+    text-align: center; color: var(--muted); font-size: 13px;
+    padding: 48px 0;
+  }
+
+  /* Footer hint */
+  .footer-hint {
+    margin-top: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    color: var(--muted);
+    font-size: 12.5px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .footer-hint svg { color: var(--brand); flex-shrink: 0; }
+  .footer-hint code {
+    background: var(--surface-2);
+    border: 1px solid var(--border-2);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 11.5px;
+    color: var(--ink-2);
+  }
+  .kbd {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: var(--ink-2);
+  }
+
+  @media (max-width: 880px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .search input { width: 160px; }
+    .brand-sub { display: none; }
+    .page-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="logo"><img src="/logo.svg" alt="Studio 1" /></div>
+    <div class="brand-text">
+      <div class="brand-title">Studio 1</div>
+      <div class="brand-sub">Dashboard</div>
+    </div>
+  </div>
+
+  <div class="top-actions">
+    <div class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" placeholder="Search apps…" autocomplete="off" />
+    </div>
+    <button id="refresh" class="btn btn-ghost" title="Refresh status">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+      Refresh
+    </button>
+    <button id="stop-all" class="btn btn-danger">Stop all</button>
+  </div>
+</div>
+
+<main>
+
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Apps</h1>
+      <div class="page-sub">Launch any app with one click. Apps open in Chrome.</div>
+    </div>
+  </div>
+
+  <!-- Summary stats -->
+  <section class="summary">
+    <div class="stat">
+      <div class="stat-label">Running</div>
+      <div class="stat-row"><div class="stat-value" id="stat-running">0</div><div class="stat-unit" id="stat-total">of 0 apps</div></div>
+      <div class="stat-bar"><div id="stat-bar" style="width: 0%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Groups</div>
+      <div class="stat-row"><div class="stat-value" id="stat-groups">0</div><div class="stat-unit">categories</div></div>
+      <div class="stat-bar"><div style="width: 100%; background: var(--brand-100)"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Last refresh</div>
+      <div class="stat-row"><div class="stat-value sm" id="stat-refresh">—</div></div>
+      <div class="stat-bar"><div style="width: 8%; background: var(--green)"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Mode</div>
+      <div class="stat-row"><div class="stat-value sm">Local · Chrome</div></div>
+      <div class="stat-bar"><div style="width: 100%; background: var(--border)"></div></div>
+    </div>
+  </section>
+
+  <div id="groups"></div>
+  <div id="empty" class="empty" style="display:none">No apps match your search.</div>
+
+  <div class="footer-hint">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    Tip: each app folder also has a <code>Launch.command</code> file you can double-click in Finder. Press <span class="kbd">⌘K</span> to search.
+  </div>
+
+</main>
+
+<script>
+const groupsEl  = document.getElementById('groups');
+const emptyEl    = document.getElementById('empty');
+const refreshBtn = document.getElementById('refresh');
+const stopAllBtn = document.getElementById('stop-all');
+const searchEl   = document.getElementById('search');
+
+let APPS = {};
+let STATUS = {};
+let query = '';
+
+const GROUP_ORDER = ['Generators', 'Plotter', 'OS', 'Utilities'];
+
+// Build a short 2-letter badge from the app name
+function initials(name) {
+  const words = name.replace(/[()]/g, '').trim().split(/\s+/);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+async function fetchApps() {
+  const r = await fetch('/api/apps');
+  APPS = await r.json();
+}
+
+async function fetchStatus() {
+  const r = await fetch('/api/status');
+  STATUS = await r.json();
+  document.getElementById('stat-refresh').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  render();
+}
+
+function statusOf(id) {
+  const app = APPS[id] || {};
+  const raw = STATUS[id] || 'stopped';
+  if (app.kind === 'static') return 'ready';
+  return raw;
+}
+
+function render() {
+  const byGroup = {};
+  for (const [id, app] of Object.entries(APPS)) {
+    (byGroup[app.group] ||= []).push([id, app]);
+  }
+
+  const orderedGroups = [
+    ...GROUP_ORDER.filter(g => byGroup[g]),
+    ...Object.keys(byGroup).filter(g => !GROUP_ORDER.includes(g)),
+  ];
+
+  // Summary
+  const ids = Object.keys(APPS);
+  const runningCount = ids.filter(id => statusOf(id) === 'running').length;
+  document.getElementById('stat-running').textContent = runningCount;
+  document.getElementById('stat-total').textContent = `of ${ids.length} apps`;
+  document.getElementById('stat-groups').textContent = orderedGroups.length;
+  document.getElementById('stat-bar').style.width = ids.length ? (runningCount / ids.length * 100) + '%' : '0%';
+
+  groupsEl.innerHTML = '';
+  let anyVisible = false;
+
+  for (const group of orderedGroups) {
+    const matches = byGroup[group].filter(([id, app]) => app.name.toLowerCase().includes(query));
+    const section = document.createElement('section');
+    section.className = 'group' + (matches.length ? '' : ' hidden');
+    section.innerHTML = `
+      <div class="group-head">
+        <div class="group-title">${group} <span class="count">${matches.length}</span></div>
+      </div>
+      <div class="grid"></div>`;
+    const grid = section.querySelector('.grid');
+    for (const [id, app] of matches) {
+      grid.appendChild(renderCard(id, app));
+      anyVisible = true;
+    }
+    groupsEl.appendChild(section);
+  }
+
+  emptyEl.style.display = anyVisible ? 'none' : 'block';
+}
+
+function renderCard(id, app) {
+  const status = statusOf(id);
+  const isStatic = app.kind === 'static';
+
+  const card = document.createElement('div');
+  card.className = 'card' + (status === 'running' ? ' running' : '');
+
+  const meta = isStatic
+    ? 'standalone HTML'
+    : (app.port ? `port ${app.port}` : 'desktop app');
+
+  const pillLabel = status === 'running' ? 'Running' : (status === 'ready' ? 'Static' : 'Stopped');
+  const primaryLabel = isStatic ? 'Open' : (status === 'running' ? 'Open' : 'Launch');
+
+  card.innerHTML = `
+    <div class="card-head">
+      <div class="card-lead">
+        <div class="card-id${isStatic ? ' alt' : ''}">${initials(app.name)}</div>
+        <div class="card-title-wrap">
+          <div class="card-name">${app.name}</div>
+          <div class="card-meta${app.port ? ' mono' : ''}">${meta}</div>
+        </div>
+      </div>
+      <span class="pill ${status}"><span class="dot"></span>${pillLabel}</span>
+    </div>
+    <div class="card-actions">
+      <button class="btn btn-primary" data-action="start">${primaryLabel}</button>
+      ${isStatic ? '' : `<button class="btn" data-action="stop" ${status === 'running' ? '' : 'disabled'}>Stop</button>`}
+    </div>
+  `;
+
+  card.querySelector('[data-action="start"]').addEventListener('click', () => startApp(id, card));
+  const stopBtn = card.querySelector('[data-action="stop"]');
+  if (stopBtn) stopBtn.addEventListener('click', () => stopApp(id, card));
+  return card;
+}
+
+async function startApp(id, card) {
+  const btn = card.querySelector('[data-action="start"]');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+  try {
+    const r = await fetch('/api/start?app=' + encodeURIComponent(id));
+    const data = await r.json();
+    if (data.status === 'error') alert(`Failed to start ${APPS[id]?.name || id}:\n${data.message}`);
+  } catch (e) {
+    alert(`Error: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+    await fetchStatus();
+  }
+}
+
+async function stopApp(id, card) {
+  const btn = card.querySelector('[data-action="stop"]');
+  btn.disabled = true;
+  try {
+    await fetch('/api/stop?app=' + encodeURIComponent(id));
+  } finally {
+    await fetchStatus();
+  }
+}
+
+stopAllBtn.addEventListener('click', async () => {
+  if (!confirm('Stop all running apps?')) return;
+  const tasks = Object.entries(STATUS)
+    .filter(([id, s]) => s === 'running' && APPS[id]?.kind !== 'static')
+    .map(([id]) => fetch('/api/stop?app=' + encodeURIComponent(id)));
+  await Promise.all(tasks);
+  await fetchStatus();
+});
+
+refreshBtn.addEventListener('click', fetchStatus);
+
+searchEl.addEventListener('input', () => { query = searchEl.value.trim().toLowerCase(); render(); });
+
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault(); searchEl.focus(); searchEl.select();
+  }
+});
+
+(async () => {
+  await fetchApps();
+  await fetchStatus();
+  setInterval(fetchStatus, 3000);
+})();
+</script>
+
+</body>
+</html>

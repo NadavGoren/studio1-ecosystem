@@ -1,0 +1,23 @@
+{
+  "name": "studio1-tracker",
+  "version": "1.0.0",
+  "description": "Match Israel Post shipments to Wix orders, generate tracking dashboard.",
+  "private": true,
+  "type": "commonjs",
+  "main": "sync.js",
+  "scripts": {
+    "start": "node server.js",
+    "sync": "node sync.js",
+    "auth": "node sync.js --auth-only"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "dotenv": "^16.4.5",
+    "googleapis": "^144.0.0",
+    "pdf-parse": "^1.1.1",
+    "puppeteer": "^24.43.1"
+  }
+}

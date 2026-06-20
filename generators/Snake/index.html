@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Snake Plotter — Generative A3 Path Tool</title>
+  <title>Snake Plotter — Generative Path Tool</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,14 +11,24 @@
   <!-- ─── CONTROL PANEL ─── -->
   <aside id="controls">
     <h1>Snake Plotter</h1>
-    <p class="subtitle">Generative A3 pen-plotter paths</p>
+    <p class="subtitle">Generative pen-plotter paths</p>
 
     <fieldset>
       <legend>Grid</legend>
 
       <label>
+        Paper Format
+        <select id="paperFormat">
+          <option value="A2">A2 (420 × 594 mm)</option>
+          <option value="A3" selected>A3 (297 × 420 mm)</option>
+          <option value="A4">A4 (210 × 297 mm)</option>
+          <option value="A5">A5 (148 × 210 mm)</option>
+        </select>
+      </label>
+
+      <label>
         Cell Size (mm)
-        <input type="range" id="cellSize" min="1" max="50" value="10" step="1">
+        <input type="range" id="cellSize" min="1" max="50" value="10" step="0.1">
         <output for="cellSize">10</output>
       </label>
 
@@ -26,6 +36,11 @@
         Margin (mm)
         <input type="range" id="margin" min="0" max="100" value="15">
         <output for="margin">15</output>
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="landscape">
+        Landscape
       </label>
     </fieldset>
 
@@ -45,15 +60,61 @@
     </fieldset>
 
     <fieldset>
-      <legend>Geometry</legend>
+      <legend>Smoothing</legend>
 
       <label>
+        Method
+        <select id="smoothMethod">
+          <option value="catmull-rom" selected>Catmull-Rom Spline</option>
+          <option value="legacy">Corner Rounding (Legacy)</option>
+        </select>
+      </label>
+
+      <label id="tensionGroup">
+        Tension
+        <input type="range" id="tension" min="0.1" max="3" value="1" step="0.1">
+        <output for="tension">1</output>
+        <span class="hint">Low = loose curves, High = tight</span>
+      </label>
+
+      <label id="cornerRadiusGroup" style="display:none">
         Corner Radius
         <input type="range" id="cornerRadius" min="0" max="100" value="40">
         <output for="cornerRadius">40</output>
         <span class="hint">% of half cell-size</span>
       </label>
 
+      <label>
+        Subdivisions (Chaikin)
+        <input type="range" id="smoothIter" min="0" max="4" value="0" step="1">
+        <output for="smoothIter">0</output>
+        <span class="hint">Extra smoothing passes</span>
+      </label>
+
+      <label>
+        Point Jitter
+        <input type="range" id="jitter" min="0" max="100" value="0" step="1">
+        <output for="jitter">0</output>
+        <span class="hint">% offset from grid centers</span>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Path Behavior</legend>
+
+      <label>
+        Diagonal Bias
+        <input type="range" id="diagBias" min="0" max="10" value="2" step="0.5">
+        <output for="diagBias">2</output>
+        <span class="hint">Straight-move penalty (0 = no preference)</span>
+      </label>
+
+      <label>
+        Max Jump (&times; cell)
+        <input type="range" id="maxJump" min="1" max="10" value="3" step="0.5">
+        <output for="maxJump">3</output>
+        <span class="hint">Pen lifts above this distance</span>
+      </label>
     </fieldset>
 
     <fieldset>
@@ -76,7 +137,11 @@
       <button id="btnExport">Export SVG</button>
     </div>
 
-    <p class="seed-display">Seed: <code id="seedDisplay">—</code></p>
+    <div class="seed-row">
+      <span class="seed-label">Seed</span>
+      <input type="text" id="seedInput" value="" spellcheck="false" placeholder="hex seed">
+      <button id="btnApplySeed" title="Apply seed">&#x21B5;</button>
+    </div>
   </aside>
 
   <!-- ─── CANVAS AREA ─── -->

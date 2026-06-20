@@ -1,0 +1,11 @@
+# Saved projects (local user data)
+projects/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# OS
+.DS_Store

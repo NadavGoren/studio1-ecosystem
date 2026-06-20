@@ -1,22 +1,33 @@
+import { useMemo } from 'react';
 import { useAppStore } from '../store';
-import { 
-  MousePointer2, MousePointer, Square, Circle, Hexagon, 
+import {
+  MousePointer2, MousePointer, Square, Circle, Hexagon,
   Minus, Undo2, Redo2, Download, ZoomIn, ZoomOut, Maximize,
-  AlignLeft, AlignCenter, AlignRight, 
-  ArrowUpToLine, FoldVertical, ArrowDownToLine
+  AlignLeft, AlignCenter, AlignRight,
+  ArrowUpToLine, FoldVertical, ArrowDownToLine, AlignJustify, Ruler
 } from 'lucide-react';
 import { exportToSVG, downloadSVG } from '../lib/svg-export';
+import { computeCanvasStats, formatLength } from '../lib/stats';
 
 export function TopBar() {
-  const { 
+  const {
     tool, setTool, undo, redo, zoomToFit, setZoom, viewTransform,
-    selectedShapeIds, alignSelection 
+    selectedShapeIds, alignSelection
   } = useAppStore();
   const state = useAppStore();
 
+  // Recompute only when geometry/hatching changes — not on pan, zoom, or selection.
+  const stats = useMemo(
+    () => computeCanvasStats(state.shapes, state.hatchParams),
+    [state.shapes, state.hatchParams]
+  );
+
   const handleExport = () => {
     const svg = exportToSVG(state);
-    downloadSVG(svg, 'hatch-design.svg');
+    const sizeLabel = state.paper.preset === 'Custom'
+      ? `${Math.round(state.paper.width)}x${Math.round(state.paper.height)}mm`
+      : state.paper.preset;
+    downloadSVG(svg, `hatch-design-${sizeLabel}.svg`);
   };
 
   const ToolBtn = ({ id, icon: Icon, label }: any) => (
@@ -42,10 +53,23 @@ export function TopBar() {
 
   return (
     <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 shadow-sm z-30 relative">
-      {/* LEFT: Logo */}
+      {/* LEFT: Logo + canvas stats */}
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold">H</div>
         <span className="font-bold text-lg tracking-tight">HatchStudio</span>
+
+        {/* Line count + total path length (what the plotter will draw) */}
+        <div className="hidden md:flex items-center gap-3 ml-3 pl-3 border-l border-gray-200 text-xs text-gray-600">
+          <span className="flex items-center gap-1.5" title="Total lines (pen strokes) on the canvas">
+            <AlignJustify size={14} className="text-gray-400" />
+            <span className="font-mono font-semibold text-gray-800 tabular-nums">{stats.lineCount.toLocaleString()}</span>
+            <span className="text-gray-400">{stats.lineCount === 1 ? 'line' : 'lines'}</span>
+          </span>
+          <span className="flex items-center gap-1.5" title="Total path length — pen-down travel distance">
+            <Ruler size={14} className="text-gray-400" />
+            <span className="font-mono font-semibold text-gray-800 tabular-nums">{formatLength(stats.totalLengthMm)}</span>
+          </span>
+        </div>
       </div>
 
       {/* CENTER: Creation Tools */}

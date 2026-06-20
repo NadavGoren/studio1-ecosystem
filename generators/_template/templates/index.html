@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generator Name</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- =====================================================================
+       SIDEBAR
+       ===================================================================== -->
+  <aside id="sidebar">
+
+    <div id="sidebar-header">
+      <h1>Generator Name</h1>
+      <!-- ↑ CUSTOMIZE: change to your generator's name -->
+      <p class="subtitle">A3 · SVG · Plotter</p>
+    </div>
+
+    <div id="controls">
+
+      <!-- -----------------------------------------------------------------
+           SECTION 1 — Primary parameters
+           Rename the section and replace/add sliders for your generator.
+           ----------------------------------------------------------------- -->
+      <div class="section" id="section-primary">
+        <div class="section-header" data-section="primary">
+          <span>Parameters</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <!-- Slider example: line count -->
+          <div class="control-row">
+            <div class="control-label">
+              <span>Line Count</span>
+              <span class="control-value" id="val-line-count">80</span>
+            </div>
+            <input type="range" id="line-count"
+              min="10" max="300" step="1" value="80"
+              data-param="lineCount" />
+          </div>
+
+          <!-- Slider example: noise scale -->
+          <div class="control-row">
+            <div class="control-label">
+              <span>Noise Scale</span>
+              <span class="control-value" id="val-noise-scale">0.005</span>
+            </div>
+            <input type="range" id="noise-scale"
+              min="0.001" max="0.02" step="0.001" value="0.005"
+              data-param="noiseScale" />
+          </div>
+
+          <!-- Slider example: step length -->
+          <div class="control-row">
+            <div class="control-label">
+              <span>Step Length (mm)</span>
+              <span class="control-value" id="val-step-length">2.0</span>
+            </div>
+            <input type="range" id="step-length"
+              min="0.5" max="10" step="0.1" value="2.0"
+              data-param="stepLength" />
+          </div>
+
+        </div>
+      </div>
+
+      <!-- -----------------------------------------------------------------
+           SECTION 2 — Paper & margins
+           Keep this section as-is; all generators share these settings.
+           ----------------------------------------------------------------- -->
+      <div class="section" id="section-paper">
+        <div class="section-header" data-section="paper">
+          <span>Paper</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Orientation</span>
+            </div>
+            <select id="orientation" data-param="orientation">
+              <option value="portrait">Portrait  297 × 420 mm</option>
+              <option value="landscape">Landscape  420 × 297 mm</option>
+            </select>
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Margin (mm)</span>
+              <span class="control-value" id="val-margin">15</span>
+            </div>
+            <input type="range" id="margin"
+              min="0" max="40" step="1" value="15"
+              data-param="margin" />
+          </div>
+
+        </div>
+      </div>
+
+      <!-- -----------------------------------------------------------------
+           SECTION 3 — Style / appearance
+           Customize or delete.
+           ----------------------------------------------------------------- -->
+      <div class="section" id="section-style">
+        <div class="section-header" data-section="style">
+          <span>Style</span>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="section-body">
+
+          <div class="control-row">
+            <div class="control-label">
+              <span>Stroke Width (mm)</span>
+              <span class="control-value" id="val-stroke-width">0.30</span>
+            </div>
+            <input type="range" id="stroke-width"
+              min="0.1" max="1.5" step="0.05" value="0.30"
+              data-param="strokeWidth" />
+          </div>
+
+          <!-- Color picker example -->
+          <div class="color-row">
+            <label for="stroke-color">Pen Color</label>
+            <input type="color" id="stroke-color"
+              value="#000000" data-param="strokeColor" />
+          </div>
+
+          <!-- Checkbox example -->
+          <div class="checkbox-row">
+            <input type="checkbox" id="show-margin" data-param="showMargin" />
+            <label for="show-margin">Show margin rect</label>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Add more <div class="section"> blocks as needed -->
+
+    </div><!-- /#controls -->
+
+    <!-- -------------------------------------------------------------------
+         Footer: action buttons + seed
+         ------------------------------------------------------------------- -->
+    <div id="sidebar-footer">
+
+      <button class="btn btn-primary" id="btn-generate">
+        Generate
+      </button>
+
+      <button class="btn btn-secondary" id="btn-export" disabled>
+        Export SVG
+      </button>
+
+      <div class="seed-row">
+        <input type="text" id="seed-input" placeholder="Seed (hex)" maxlength="8" />
+        <button class="btn-icon" id="btn-randomize-seed" title="Random seed">⟳</button>
+        <button class="btn-icon" id="btn-apply-seed" title="Apply seed">↵</button>
+      </div>
+
+      <p class="kbd-hint">
+        <kbd>Space</kbd> generate &nbsp; <kbd>⌘S</kbd> export
+      </p>
+
+    </div>
+
+  </aside><!-- /#sidebar -->
+
+  <!-- =====================================================================
+       MAIN PREVIEW
+       ===================================================================== -->
+  <main id="main">
+    <div id="preview-wrap">
+      <div id="preview">
+        <!-- SVG injected here by main.js -->
+        <div id="preview-empty">
+          <div class="icon">✦</div>
+          <p>Press Space to generate</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="status-bar">
+      <div class="dot"></div>
+      <span id="status-text">ready</span>
+    </div>
+  </main>
+
+</div><!-- /#app -->
+
+<script type="module" src="/static/js/main.js"></script>
+</body>
+</html>

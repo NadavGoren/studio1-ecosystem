@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alerts Israel — Timeline Generator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Alerts&nbsp;Israel</h1>
+      <span class="subtitle">Tzeva Adom · temporal timeline</span>
+    </div>
+    <div class="stats" id="stats"><!-- filled by JS --></div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <section class="panel">
+        <h2>View</h2>
+        <div class="seg" id="view">
+          <button data-view="timeline" class="active">Timeline</button>
+          <button data-view="calendar">Calendar</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Time range</h2>
+        <div class="presets" id="presets">
+          <button data-preset="30">30 days</button>
+          <button data-preset="90">90 days</button>
+          <button data-preset="180">6 months</button>
+          <button data-preset="365">1 year</button>
+          <button data-preset="all" class="active">All</button>
+        </div>
+        <div class="dates">
+          <label>From <input type="date" id="fromDate" /></label>
+          <label>To <input type="date" id="toDate" /></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 id="bucketLabel">Bucket</h2>
+        <div class="seg" id="bucket">
+          <button data-bucket="day">Day</button>
+          <button data-bucket="week" class="active">Week</button>
+          <button data-bucket="month">Month</button>
+        </div>
+        <label class="check"><input type="checkbox" id="logScale" /> Log scale</label>
+        <label class="check"><input type="checkbox" id="eventsToggle" checked /> Mark key events</label>
+      </section>
+
+      <section class="panel" id="displayPanel">
+        <h2>Display</h2>
+        <div class="seg" id="mode">
+          <button data-mode="stacked" class="active">Stacked</button>
+          <button data-mode="lines">Lines</button>
+          <button data-mode="split">Split</button>
+        </div>
+        <p class="hint" id="splitHint" hidden>Ground threats grow down ↓ · airborne threats grow up ↑</p>
+      </section>
+
+      <section class="panel" id="glyphPanel" hidden>
+        <h2>Glyph</h2>
+        <div class="seg" id="glyph">
+          <button data-glyph="rings" class="active">Rings</button>
+          <button data-glyph="square">Square</button>
+          <button data-glyph="hatch">Hatch</button>
+        </div>
+        <p class="hint">Count → glyph size / density. Color = dominant threat.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Threat types</h2>
+        <div class="types" id="types"><!-- filled by JS --></div>
+      </section>
+
+      <section class="panel">
+        <h2>Cities <span class="muted" id="cityHint">(all)</span></h2>
+        <input type="text" id="citySearch" placeholder="Search a city…" autocomplete="off" />
+        <div class="city-results" id="cityResults"></div>
+        <div class="city-selected" id="citySelected"></div>
+      </section>
+
+      <section class="panel exports">
+        <button id="exportSvg" class="primary">Export SVG</button>
+        <button id="exportCsv">Export filtered CSV</button>
+      </section>
+
+      <p class="source" id="source"><!-- filled by JS --></p>
+    </aside>
+
+    <main class="canvas">
+      <div class="chart-wrap" id="chartWrap">
+        <svg id="chart" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </main>
+  </div>
+
+  <script src="data/data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

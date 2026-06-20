@@ -15,7 +15,7 @@ export function exportToSVG(state: ProjectState): string {
   const { paper, shapes, hatchParams } = state;
   const width = paper.width;
   const height = paper.height;
-  const strokeWidth = paper.globalStrokeWidth || 0.1; // Use global setting
+  const defaultStrokeWidth = paper.globalStrokeWidth || 0.1; // Fallback when a shape has no width
   
   // SVG header with explicit mm units
   let svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -50,7 +50,9 @@ export function exportToSVG(state: ProjectState): string {
     const params = hatchParams[shape.id];
     // Use global color if override is enabled, otherwise use shape's color
     const color = paper.globalColorOverride ? paper.globalColor : (shape.color || '#000000');
-    
+    // Each shape carries its own stroke width; fall back to the global default if unset.
+    const strokeWidth = shape.strokeWidth ?? defaultStrokeWidth;
+
     // 1. Generate Hatch Paths
     if (params && params.enabled) {
       const hatchPaths = generateAllHatchLines(shape, params);

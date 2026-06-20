@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>עורך אותיות · גופן קו-יחיד</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <aside id="editor-controls">
+    <header>
+      <h1>עורך אותיות</h1>
+      <p class="sub"><a href="index.html">→ חזרה למחולל</a></p>
+    </header>
+
+    <fieldset>
+      <legend>בחר אות</legend>
+      <div id="palette"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>כלים</legend>
+      <div class="tool-row">
+        <button id="btn-add">+ קו חדש</button>
+        <button id="btn-del">מחק קו</button>
+      </div>
+      <div class="tool-row">
+        <button id="btn-undo">↶ בטל</button>
+        <button id="btn-reset">אפס אות</button>
+      </div>
+      <p class="hint">גרור נקודה להזזה · דאבל-קליק על קו להוספת נקודה · Alt+קליק למחיקת נקודה · לחיצה על קו לבחירה ואז Delete · "קו חדש" מוסיף נקודה בכל לחיצה — לחצו שוב על הכפתור (או Enter / Esc) לסיום וחזרה לגרירה</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>תיקונים</legend>
+      <div class="tool-row">
+        <button id="btn-export">ייצוא קובץ</button>
+        <label class="imp">ייבוא קובץ<input id="imp" type="file" accept="application/json" hidden></label>
+      </div>
+      <p id="status" class="hint"></p>
+    </fieldset>
+
+    <p class="foot">נשמר בדפדפן ומוחל מיד במחולל · ייצוא לקובץ לשמירת קבע</p>
+  </aside>
+
+  <main>
+    <svg id="edit" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+  </main>
+
+  <script src="font-data.js"></script>
+  <script src="outlines.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

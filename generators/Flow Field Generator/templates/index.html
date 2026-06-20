@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flow Field Generator</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3">
 </head>
 <body>
     <div class="app-container">
@@ -17,6 +17,23 @@
                     <path d="M4 20L16 28L28 20" stroke="currentColor" stroke-width="2" fill="none"/>
                 </svg>
                 <h1>Flow Field Generator</h1>
+            </div>
+            <div class="header-actions">
+                <span id="current-project-name" class="current-project-name">Unsaved project</span>
+                <button class="btn btn-secondary btn-compact" id="btn-open-projects">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Projects
+                </button>
+                <button class="btn btn-primary btn-compact" id="btn-save-project">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Save
+                </button>
             </div>
         </header>
 
@@ -587,15 +604,29 @@
                         <div class="control-group">
                             <label for="paper-size">Paper Size</label>
                             <select id="paper-size" style="width: 100%; padding: 8px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); font-size: 0.875rem;">
+                                <option value="420x594">A2 (420 × 594 mm)</option>
                                 <option value="297x420" selected>A3 (297 × 420 mm)</option>
                                 <option value="210x297">A4 (210 × 297 mm)</option>
                                 <option value="148x210">A5 (148 × 210 mm)</option>
                             </select>
                         </div>
                         <div class="control-group">
+                            <label>Orientation</label>
+                            <div class="orientation-toggle">
+                                <button class="orientation-btn active" id="btn-portrait" title="Portrait">
+                                    <svg width="12" height="14" viewBox="0 0 12 16" fill="currentColor"><rect x="1" y="1" width="10" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                                    Portrait
+                                </button>
+                                <button class="orientation-btn" id="btn-landscape" title="Landscape">
+                                    <svg width="14" height="12" viewBox="0 0 16 12" fill="currentColor"><rect x="1" y="1" width="14" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                                    Landscape
+                                </button>
+                            </div>
+                        </div>
+                        <div class="control-group">
                             <label for="stroke-width">Stroke Width</label>
                             <div class="slider-group">
-                                <input type="range" id="stroke-width" min="0.1" max="2.0" value="0.4" step="0.05">
+                                <input type="range" id="stroke-width" min="0.2" max="15" value="0.4" step="0.05">
                                 <span class="slider-value" id="stroke-width-value">0.4 mm</span>
                             </div>
                         </div>
@@ -659,7 +690,8 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/perlin.js') }}?v=2"></script>
-    <script src="{{ url_for('static', filename='js/flowfield.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/flowfield.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/projects.js') }}?v=1"></script>
     <script>
         // Debounce function for live updates
         let updateTimeout = null;
@@ -1383,20 +1415,52 @@
                 });
             }
 
+            // Orientation toggle
+            function syncOrientationButtons() {
+                const isLandscape = flowState.widthMm > flowState.heightMm;
+                const portrait = document.getElementById('btn-portrait');
+                const landscape = document.getElementById('btn-landscape');
+                if (portrait) portrait.classList.toggle('active', !isLandscape);
+                if (landscape) landscape.classList.toggle('active', isLandscape);
+            }
+
+            function applyOrientation(forceLandscape) {
+                const isLandscape = flowState.widthMm > flowState.heightMm;
+                if (forceLandscape !== isLandscape) {
+                    [flowState.widthMm, flowState.heightMm] = [flowState.heightMm, flowState.widthMm];
+                    syncOrientationButtons();
+                    if (typeof initCanvas === 'function') initCanvas();
+                    saveActiveLayerSettings();
+                    debounceUpdate(updateFlowField);
+                }
+            }
+
+            const portraitBtn = document.getElementById('btn-portrait');
+            const landscapeBtn = document.getElementById('btn-landscape');
+            if (portraitBtn) portraitBtn.addEventListener('click', () => applyOrientation(false));
+            if (landscapeBtn) landscapeBtn.addEventListener('click', () => applyOrientation(true));
+            syncOrientationButtons();
+
             // Paper size selector
             const paperSizeEl = document.getElementById('paper-size');
             if (paperSizeEl) {
-                // Initialize selected value based on current state
-                const sizeValue = `${flowState.widthMm}x${flowState.heightMm}`;
+                // Initialize selected value based on current state (match portrait base size)
+                const w = Math.min(flowState.widthMm, flowState.heightMm);
+                const h = Math.max(flowState.widthMm, flowState.heightMm);
+                const sizeValue = `${w}x${h}`;
                 if (paperSizeEl.querySelector(`option[value="${sizeValue}"]`)) {
                     paperSizeEl.value = sizeValue;
                 }
 
                 paperSizeEl.addEventListener('change', (e) => {
                     const [wStr, hStr] = String(e.target.value || '').split('x');
-                    const nextWidth = parseFloat(wStr);
-                    const nextHeight = parseFloat(hStr);
+                    let nextWidth = parseFloat(wStr);
+                    let nextHeight = parseFloat(hStr);
                     if (!isFinite(nextWidth) || !isFinite(nextHeight)) return;
+
+                    // Respect current orientation (values in select are always portrait)
+                    const isLandscape = flowState.widthMm > flowState.heightMm;
+                    if (isLandscape) [nextWidth, nextHeight] = [nextHeight, nextWidth];
 
                     flowState.widthMm = nextWidth;
                     flowState.heightMm = nextHeight;

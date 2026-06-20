@@ -1,23 +1,31 @@
 /* ══════════════════════════════════════════════════════════════════════
    Snake Plotter — app.js
-   Generative A3 pen-plotter path tool
+   Generative pen-plotter path tool (A3/A4)
 
    Architecture
    ────────────
-   1. Config   — read UI values
-   2. Grid     — square cells, dynamically sized from Cell Size (mm)
-   3. Layers   — randomly assign every cell to one of N layers (by
-                  ratio weights), then connect each layer's cells in
-                  random order.  100 % coverage guaranteed, O(n).
-   4. Smooth   — bezier corner rounding
-   5. Render   — SVG <path> elements
-   6. Export   — standalone SVG file download
+   1. Config     — read UI values
+   2. Grid       — square cells, dynamically sized from Cell Size (mm)
+   3. Layers     — randomly assign every cell to one of N layers (by
+                   ratio weights), then connect each layer's cells via
+                   nearest-neighbour walk.  100 % coverage guaranteed.
+   4. Transform  — optional point jitter + Chaikin subdivision
+   5. Smooth     — Catmull-Rom spline or legacy corner rounding
+   6. Render     — SVG <path> elements
+   7. Export     — standalone SVG file download
    ══════════════════════════════════════════════════════════════════════ */
 
 "use strict";
 
-const A3_W = 2970;   // 297 mm in SVG units (0.1 mm each)
-const A3_H = 4200;   // 420 mm
+const PAPER_SIZES = {
+  A2: { w: 4200, h: 5940 },   // 420 × 594 mm in SVG units (0.1 mm each)
+  A3: { w: 2970, h: 4200 },   // 297 × 420 mm
+  A4: { w: 2100, h: 2970 },   // 210 × 297 mm
+  A5: { w: 1480, h: 2100 },   // 148 × 210 mm
+};
+
+let paperW = 2970;
+let paperH = 4200;
 
 const PALETTE = [
   "#e6194b", "#3cb44b", "#4363d8", "#f58231",
@@ -50,15 +58,29 @@ function readConfig() {
     colors.push(colEl ? colEl.value : PALETTE[i % PALETTE.length]);
   }
 
+  const landscape = document.getElementById("landscape").checked;
+  const format = document.getElementById("paperFormat").value;
+  const size = PAPER_SIZES[format];
+  paperW = landscape ? size.h : size.w;
+  paperH = landscape ? size.w : size.h;
+  document.getElementById("artboard").setAttribute("viewBox", `0 0 ${paperW} ${paperH}`);
+
   return {
-    cellSize:    +document.getElementById("cellSize").value,       // mm
-    marginMM:    +document.getElementById("margin").value,         // mm
+    cellSize:     +document.getElementById("cellSize").value,
+    marginMM:     +document.getElementById("margin").value,
     numLines,
     pcts,
     colors,
-    cornerPct:   +document.getElementById("cornerRadius").value / 100,
-    showGrid:     document.getElementById("showGrid").checked,
-    strokeWidth: +document.getElementById("strokeWidth").value,    // mm
+    smoothMethod: document.getElementById("smoothMethod").value,
+    cornerPct:    +document.getElementById("cornerRadius").value / 100,
+    tension:      +document.getElementById("tension").value,
+    jitter:       +document.getElementById("jitter").value / 100,
+    smoothIter:   +document.getElementById("smoothIter").value,
+    diagBias:     +document.getElementById("diagBias").value,
+    maxJumpMult:  +document.getElementById("maxJump").value,
+    showGrid:      document.getElementById("showGrid").checked,
+    strokeWidth:  +document.getElementById("strokeWidth").value,
+    landscape,
   };
 }
 
@@ -71,66 +93,48 @@ function cellCenter(col, row, origin, cell) {
   };
 }
 
-/* ═══════════════════ §3  PATH GENERATION ════════════════════════════
+function ptDist(a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
 
-   1. Collect every cell, shuffle, deal to N layers by ratio weights.
-   2. For each layer, order cells via nearest-neighbour walk:
-        • prefer DIAGONAL connections (dc≠0 AND dr≠0)
-        • fall back to straight (same row or col) only when no
-          diagonal candidate remains
-        • among the preferred group, pick the closest cell
-          (Euclidean), random tiebreak
-
-   Every cell assigned to exactly one layer → 100 % coverage.
-   Nearest-neighbour walk is O(n²) per layer — fast for typical grids.
-   ════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════ §3  PATH GENERATION ════════════════════════════ */
 
 function generatePaths(cfg, rng, cols, rows) {
-  const { numLines, pcts } = cfg;
+  const { numLines, pcts, diagBias } = cfg;
   const total = cols * rows;
   const N     = Math.min(numLines, total);
 
-  // Collect all cells
   const cells = [];
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++)
       cells.push({ col: c, row: r });
 
-  // Fisher-Yates shuffle (randomises the initial assignment)
   for (let i = cells.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [cells[i], cells[j]] = [cells[j], cells[i]];
   }
 
-  // Distribute to layers by percentage
   const layers = [];
   let offset   = 0;
-
   for (let i = 0; i < N; i++) {
     const count = (i === N - 1)
       ? total - offset
       : Math.max(1, Math.round((pcts[i] / 100) * total));
-    const end   = Math.min(offset + count, total);
+    const end = Math.min(offset + count, total);
     layers.push(cells.slice(offset, end));
     offset = end;
   }
 
-  // Order each layer by nearest-neighbour, diagonal-first
   const snakes = [];
   for (const layer of layers) {
     if (layer.length < 2) continue;
-    snakes.push(orderByNearest(layer, rng));
+    snakes.push(orderByNearest(layer, rng, diagBias));
   }
   return snakes;
 }
 
-/**
- * Greedy nearest-neighbour walk through `cells`.
- * Uses a spatial grid for O(1) neighbour lookup instead of scanning
- * every cell.  Searches outward in expanding Chebyshev-distance rings
- * until a candidate is found.  Prefers diagonal connections.
- */
-function orderByNearest(cells, rng) {
+function orderByNearest(cells, rng, diagBias) {
   const n = cells.length;
   if (n === 0) return [];
 
@@ -142,7 +146,6 @@ function orderByNearest(cells, rng) {
   const gCols = maxCol + 1;
   const gRows = maxRow + 1;
 
-  // Spatial grid: grid[row * gCols + col] = index into cells[], or -1
   const grid = new Int32Array(gCols * gRows).fill(-1);
   for (let i = 0; i < n; i++) {
     grid[cells[i].row * gCols + cells[i].col] = i;
@@ -175,15 +178,13 @@ function orderByNearest(cells, rng) {
           const dc = cc - cur.col, dr = rr - cur.row;
           const dist2  = dc * dc + dr * dr;
           const isDiag = dc !== 0 && dr !== 0;
-          const score  = dist2 + (isDiag ? 0 : 2);
+          const score  = dist2 + (isDiag ? 0 : diagBias);
           if (score < bestScore || (score === bestScore && rng() < 0.5)) {
             bestIdx = idx; bestScore = score;
           }
         }
       }
 
-      // Once we've found a candidate AND the next ring's minimum
-      // possible dist² would exceed our best score, we can stop.
       const nextMinDist2 = (ring + 1) * (ring + 1);
       if (bestIdx !== -1 && nextMinDist2 > bestScore) break;
     }
@@ -195,68 +196,116 @@ function orderByNearest(cells, rng) {
   return path;
 }
 
-/* ═══════════════════ §4  PATH SMOOTHING ═════════════════════════════ */
+/* ═══════════════════ §4  POINT TRANSFORMS ═══════════════════════════ */
 
-/**
- * Build SVG path data from an ordered list of cells.
- * `maxSegDist` — if > 0, any segment longer than this emits a
- * pen-up (M) instead of a line, preventing cross-canvas jumps.
- */
-function buildPathData(snake, origin, cell, cornerPct, maxSegDist) {
-  if (snake.length < 2) return "";
+function applyJitter(pts, jitterFrac, cell, rng) {
+  if (jitterFrac <= 0) return pts;
+  const maxOff = jitterFrac * cell * 0.5;
+  return pts.map(p => ({
+    x: p.x + (rng() * 2 - 1) * maxOff,
+    y: p.y + (rng() * 2 - 1) * maxOff,
+  }));
+}
 
-  const pts  = snake.map(s => cellCenter(s.col, s.row, origin, cell));
-  const maxR = cornerPct * cell / 2;
+function chaikinSubdivide(pts, iterations) {
+  if (iterations <= 0 || pts.length < 3) return pts;
+  let result = pts;
+  for (let iter = 0; iter < iterations; iter++) {
+    const next = [result[0]];
+    for (let i = 0; i < result.length - 1; i++) {
+      const a = result[i], b = result[i + 1];
+      next.push({ x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 });
+      next.push({ x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 });
+    }
+    next.push(result[result.length - 1]);
+    result = next;
+  }
+  return result;
+}
 
-  // Pre-compute segment distances and whether each is drawable
-  const segLen  = [];    // segLen[i] = distance from pts[i] to pts[i+1]
-  const draw    = [];    // draw[i]   = true if segment i is short enough
+function splitAtPenUp(pts, maxSegDist) {
+  if (pts.length < 2) return [pts];
+  const subPaths = [];
+  let current = [pts[0]];
   for (let i = 0; i < pts.length - 1; i++) {
-    const d = dist(pts[i], pts[i + 1]);
-    segLen.push(d);
-    draw.push(maxSegDist <= 0 || d <= maxSegDist);
+    if (maxSegDist > 0 && ptDist(pts[i], pts[i + 1]) > maxSegDist) {
+      if (current.length >= 2) subPaths.push(current);
+      current = [pts[i + 1]];
+    } else {
+      current.push(pts[i + 1]);
+    }
+  }
+  if (current.length >= 2) subPaths.push(current);
+  return subPaths;
+}
+
+/* ═══════════════════ §5  PATH SMOOTHING ═════════════════════════════ */
+
+function buildCatmullRomSubPath(pts, tension) {
+  if (pts.length < 2) return "";
+  const t6 = 6 * tension;
+  const cmds = [`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`];
+
+  if (pts.length === 2) {
+    cmds.push(`L ${pts[1].x.toFixed(2)} ${pts[1].y.toFixed(2)}`);
+    return cmds.join(" ");
   }
 
-  const d = [];
-  d.push(`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`);
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+
+    const cp1x = p1.x + (p2.x - p0.x) / t6;
+    const cp1y = p1.y + (p2.y - p0.y) / t6;
+    const cp2x = p2.x - (p3.x - p1.x) / t6;
+    const cp2y = p2.y - (p3.y - p1.y) / t6;
+
+    cmds.push(
+      `C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)} ` +
+      `${cp2x.toFixed(2)} ${cp2y.toFixed(2)} ` +
+      `${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
+    );
+  }
+  return cmds.join(" ");
+}
+
+function buildLegacySubPath(pts, cornerPct, cell) {
+  if (pts.length < 2) return "";
+  const maxR = cornerPct * cell / 2;
+  const cmds = [`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`];
 
   for (let i = 1; i < pts.length; i++) {
-    const seg = i - 1;                      // index into segLen / draw
-
-    if (!draw[seg]) {
-      // Segment too long → pen up, move to this point
-      d.push(`M ${pts[i].x.toFixed(2)} ${pts[i].y.toFixed(2)}`);
-      continue;
-    }
-
-    const isLast      = (i === pts.length - 1);
-    const nextDrawn   = !isLast && draw[i];  // will the NEXT segment also be drawn?
-
-    if (maxR === 0 || isLast || !nextDrawn) {
-      // Straight line (no rounding possible at this vertex)
-      d.push(`L ${pts[i].x.toFixed(2)} ${pts[i].y.toFixed(2)}`);
+    const isLast = (i === pts.length - 1);
+    if (maxR === 0 || isLast) {
+      cmds.push(`L ${pts[i].x.toFixed(2)} ${pts[i].y.toFixed(2)}`);
     } else {
-      // Interior vertex with both segments drawn → round the corner
       const prev = pts[i - 1], curr = pts[i], next = pts[i + 1];
-      const dIn  = segLen[seg];
-      const dOut = segLen[i];
-      const r    = Math.min(maxR, dIn / 2, dOut / 2);
-
-      d.push(`L ${(curr.x + (prev.x - curr.x) / dIn * r).toFixed(2)} ${(curr.y + (prev.y - curr.y) / dIn * r).toFixed(2)}`);
-      d.push(`Q ${curr.x.toFixed(2)} ${curr.y.toFixed(2)} ${(curr.x + (next.x - curr.x) / dOut * r).toFixed(2)} ${(curr.y + (next.y - curr.y) / dOut * r).toFixed(2)}`);
+      const dIn  = ptDist(prev, curr);
+      const dOut = ptDist(curr, next);
+      if (dIn === 0 || dOut === 0) {
+        cmds.push(`L ${pts[i].x.toFixed(2)} ${pts[i].y.toFixed(2)}`);
+        continue;
+      }
+      const r = Math.min(maxR, dIn / 2, dOut / 2);
+      cmds.push(
+        `L ${(curr.x + (prev.x - curr.x) / dIn * r).toFixed(2)} ` +
+        `${(curr.y + (prev.y - curr.y) / dIn * r).toFixed(2)}`
+      );
+      cmds.push(
+        `Q ${curr.x.toFixed(2)} ${curr.y.toFixed(2)} ` +
+        `${(curr.x + (next.x - curr.x) / dOut * r).toFixed(2)} ` +
+        `${(curr.y + (next.y - curr.y) / dOut * r).toFixed(2)}`
+      );
     }
   }
-  return d.join(" ");
+  return cmds.join(" ");
 }
 
-function dist(a, b) {
-  const dx = b.x - a.x, dy = b.y - a.y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
+/* ═══════════════════ §6  RENDER ═════════════════════════════════════ */
 
-/* ═══════════════════ §5  RENDER ═════════════════════════════════════ */
-
-function render(snakes, cfg, cols, rows) {
+function render(snakes, cfg, cols, rows, rng) {
   const svg = document.getElementById("artboard");
   svg.innerHTML = "";
 
@@ -266,15 +315,16 @@ function render(snakes, cfg, cols, rows) {
   const gridW  = cols * cell;
   const gridH  = rows * cell;
   const origin = {
-    x: m + (A3_W - 2 * m - gridW) / 2,
-    y: m + (A3_H - 2 * m - gridH) / 2,
+    x: m + (paperW - 2 * m - gridW) / 2,
+    y: m + (paperH - 2 * m - gridH) / 2,
   };
 
-  const svgStroke = cfg.strokeWidth * 10;
+  const svgStroke  = cfg.strokeWidth * 10;
+  const maxSegDist = cfg.maxJumpMult * cell;
   const NS = "http://www.w3.org/2000/svg";
   const hideGrid = !cfg.showGrid;
 
-  // ── Layer: Frame (outer rectangle) ──
+  // Frame
   const frameG = document.createElementNS(NS, "g");
   frameG.setAttribute("id", "Frame");
   if (hideGrid) frameG.setAttribute("display", "none");
@@ -289,7 +339,7 @@ function render(snakes, cfg, cols, rows) {
   frameG.appendChild(rect);
   svg.appendChild(frameG);
 
-  // ── Layer: Grid (inner lines) ──
+  // Grid lines
   const gridG = document.createElementNS(NS, "g");
   gridG.setAttribute("id", "Grid");
   gridG.setAttribute("stroke", "#ccc");
@@ -315,12 +365,24 @@ function render(snakes, cfg, cols, rows) {
   }
   svg.appendChild(gridG);
 
-  // ── Layers: Line 1, Line 2, … ──
-  const maxSegDist = 3 * cell;
-
+  // Snake paths
   snakes.forEach((snake, i) => {
-    const pd = buildPathData(snake, origin, cell, cfg.cornerPct, maxSegDist);
+    let pts = snake.map(s => cellCenter(s.col, s.row, origin, cell));
+    pts = applyJitter(pts, cfg.jitter, cell, rng);
+
+    const subPaths = splitAtPenUp(pts, maxSegDist);
+    const isCR = cfg.smoothMethod === "catmull-rom";
+
+    const pathParts = subPaths.map(sp => {
+      const smoothed = chaikinSubdivide(sp, cfg.smoothIter);
+      return isCR
+        ? buildCatmullRomSubPath(smoothed, cfg.tension)
+        : buildLegacySubPath(smoothed, cfg.cornerPct, cell);
+    });
+
+    const pd = pathParts.filter(Boolean).join(" ");
     if (!pd) return;
+
     const g = document.createElementNS(NS, "g");
     g.setAttribute("id", `Line ${i + 1}`);
     const p = document.createElementNS(NS, "path");
@@ -335,7 +397,7 @@ function render(snakes, cfg, cols, rows) {
   });
 }
 
-/* ═══════════════════ §6  EXPORT ═════════════════════════════════════ */
+/* ═══════════════════ §7  EXPORT ═════════════════════════════════════ */
 
 function exportSVG() {
   const svg   = document.getElementById("artboard");
@@ -343,10 +405,9 @@ function exportSVG() {
 
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   clone.setAttribute("xmlns:inkscape", "http://www.inkscape.org/namespaces/inkscape");
-  clone.setAttribute("width", "297mm");
-  clone.setAttribute("height", "420mm");
+  clone.setAttribute("width", `${paperW / 10}mm`);
+  clone.setAttribute("height", `${paperH / 10}mm`);
 
-  // Make all top-level <g> groups visible and tag as Inkscape layers
   const INK = "http://www.inkscape.org/namespaces/inkscape";
   clone.querySelectorAll(":scope > g").forEach(g => {
     g.removeAttribute("display");
@@ -361,19 +422,19 @@ function exportSVG() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
   a.href     = url;
-  a.download = `snake-plotter-${currentSeed}.svg`;
+  a.download = `snake-plotter-${document.getElementById("paperFormat").value}-${currentSeed.toString(16)}.svg`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-/* ═══════════════════ §7  UI WIRING ══════════════════════════════════ */
+/* ═══════════════════ §8  UI WIRING ══════════════════════════════════ */
 
 let currentSeed = 0;
 
 function wireSliders() {
-  document.querySelectorAll('input[type="range"]').forEach((slider) => {
+  document.querySelectorAll('input[type="range"]').forEach(slider => {
     const out = slider.parentElement.querySelector("output");
     if (out) {
       out.textContent = slider.value;
@@ -428,7 +489,6 @@ function buildRatioInputs() {
   }
 }
 
-/** Recalculate the last line's percentage so all lines sum to 100 %. */
 function updateLastPct() {
   const n = +document.getElementById("numLines").value;
   if (n < 2) {
@@ -443,7 +503,6 @@ function updateLastPct() {
     if (v < 0) { v = 0; el.value = "0"; }
     sum += v;
   }
-  // Clamp editable inputs so total never exceeds 100
   if (sum > 100) {
     const last = document.getElementById(`ratio-${n - 2}`);
     const over = sum - 100;
@@ -455,17 +514,26 @@ function updateLastPct() {
   if (lastEl) lastEl.value = String(remainder);
 }
 
+function updateSmoothingVisibility() {
+  const method = document.getElementById("smoothMethod").value;
+  const isCR = method === "catmull-rom";
+  document.getElementById("tensionGroup").style.display    = isCR ? "" : "none";
+  document.getElementById("cornerRadiusGroup").style.display = isCR ? "none" : "";
+}
+
 function computeGrid(cfg) {
   const m    = cfg.marginMM * 10;
   const cell = cfg.cellSize * 10;
   return {
-    cols: Math.max(2, Math.floor((A3_W - 2 * m) / cell)),
-    rows: Math.max(2, Math.floor((A3_H - 2 * m) / cell)),
+    cols: Math.max(2, Math.floor((paperW - 2 * m) / cell)),
+    rows: Math.max(2, Math.floor((paperH - 2 * m) / cell)),
   };
 }
 
 function generate() {
   currentSeed = Math.floor(Math.random() * 0xffffffff);
+  document.getElementById("seedInput").value =
+    currentSeed.toString(16).toUpperCase();
   runWithSeed(currentSeed);
 }
 
@@ -474,11 +542,8 @@ function runWithSeed(seed) {
   const cfg = readConfig();
   const { cols, rows } = computeGrid(cfg);
 
-  document.getElementById("seedDisplay").textContent =
-    seed.toString(16).toUpperCase();
-
   const snakes = generatePaths(cfg, rng, cols, rows);
-  render(snakes, cfg, cols, rows);
+  render(snakes, cfg, cols, rows, rng);
 }
 
 function regenerate() {
@@ -486,11 +551,21 @@ function regenerate() {
   runWithSeed(currentSeed);
 }
 
+function applySeedFromInput() {
+  const raw = document.getElementById("seedInput").value.trim();
+  const parsed = parseInt(raw, 16);
+  if (!isNaN(parsed) && parsed > 0) {
+    currentSeed = parsed;
+    runWithSeed(currentSeed);
+  }
+}
+
 /* ── Init ────────────────────────────────────────────────────────── */
 
 document.addEventListener("DOMContentLoaded", () => {
   wireSliders();
   buildRatioInputs();
+  updateSmoothingVisibility();
 
   document.getElementById("btnGenerate").addEventListener("click", generate);
   document.getElementById("btnExport").addEventListener("click", exportSVG);
@@ -500,8 +575,22 @@ document.addEventListener("DOMContentLoaded", () => {
     regenerate();
   });
 
-  ["cellSize", "margin", "cornerRadius",
-   "showGrid", "strokeWidth"
+  document.getElementById("smoothMethod").addEventListener("change", () => {
+    updateSmoothingVisibility();
+    regenerate();
+  });
+
+  document.getElementById("seedInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") applySeedFromInput();
+  });
+  document.getElementById("btnApplySeed").addEventListener("click", applySeedFromInput);
+
+  document.getElementById("paperFormat").addEventListener("change", regenerate);
+
+  [
+    "cellSize", "margin", "cornerRadius", "tension", "jitter",
+    "smoothIter", "diagBias", "maxJump",
+    "showGrid", "strokeWidth", "landscape",
   ].forEach(id => {
     const el = document.getElementById(id);
     el.addEventListener("input", regenerate);
