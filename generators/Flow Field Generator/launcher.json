@@ -1,0 +1,12 @@
+{
+  "id": "flow-field",
+  "name": "Flow Field Generator",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "python3",
+    "app.py"
+  ],
+  "port": 8000,
+  "order": 10
+}

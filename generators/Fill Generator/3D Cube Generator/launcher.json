@@ -1,0 +1,14 @@
+{
+  "id": "cube-generator",
+  "name": "3D Cube Generator",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "python3",
+    "server.py",
+    "8003"
+  ],
+  "port": 8003,
+  "path": "/3d-generator.html",
+  "order": 90
+}

@@ -1,0 +1,13 @@
+{
+  "id": "hatch",
+  "name": "Hatch Generator",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "npm",
+    "run",
+    "dev"
+  ],
+  "port": 4000,
+  "order": 20
+}

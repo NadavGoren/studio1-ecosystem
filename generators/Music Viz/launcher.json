@@ -1,0 +1,11 @@
+{
+  "id": "music-viz",
+  "name": "Music Viz (Buu)",
+  "group": "Generators",
+  "kind": "desktop",
+  "cmd": [
+    "python3",
+    "Buu.py"
+  ],
+  "order": 120
+}

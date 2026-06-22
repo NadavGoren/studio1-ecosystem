@@ -1,0 +1,8 @@
+{
+  "id": "fill-generator-classic",
+  "name": "Fill Generator",
+  "group": "Generators",
+  "kind": "static",
+  "file": "index.html",
+  "order": 100
+}

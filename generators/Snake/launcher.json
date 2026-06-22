@@ -1,0 +1,8 @@
+{
+  "id": "snake",
+  "name": "Snake",
+  "group": "Generators",
+  "kind": "static",
+  "file": "index.html",
+  "order": 130
+}

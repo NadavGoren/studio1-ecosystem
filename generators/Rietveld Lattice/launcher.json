@@ -1,0 +1,13 @@
+{
+  "id": "rietveld-lattice",
+  "name": "Rietveld Lattice",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "npm",
+    "run",
+    "dev"
+  ],
+  "port": 6060,
+  "order": 200
+}

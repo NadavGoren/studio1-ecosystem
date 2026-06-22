@@ -1,0 +1,12 @@
+{
+  "id": "image-processor-backend",
+  "name": "Image Processor (Backend)",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "python3",
+    "app.py"
+  ],
+  "port": 5500,
+  "order": 30
+}

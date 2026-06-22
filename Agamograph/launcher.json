@@ -1,0 +1,13 @@
+{
+  "id": "agamograph",
+  "name": "Agamograph",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "npm",
+    "run",
+    "dev"
+  ],
+  "port": 5180,
+  "order": 220
+}

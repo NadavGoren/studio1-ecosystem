@@ -1,0 +1,8 @@
+{
+  "id": "weaving",
+  "name": "Weaving Generator",
+  "group": "Generators",
+  "kind": "static",
+  "file": "index.html",
+  "order": 160
+}

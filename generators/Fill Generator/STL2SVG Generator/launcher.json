@@ -1,0 +1,13 @@
+{
+  "id": "fill-generator",
+  "name": "Fill Generator (STL2SVG)",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "python3",
+    "server.py"
+  ],
+  "port": 8001,
+  "path": "/3d-generator.html",
+  "order": 70
+}

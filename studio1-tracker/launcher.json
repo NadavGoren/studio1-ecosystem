@@ -1,0 +1,12 @@
+{
+  "id": "tracker",
+  "name": "Studio 1 Tracker",
+  "group": "Utilities",
+  "kind": "server",
+  "cmd": [
+    "npm",
+    "start"
+  ],
+  "port": 3137,
+  "order": 10
+}

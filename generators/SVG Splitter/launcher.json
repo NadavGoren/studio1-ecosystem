@@ -1,0 +1,8 @@
+{
+  "id": "svg-splitter",
+  "name": "SVG Splitter",
+  "group": "Generators",
+  "kind": "static",
+  "file": "index.html",
+  "order": 150
+}

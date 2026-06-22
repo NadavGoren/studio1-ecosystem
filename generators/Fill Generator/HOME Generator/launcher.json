@@ -1,0 +1,16 @@
+{
+  "id": "home-generator",
+  "name": "HOME Generator",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "npm",
+    "run",
+    "dev",
+    "--",
+    "--port",
+    "3002"
+  ],
+  "port": 3002,
+  "order": 80
+}

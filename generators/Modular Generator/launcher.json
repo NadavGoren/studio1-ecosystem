@@ -1,0 +1,8 @@
+{
+  "id": "modular",
+  "name": "Modular Generator",
+  "group": "Generators",
+  "kind": "static",
+  "file": "index.html",
+  "order": 190
+}

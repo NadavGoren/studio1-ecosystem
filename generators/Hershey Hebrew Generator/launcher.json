@@ -1,0 +1,12 @@
+{
+  "id": "hershey-hebrew",
+  "name": "Hershey Hebrew Generator",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "python3",
+    "server.py"
+  ],
+  "port": 8095,
+  "order": 180
+}

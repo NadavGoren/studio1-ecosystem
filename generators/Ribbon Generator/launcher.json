@@ -1,0 +1,12 @@
+{
+  "id": "ribbon",
+  "name": "Ribbon Generator",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "python3",
+    "app.py"
+  ],
+  "port": 8002,
+  "order": 110
+}

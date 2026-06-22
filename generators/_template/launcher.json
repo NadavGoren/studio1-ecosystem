@@ -1,0 +1,13 @@
+{
+  "id": "__template__",
+  "name": "My Generator",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "python3",
+    "app.py"
+  ],
+  "port": 8004,
+  "order": 999,
+  "_comment": "Template manifest. Copy into a new app folder, rename id/name/port. kind: server|static|desktop. server -> cmd+port (+optional path). static -> file. desktop -> cmd."
+}

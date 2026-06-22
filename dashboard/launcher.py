@@ -16,225 +16,106 @@ import json
 import time
 import socket
 import glob
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+import threading
+import tempfile
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def p(*parts):
-    return os.path.join(REPO, *parts)
-
-
 # ── App registry ─────────────────────────────────────────────────────────────
+# Apps are DISCOVERED, not hardcoded. Every app folder carries its own
+# `launcher.json` manifest — the single source of truth for how it launches:
+#
+#   { "id": "flow-field", "name": "Flow Field Generator", "group": "Generators",
+#     "kind": "server", "cmd": ["python3", "app.py"], "port": 8000 }
+#
 # kind:
-#   server   — spawn a process, wait for port, then open Chrome to url
-#   static   — no process; open file:// in Chrome
-#   desktop  — spawn a process, no URL
-APPS = {
-    # ── Generators ────────────────────────────────────────────────
-    "flow-field": {
-        "name": "Flow Field Generator",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Flow Field Generator"),
-        "cmd": ["python3", "app.py"],
-        "port": 8000,
-        "url": "http://localhost:8000",
-    },
-    "hatch": {
-        "name": "Hatch Generator",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Hatch Generator"),
-        "cmd": ["npm", "run", "dev"],
-        "port": 4000,
-        "url": "http://localhost:4000",
-    },
-    "image-processor-backend": {
-        "name": "Image Processor (Backend)",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Image Processor", "backend"),
-        "cmd": ["python3", "app.py"],
-        "port": 5500,
-        "url": "http://localhost:5500",
-    },
-    "image-processor-frontend": {
-        "name": "Image Processor (Frontend)",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Image Processor", "frontend"),
-        "cmd": ["npm", "run", "dev", "--", "--port", "5174"],
-        "port": 5174,
-        "url": "http://localhost:5174",
-    },
-    "midi": {
-        "name": "Midi Project",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Midi Project"),
-        "cmd": ["python3", "app.py"],
-        "port": 5050,
-        "url": "http://localhost:5050",
-    },
-    "stl-generator": {
-        "name": "STL Generator",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "STL GENERATOR", "stl-generator"),
-        "cmd": ["npm", "run", "dev"],
-        "port": 5173,
-        "url": "http://localhost:5173",
-    },
-    "fill-generator": {
-        "name": "Fill Generator (STL2SVG)",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Fill Generator", "STL2SVG Generator"),
-        "cmd": ["python3", "server.py"],
-        "port": 8001,
-        "url": "http://localhost:8001/3d-generator.html",
-    },
-    "home-generator": {
-        "name": "HOME Generator",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Fill Generator", "HOME Generator"),
-        "cmd": ["npm", "run", "dev", "--", "--port", "3002"],
-        "port": 3002,
-        "url": "http://localhost:3002",
-    },
-    "cube-generator": {
-        "name": "3D Cube Generator",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Fill Generator", "3D Cube Generator"),
-        "cmd": ["python3", "server.py", "8003"],
-        "port": 8003,
-        "url": "http://localhost:8003/3d-generator.html",
-    },
-    "fill-generator-classic": {
-        "name": "Fill Generator",
-        "group": "Generators",
-        "kind": "static",
-        "cwd": p("generators", "Fill Generator", "Fill Generator"),
-        "file": "index.html",
-    },
-    "ribbon": {
-        "name": "Ribbon Generator",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Ribbon Generator"),
-        "cmd": ["python3", "app.py"],
-        "port": 8002,
-        "url": "http://localhost:8002",
-    },
-    "music-viz": {
-        "name": "Music Viz (Buu)",
-        "group": "Generators",
-        "kind": "desktop",
-        "cwd": p("generators", "Music Viz"),
-        "cmd": ["python3", "Buu.py"],
-        "port": None,
-        "url": None,
-    },
-    "snake": {
-        "name": "Snake",
-        "group": "Generators",
-        "kind": "static",
-        "cwd": p("generators", "Snake"),
-        "file": "index.html",
-    },
-    "gif-generator": {
-        "name": "GIF Generator",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "GIF Generator"),
-        "cmd": ["python3", "-m", "http.server", "8088"],
-        "port": 8088,
-        "url": "http://localhost:8088",
-    },
-    "svg-splitter": {
-        "name": "SVG Splitter",
-        "group": "Generators",
-        "kind": "static",
-        "cwd": p("generators", "SVG Splitter"),
-        "file": "index.html",
-    },
-    "weaving": {
-        "name": "Weaving Generator",
-        "group": "Generators",
-        "kind": "static",
-        "cwd": p("generators", "Weaving Generator"),
-        "file": "index.html",
-    },
-    "woven-grid": {
-        "name": "Woven Grid Generator",
-        "group": "Generators",
-        "kind": "static",
-        "cwd": p("generators", "Woven Grid Generator"),
-        "file": "index.html",
-    },
-    "hershey-hebrew": {
-        "name": "Hershey Hebrew Generator",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Hershey Hebrew Generator"),
-        "cmd": ["python3", "server.py"],
-        "port": 8095,
-        "url": "http://localhost:8095",
-    },
-    "modular": {
-        "name": "Modular Generator",
-        "group": "Generators",
-        "kind": "static",
-        "cwd": p("generators", "Modular Generator"),
-        "file": "index.html",
-    },
-    "rietveld-lattice": {
-        "name": "Rietveld Lattice",
-        "group": "Generators",
-        "kind": "server",
-        "cwd": p("generators", "Rietveld Lattice"),
-        "cmd": ["npm", "run", "dev"],
-        "port": 6060,
-        "url": "http://localhost:6060",
-    },
-    # ── Plotter ───────────────────────────────────────────────────
-    "plotter-ui": {
-        "name": "Plotter UI",
-        "group": "Plotter",
-        "kind": "server",
-        "cwd": p("plotter-slicer", "plotter-ui"),
-        "cmd": ["python3", "app.py"],
-        "port": 5001,
-        "url": "http://localhost:5001",
-    },
-    # ── OS / Utilities ────────────────────────────────────────────
-    "studio-os": {
-        "name": "Studio-OS",
-        "group": "OS",
-        "kind": "server",
-        "cwd": p("studio-os", "Studio-OS"),
-        "cmd": ["npm", "run", "dev", "--", "--port", "3001"],
-        "port": 3001,
-        "url": "http://localhost:3001",
-    },
-    "tracker": {
-        "name": "Studio 1 Tracker",
-        "group": "Utilities",
-        "kind": "server",
-        "cwd": p("studio1-tracker"),
-        "cmd": ["npm", "start"],
-        "port": 3137,
-        "url": "http://localhost:3137",
-    },
-}
+#   server   — spawn `cmd`, wait for `port`, then open Chrome to the url
+#              (url = http://localhost:<port><path>; `path` defaults to "")
+#   static   — no process; open file://<cwd>/<file> in Chrome
+#   desktop  — spawn `cmd`, no URL (e.g. a Tkinter app)
+#
+# Drop a folder with a launcher.json anywhere under the repo and it shows up
+# here automatically — no edits to this file. Restart launcher.py to pick up
+# newly added or changed manifests.
+
+GROUP_RANK = {"Generators": 0, "Plotter": 1, "OS": 2, "Utilities": 3}
+
+# Directory names never descended into while discovering manifests:
+#   node_modules/__pycache__ — noise;  _template — a copy-me stub, not a real app;
+#   dashboard — this launcher itself.  Hidden dirs (.git, .claude) are pruned too.
+_SKIP_DIRS = {"node_modules", "__pycache__", "_template", "dashboard"}
+
+manifest_errors = {}  # launcher.json path -> parse/validation error (shown at startup)
 
 
-running = {}  # app_id -> subprocess.Popen
+def discover_apps():
+    """Walk the repo and build the app registry from per-app launcher.json files.
+
+    The manifest's location IS the app's working directory, so moving an app
+    folder can never desync its launch config from the dashboard.
+    """
+    found = {}
+    for dirpath, dirnames, filenames in os.walk(REPO):
+        # Prune noise + hidden dirs in place so os.walk never descends into them.
+        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS and not d.startswith(".")]
+        if "launcher.json" not in filenames:
+            continue
+        mpath = os.path.join(dirpath, "launcher.json")
+        try:
+            with open(mpath, encoding="utf-8") as f:
+                cfg = json.load(f)
+        except (OSError, ValueError) as e:
+            manifest_errors[mpath] = str(e)
+            continue
+
+        aid = cfg.get("id")
+        if not aid:
+            manifest_errors[mpath] = "missing required field 'id'"
+            continue
+        if aid in found:
+            manifest_errors[mpath] = f"duplicate id '{aid}' (also at {found[aid]['cwd']})"
+            continue
+
+        kind = cfg.get("kind", "server")
+        app = {
+            "name": cfg.get("name", aid),
+            "group": cfg.get("group", "Other"),
+            "kind": kind,
+            "cwd": dirpath,
+            "order": cfg.get("order", 1000),
+        }
+        if kind == "static":
+            app["file"] = cfg.get("file", "index.html")
+        elif kind == "desktop":
+            app["cmd"] = cfg.get("cmd", [])
+            app["port"] = None
+            app["url"] = None
+        else:  # server
+            app["cmd"] = cfg.get("cmd", [])
+            port = cfg.get("port")
+            app["port"] = port
+            app["url"] = f"http://localhost:{port}{cfg.get('path', '')}" if port else None
+
+        found[aid] = app
+
+    # Sort by group rank, then the app's own `order`, then name — a stable,
+    # curated sequence independent of filesystem walk order.
+    return dict(sorted(
+        found.items(),
+        key=lambda kv: (GROUP_RANK.get(kv[1]["group"], 99), kv[1]["order"], kv[1]["name"]),
+    ))
+
+
+APPS = discover_apps()
+
+
+running = {}    # app_id -> subprocess.Popen
+launching = {}  # app_id -> True while we wait (in a thread) for its port
+errors = {}     # app_id -> last startup error message
 
 
 def get_shell_env():
@@ -250,11 +131,20 @@ def get_shell_env():
 
 
 def is_port_in_use(port):
+    # Probe BOTH IPv4 and IPv6 loopback. Vite/npm dev servers bind "localhost"
+    # which resolves to ::1 (IPv6) — an IPv4-only probe misses them entirely,
+    # making the launcher think they're down and spawn a doomed duplicate.
     if not port:
         return False
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(0.3)
-        return s.connect_ex(("127.0.0.1", port)) == 0
+    for family, addr in ((socket.AF_INET, "127.0.0.1"), (socket.AF_INET6, "::1")):
+        try:
+            with socket.socket(family, socket.SOCK_STREAM) as s:
+                s.settimeout(0.3)
+                if s.connect_ex((addr, port)) == 0:
+                    return True
+        except OSError:
+            pass
+    return False
 
 
 def wait_for_port(port, timeout=20):
@@ -289,6 +179,47 @@ def clean_lock_files(app_id):
             pass
 
 
+def log_path(app_id):
+    return os.path.join(tempfile.gettempdir(), f"studio1-{app_id}.log")
+
+
+def read_log_tail(app_id, limit=1500):
+    try:
+        with open(log_path(app_id), "r", errors="replace") as f:
+            return f.read()[-limit:].strip()
+    except OSError:
+        return ""
+
+
+def await_port_and_open(app_id):
+    """Background worker: wait for the app's port, then open Chrome.
+
+    Runs in its own thread so a slow dev-server cold start never blocks the
+    dashboard (status polls, other launches) the way the old inline wait did.
+    """
+    app = APPS.get(app_id, {})
+    port = app.get("port")
+    proc = running.get(app_id)
+    try:
+        deadline = time.time() + 90
+        while time.time() < deadline:
+            if port and is_port_in_use(port):
+                break  # server is up
+            if proc is not None and proc.poll() is not None:
+                # Process exited before the port opened — surface why, fast.
+                errors[app_id] = read_log_tail(app_id) or "Process exited during startup."
+                running.pop(app_id, None)
+                return
+            if not port:
+                break  # nothing portwise to wait on
+            time.sleep(0.3)
+        # Port is up (or alive-but-slow past the deadline) — open it.
+        if app.get("url"):
+            open_in_chrome(app["url"])
+    finally:
+        launching.pop(app_id, None)
+
+
 def start_app(app_id):
     app = APPS[app_id]
     kind = app["kind"]
@@ -304,18 +235,19 @@ def start_app(app_id):
 
     port = app.get("port")
 
-    # Already running externally?
+    # Already running externally or by us?
     if port and is_port_in_use(port):
         open_in_chrome(app["url"])
         return {"status": "already_running", "url": app["url"]}
-
-    # Already running by us?
+    if app_id in launching:
+        return {"status": "starting", "url": app.get("url")}
     if app_id in running and running[app_id].poll() is None:
-        if app["url"]:
+        if app.get("url"):
             open_in_chrome(app["url"])
         return {"status": "already_running", "url": app.get("url")}
 
     clean_lock_files(app_id)
+    errors.pop(app_id, None)
 
     try:
         if kind == "desktop":
@@ -330,27 +262,31 @@ def start_app(app_id):
             running[app_id] = proc
             return {"status": "started", "url": None, "desktop": True}
 
-        # kind == "server"
-        proc = subprocess.Popen(
-            app["cmd"],
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            preexec_fn=os.setsid,
-            env=get_shell_env(),
-        )
+        # kind == "server" — log to a file (not a PIPE). A chatty dev server
+        # that fills an undrained PIPE buffer will block and hang; a file won't.
+        logf = open(log_path(app_id), "w")
+        try:
+            proc = subprocess.Popen(
+                app["cmd"],
+                cwd=cwd,
+                stdout=logf,
+                stderr=subprocess.STDOUT,
+                preexec_fn=os.setsid,
+                env=get_shell_env(),
+            )
+        finally:
+            logf.close()  # the child keeps its own copy of the fd
         running[app_id] = proc
+        launching[app_id] = True
 
-        # Wait for the port to come up (npm dev servers can take ~10s)
-        if not wait_for_port(port, timeout=25):
-            if proc.poll() is not None:
-                output = proc.stdout.read().decode(errors="replace")[:500]
-                del running[app_id]
-                return {"status": "error", "message": f"Process exited.\n{output}"}
-            # Process is alive but port didn't open — open Chrome anyway
-        open_in_chrome(app["url"])
-        return {"status": "started", "url": app["url"]}
+        # Return immediately; a background thread waits for the port and opens
+        # Chrome the moment the server is actually ready.
+        threading.Thread(
+            target=await_port_and_open, args=(app_id,), daemon=True
+        ).start()
+        return {"status": "starting", "url": app.get("url")}
     except FileNotFoundError as e:
+        errors[app_id] = str(e)
         return {"status": "error", "message": str(e)}
 
 
@@ -358,6 +294,9 @@ def stop_app(app_id):
     app = APPS.get(app_id, {})
     if app.get("kind") == "static":
         return {"status": "not_running"}
+
+    launching.pop(app_id, None)
+    errors.pop(app_id, None)
 
     if app_id not in running:
         return {"status": "not_running"}
@@ -386,13 +325,22 @@ def get_status():
         if app["kind"] == "static":
             out[app_id] = "ready"
             continue
-        if app_id in running and running[app_id].poll() is None:
-            out[app_id] = "running"
-            continue
-        if app_id in running:
-            del running[app_id]
         port = app.get("port")
-        out[app_id] = "running" if port and is_port_in_use(port) else "stopped"
+        proc = running.get(app_id)
+        alive = proc is not None and proc.poll() is None
+        if port and is_port_in_use(port):
+            launching.pop(app_id, None)
+            out[app_id] = "running"
+        elif app_id in launching and alive:
+            out[app_id] = "starting"
+        elif alive and not port:        # desktop app, no port to probe
+            out[app_id] = "running"
+        elif app_id in errors:
+            out[app_id] = "error"
+        else:
+            if proc is not None and not alive:
+                running.pop(app_id, None)
+            out[app_id] = "stopped"
     return out
 
 
@@ -407,6 +355,9 @@ class LauncherHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/status":
             return self._json(get_status())
+
+        if path == "/api/errors":
+            return self._json(errors)
 
         if path == "/api/apps":
             info = {}
@@ -458,13 +409,18 @@ def cleanup():
 
 if __name__ == "__main__":
     PORT = 7777
-    server = HTTPServer(("127.0.0.1", PORT), LauncherHandler)
+    server = ThreadingHTTPServer(("127.0.0.1", PORT), LauncherHandler)
 
     print("╔════════════════════════════════════════════╗")
     print("║   Studio 1 — Dashboard Launcher            ║")
     print(f"║   http://localhost:{PORT}                      ║")
     print("║   Press Ctrl+C to stop.                    ║")
     print("╚════════════════════════════════════════════╝")
+    print(f"Discovered {len(APPS)} apps from launcher.json manifests.")
+    if manifest_errors:
+        print("⚠  Skipped malformed manifests:")
+        for mpath, err in manifest_errors.items():
+            print(f"   • {os.path.relpath(mpath, REPO)}: {err}")
 
     try:
         server.serve_forever()

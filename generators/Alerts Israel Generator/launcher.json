@@ -1,0 +1,8 @@
+{
+  "id": "alerts-israel",
+  "name": "Alerts Israel Generator",
+  "group": "Generators",
+  "kind": "static",
+  "file": "index.html",
+  "order": 210
+}

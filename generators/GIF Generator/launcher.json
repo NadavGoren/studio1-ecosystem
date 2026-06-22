@@ -1,0 +1,14 @@
+{
+  "id": "gif-generator",
+  "name": "GIF Generator",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "python3",
+    "-m",
+    "http.server",
+    "8088"
+  ],
+  "port": 8088,
+  "order": 140
+}

@@ -1,0 +1,12 @@
+{
+  "id": "midi",
+  "name": "Midi Project",
+  "group": "Generators",
+  "kind": "server",
+  "cmd": [
+    "python3",
+    "app.py"
+  ],
+  "port": 5050,
+  "order": 50
+}
