@@ -163,8 +163,8 @@
   }
 
   // ---------------------------------------------------------------------------
-  // 4) GRID COMPOSITION — visible graph grid + checker fields + a solid block
-  //    + bold crossing bars + thin accent lines. Bauhaus feel.
+  // 4) GRID COMPOSITION — visible graph grid + checker fields + bold crossing
+  //    bars + thin accent lines. Bauhaus feel.
   // ---------------------------------------------------------------------------
   function grid(area, ctx) {
     const rh = ctx.rh, p = ctx.params;
@@ -176,7 +176,7 @@
     const W = cols * cell, H = rows * cell;
     const strokes = [];
 
-    // one slider controls the line spacing inside every filled cell / bar / block
+    // one slider controls the line spacing inside every filled cell / bar
     const fillSp = Math.max(0.4, p.fillSpacing != null ? p.fillSpacing : 1.2);
     ctx.solidSpacing = fillSp;
 
@@ -189,50 +189,87 @@
 
     const cellRect = (ci, cj, cw, ch) => ({ x: ox + ci * cell, y: oy + cj * cell, w: cw * cell, h: ch * cell });
 
-    // 2) checker fields — count, size and colour are all user-controlled
-    const fSize = p.fieldSize != null ? p.fieldSize : 9;
-    const fLo = Math.max(2, fSize - 4), fHi = fSize + 4;
+    // Overlap of two cell-rects as a fraction of the smaller one's area. Each
+    // obstacle can be inflated by `gap` empty cells to force breathing room
+    // (used both for field-vs-field spacing and bar-vs-field clearance).
+    const overlapFrac = (a, b, gap) => {
+      const ix = Math.max(0, Math.min(a.ci + a.cw, b.ci + b.cw + gap) - Math.max(a.ci, b.ci - gap));
+      const iy = Math.max(0, Math.min(a.cj + a.ch, b.cj + b.ch + gap) - Math.max(a.cj, b.cj - gap));
+      const minA = Math.min(a.cw * a.ch, b.cw * b.ch) || 1;
+      return (ix * iy) / minA;
+    };
+
+    // The set of already-placed checker fields that later elements (more
+    // fields, then bars) must keep clear of.
+    const placed = [];
+
+    // 2) checker fields — count, size and colour are user-controlled. The
+    //    "Field overlap" value is a HARD ceiling on how much a field may
+    //    overprint the fields already placed: 0 = never overlap (a 1-cell
+    //    breathing gap is kept) → composed; 1 = may land anywhere → busy. A
+    //    field that can't fit is shrunk, then skipped if there's still no room,
+    //    so at low overlap the field count is a maximum.
+    const fSize = p.fieldSize != null ? p.fieldSize : 10;
+    const spread = Math.max(2, Math.round(fSize * 0.28));
+    const fLo = Math.max(2, fSize - spread), fHi = fSize + spread;
+    const budget = p.fieldOverlap != null ? p.fieldOverlap : 0.3;
+    const fieldGap = budget <= 0 ? 1 : 0;
+    const fits = (cand) => {
+      for (const q of placed) if (overlapFrac(cand, q, fieldGap) > budget) return false;
+      return true;
+    };
     for (let fld = 0; fld < p.fields; fld++) {
-      const cw = Math.min(cols, rh.int(fLo, fHi));
-      const ch = Math.min(rows, rh.int(fLo, fHi));
-      const ci = rh.int(0, Math.max(0, cols - cw));
-      const cj = rh.int(0, Math.max(0, rows - ch));
+      let cw = Math.min(cols, rh.int(fLo, fHi));
+      let ch = Math.min(rows, rh.int(fLo, fHi));
+      let field = null;
+      for (let attempt = 0; attempt < 3 && !field; attempt++) {
+        for (let t = 0; t < 40; t++) {
+          const cand = { ci: rh.int(0, Math.max(0, cols - cw)), cj: rh.int(0, Math.max(0, rows - ch)), cw, ch };
+          if (fits(cand)) { field = cand; break; }
+        }
+        if (!field) { cw = Math.max(fLo, Math.round(cw * 0.7)); ch = Math.max(fLo, Math.round(ch * 0.7)); }
+      }
+      if (!field) continue; // no room within the overlap budget — skip this field
+      placed.push(field);
       const col = ctx.resolvePen(p.fieldColor);
-      for (let j = 0; j < ch; j++)
-        for (let i = 0; i < cw; i++)
+      for (let j = 0; j < field.ch; j++)
+        for (let i = 0; i < field.cw; i++)
           if ((i + j) % 2 === 0) {
-            const sub = { x: ox + (ci + i) * cell, y: oy + (cj + j) * cell, w: cell, h: cell };
+            const sub = { x: ox + (field.ci + i) * cell, y: oy + (field.cj + j) * cell, w: cell, h: cell };
             for (const d of G.fillRect(G.inset(sub, cell * 0.04), 0, fillSp)) strokes.push({ color: col, d });
           }
     }
 
-    // 3) a solid block
-    if (p.solidBlock) {
-      const bw = rh.int(6, Math.min(14, cols));
-      const bh = rh.int(6, Math.min(16, rows));
-      const ci = rh.int(0, Math.max(0, cols - bw));
-      const cj = rh.int(0, Math.max(0, rows - bh));
-      strokes.push(...apply('solid', cellRect(ci, cj, bw, bh), ctx.resolvePen(p.fieldColor), ctx));
-    }
-
-    // 4) bold crossing bars (thick rects, filled solid)
+    // 3) bold crossing bars (thick rects, filled solid). "Bar–field gap" > 0
+    //    turns on no-intersect mode: every bar keeps at least that many empty
+    //    cells from each checker field, so they never overprint. At 0 bars
+    //    place freely and may cross fields as before.
+    const clearance = Math.max(0, p.barClearance != null ? p.barClearance : 0);
+    const obstacles = clearance > 0 ? placed : []; // placed = all checker fields
+    const barThick = Math.max(1, p.barThick);
+    const barIsClear = (rect) => {
+      for (const o of obstacles) if (overlapFrac(rect, o, clearance) > 0) return false;
+      return true;
+    };
     for (let b = 0; b < p.bars; b++) {
-      const thick = Math.max(1, p.barThick) * cell;
       const col = ctx.resolvePen(p.barColor);
-      if (rh.chance(0.5)) {
-        const len = rh.int(Math.floor(cols * 0.4), cols);
-        const ci = rh.int(0, Math.max(0, cols - len));
-        const cj = rh.int(0, Math.max(0, rows - 1));
-        strokes.push(...apply('solid', { x: ox + ci * cell, y: oy + cj * cell, w: len * cell, h: thick }, col, ctx));
-      } else {
-        const len = rh.int(Math.floor(rows * 0.4), rows);
-        const cj = rh.int(0, Math.max(0, rows - len));
-        const ci = rh.int(0, Math.max(0, cols - 1));
-        strokes.push(...apply('solid', { x: ox + ci * cell, y: oy + cj * cell, w: thick, h: len * cell }, col, ctx));
+      const horiz = rh.chance(0.5);
+      let rect = null;
+      for (let t = 0; t < 40; t++) {
+        if (horiz) {
+          const len = rh.int(Math.floor(cols * 0.4), cols);
+          rect = { ci: rh.int(0, Math.max(0, cols - len)), cj: rh.int(0, Math.max(0, rows - barThick)), cw: len, ch: barThick };
+        } else {
+          const len = rh.int(Math.floor(rows * 0.4), rows);
+          rect = { ci: rh.int(0, Math.max(0, cols - barThick)), cj: rh.int(0, Math.max(0, rows - len)), cw: barThick, ch: len };
+        }
+        if (clearance <= 0 || barIsClear(rect)) break;
+        rect = null; // too close to a field — try another spot, else skip this bar
       }
+      if (rect) strokes.push(...apply('solid', cellRect(rect.ci, rect.cj, rect.cw, rect.ch), col, ctx));
     }
 
-    // 5) thin accent lines spanning the grid
+    // 4) thin accent lines spanning the grid
     for (let a = 0; a < p.accentLines; a++) {
       const col = ctx.resolvePen(p.accentColor);
       if (rh.chance(0.5)) {
