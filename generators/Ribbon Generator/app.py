@@ -147,7 +147,7 @@ def export_svg():
 
 if __name__ == '__main__':
     import os
-    ribbon_port = 8002
+    ribbon_port = int(os.environ.get('PORT', 8002))
     print("=" * 50)
     print("Ribbon Generator")
     print("=" * 50)

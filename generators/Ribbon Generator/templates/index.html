@@ -104,6 +104,15 @@
                     </div>
 
                     <div class="layers-toolbar-buttons">
+                        <!-- Colour palette: recolours every current layer from a preset (any layer count) -->
+                        <div class="control-group palette-control" style="margin-bottom: 6px;">
+                            <label for="palette-select" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin-bottom: 2px; display: block;">Colour Palette</label>
+                            <select id="palette-select" title="Recolour all layers from a preset" style="width: 100%; padding: 4px 6px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 2px; color: var(--color-text); font-family: var(--font-mono); font-size: 0.7rem;">
+                                <option value="">Custom…</option>
+                                <!-- palette options injected by populatePaletteDropdown() -->
+                            </select>
+                            <div id="palette-preview" class="palette-preview is-empty"></div>
+                        </div>
                         <div class="control-group" style="margin-bottom: 4px;">
                             <div style="display: flex; gap: 4px;">
                                 <button class="btn btn-secondary" id="btn-sort-dark-to-bright" title="Sort layers from dark to bright" style="flex: 1;">
@@ -1973,6 +1982,8 @@
                 addLayerBtn.addEventListener('click', () => {
                     if (typeof addNewLayer === 'function') {
                         addNewLayer();
+                        // Re-spread the active palette so the new layer fits the vibe
+                        if (typeof reapplyActivePalette === 'function') reapplyActivePalette();
                     }
                 });
             }
@@ -2003,6 +2014,11 @@
                 addBatchBtn.addEventListener('click', () => {
                     if (typeof addNewLayer !== 'function') return;
                     const count = Math.max(1, parseInt(batchCountInput.value, 10) || 8);
+                    // If a palette is selected, spread it across the new layers;
+                    // otherwise fall back to the default rainbow.
+                    const usePalette = typeof reapplyActivePalette === 'function'
+                        && flowState.activePaletteId
+                        && getPaletteById(flowState.activePaletteId);
                     const batchColors = [
                         '#00008B', // Dark Blue
                         '#00BFFF', // Light Blue
@@ -2014,9 +2030,10 @@
                         '#8B00FF'  // Purple
                     ];
                     for (let i = 0; i < count; i++) {
-                        const color = batchColors[i % batchColors.length];
+                        const color = usePalette ? undefined : batchColors[i % batchColors.length];
                         addNewLayer(color);
                     }
+                    if (usePalette) reapplyActivePalette();
                 });
             }
             

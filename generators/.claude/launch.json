@@ -36,6 +36,16 @@
         "cd 'Rietveld Lattice' && npm run dev -- --port 6060 --strictPort"
       ],
       "port": 6060
+    },
+    {
+      "name": "ribbon",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd 'Ribbon Generator' && python3 app.py"
+      ],
+      "port": 8002,
+      "autoPort": true
     }
   ]
 }

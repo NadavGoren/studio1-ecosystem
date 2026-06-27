@@ -97,6 +97,9 @@ const flowState = {
     // 'lottery' = each point is randomly assigned to a layer based on presence weights
     // 'striped' = assign grid rows to layers in rotation
     distributionMode: 'sequential',
+    // Color palette system: which preset is currently driving layer colours ('' = custom)
+    activePaletteId: '',
+    paletteReversed: false,
     // Gradient distribution config
     gradientConfig: {
         enabled: false,
@@ -1770,6 +1773,203 @@ function generateRandomHexColor() {
     return rgbToHex(rand(), rand(), rand());
 }
 
+// ============================================================================
+// COLOR PALETTE SYSTEM
+// A palette recolours every existing layer from a curated preset. The palette
+// is resampled to the current layer count, so picking one works for ANY number
+// of layers (4, 8, 20…) — each layer gets one colour from the blend.
+// ============================================================================
+
+/**
+ * Curated palettes. Each is an ordered list of hex "stops"; applying a palette
+ * resamples those stops to however many layers exist.
+ *   group 'Monochrome' : one hue, light → dark tints
+ *   group 'Gradient'   : multi-hue ramps that blend smoothly end-to-end
+ *   group 'Multi'      : distinct colourful vibes (pastel / vibrant / retro…)
+ */
+const RIBBON_PALETTES = [
+    // --- Monochrome tonal ramps (light → dark tints of one hue) ---
+    { id: 'mono-blue',     name: 'Blue',      group: 'Monochrome', stops: ['#BFE3F2', '#7FC4E8', '#3E92CC', '#1C5D99', '#0A2E52'] },
+    { id: 'mono-green',    name: 'Green',     group: 'Monochrome', stops: ['#CDEAC0', '#8FCB81', '#4CA64C', '#2E7D32', '#14532D'] },
+    { id: 'mono-red',      name: 'Red',       group: 'Monochrome', stops: ['#F6C5C0', '#EE8A82', '#E23B3B', '#A81E22', '#5E1115'] },
+    { id: 'mono-teal',     name: 'Teal',      group: 'Monochrome', stops: ['#BEEDE6', '#79D5C8', '#2BB3A3', '#14796F', '#0A3F3A'] },
+    { id: 'mono-violet',   name: 'Violet',    group: 'Monochrome', stops: ['#E0CCF2', '#BE9BE3', '#9163CC', '#5E3A99', '#321F52'] },
+    { id: 'mono-amber',    name: 'Amber',     group: 'Monochrome', stops: ['#F7E1A0', '#F0C24B', '#E0982E', '#B5651D', '#6E3B10'] },
+    { id: 'mono-rose',     name: 'Rose',      group: 'Monochrome', stops: ['#F9D7E3', '#F2A8C4', '#E36C9A', '#B23E6E', '#6E2243'] },
+    { id: 'mono-slate',    name: 'Slate',     group: 'Monochrome', stops: ['#D6DBE0', '#A3AEB8', '#6C7A89', '#404C57', '#1C242B'] },
+    { id: 'mono-graphite', name: 'Graphite',  group: 'Monochrome', stops: ['#C9C9C9', '#9A9A9A', '#6B6B6B', '#3D3D3D', '#141414'] },
+
+    // --- Smooth multi-hue gradients ---
+    { id: 'grad-sunset',   name: 'Sunset',    group: 'Gradient', stops: ['#FCE38A', '#F7A24B', '#F25C54', '#C9388A', '#6A2C70'] },
+    { id: 'grad-ocean',    name: 'Ocean',     group: 'Gradient', stops: ['#E8F7C8', '#6FD0A8', '#2BA6B0', '#1E5F94', '#14224F'] },
+    { id: 'grad-lava',     name: 'Lava',      group: 'Gradient', stops: ['#FFE066', '#FF9F1C', '#E8341C', '#8B1E3F', '#2B0A12'] },
+    { id: 'grad-dusk',     name: 'Dusk',      group: 'Gradient', stops: ['#F6C0C7', '#C97BA8', '#7E5AA2', '#3E4C8A', '#16213E'] },
+    { id: 'grad-citrus',   name: 'Citrus',    group: 'Gradient', stops: ['#FFF3A0', '#FFD23F', '#F79D2E', '#EE6C2B', '#C73E1D'] },
+    { id: 'grad-forest',   name: 'Forest',    group: 'Gradient', stops: ['#EDE7B1', '#A7C957', '#4C9A52', '#2A7245', '#1B3A2B'] },
+
+    // --- Multi-colour vibes ---
+    { id: 'vibe-pastel',   name: 'Pastel',    group: 'Multi', stops: ['#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF', '#BDB2FF'] },
+    { id: 'vibe-vibrant',  name: 'Vibrant',   group: 'Multi', stops: ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#AF52DE'] },
+    { id: 'vibe-retro',    name: 'Retro 70s', group: 'Multi', stops: ['#6B3E26', '#A6611A', '#D9A441', '#E3C04B', '#8AA053', '#4E6B3A'] },
+    { id: 'vibe-riso',     name: 'Riso',      group: 'Multi', stops: ['#FF48B0', '#FF7A00', '#FFD800', '#00A95C', '#0078BF', '#7A4FBF'] },
+    { id: 'vibe-earth',    name: 'Earth',     group: 'Multi', stops: ['#E7DBC0', '#CBB07A', '#9CA86E', '#6E7B53', '#5A5346'] },
+    { id: 'vibe-neon',     name: 'Neon',      group: 'Multi', stops: ['#C6FF00', '#00E676', '#00E5FF', '#2979FF', '#D500F9', '#FF1744'] },
+    { id: 'vibe-candy',    name: 'Candy',     group: 'Multi', stops: ['#FF6FB5', '#FF9CEE', '#C49BFF', '#9BB8FF', '#7DE5E5', '#A0F0B5'] },
+    { id: 'vibe-autumn',   name: 'Autumn',    group: 'Multi', stops: ['#F2C14E', '#F09540', '#DE6B35', '#B23A2E', '#7C2D2D', '#5A3A22'] },
+    { id: 'vibe-tropical', name: 'Tropical',  group: 'Multi', stops: ['#FFD23F', '#FF8C42', '#2EC4B6', '#17A398', '#1B6CA8'] },
+    { id: 'vibe-nordic',   name: 'Nordic',    group: 'Multi', stops: ['#D9E4DD', '#A7C4BC', '#6E92A0', '#4A6670', '#2E3F4A'] }
+];
+
+/** Parse a #rrggbb string into [r, g, b]. */
+function hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
+}
+
+/** Linear RGB blend between two hex colours at t (0..1). */
+function lerpHex(a, b, t) {
+    const ca = hexToRgb(a);
+    const cb = hexToRgb(b);
+    return rgbToHex(
+        ca[0] + (cb[0] - ca[0]) * t,
+        ca[1] + (cb[1] - ca[1]) * t,
+        ca[2] + (cb[2] - ca[2]) * t
+    );
+}
+
+/**
+ * Resample an ordered list of stops to exactly n colours via linear RGB blend.
+ * n === 1 returns a representative middle stop; otherwise the colours span the
+ * full ramp end-to-end.
+ */
+function samplePaletteStops(stops, n) {
+    if (n <= 0) return [];
+    if (stops.length === 1) return Array(n).fill(stops[0]);
+    if (n === 1) return [stops[Math.floor((stops.length - 1) / 2)]];
+    const out = [];
+    for (let i = 0; i < n; i++) {
+        const x = (i / (n - 1)) * (stops.length - 1);
+        const lo = Math.min(Math.floor(x), stops.length - 2);
+        out.push(lerpHex(stops[lo], stops[lo + 1], x - lo));
+    }
+    return out;
+}
+
+/** Look up a palette by id. */
+function getPaletteById(id) {
+    return RIBBON_PALETTES.find(p => p.id === id) || null;
+}
+
+/**
+ * Paint an array of colours onto the current layers (one colour per layer).
+ * Re-bakes already-generated path colours so the canvas updates instantly
+ * without regenerating any geometry.
+ */
+function applyColorsToLayers(colors) {
+    flowState.layers.forEach((layer, i) => {
+        const color = colors[i] ?? colors[colors.length - 1] ?? layer.color;
+        layer.color = color;
+        layer.settings = layer.settings || {};
+        layer.settings.color = color;
+        if (Array.isArray(layer.paths)) {
+            for (const p of layer.paths) p.color = color;
+        }
+    });
+    syncPathsFromLayers();
+    renderLayerList();
+    renderCanvas();
+}
+
+/** Apply a palette (by id) across however many layers currently exist. */
+function applyPaletteById(id) {
+    flowState.activePaletteId = id || '';
+    const palette = getPaletteById(id);
+    if (!palette) {
+        // "Custom" — leave layer colours untouched, just clear the preview
+        renderPalettePreview('');
+        return;
+    }
+    const stops = flowState.paletteReversed ? [...palette.stops].reverse() : palette.stops;
+    applyColorsToLayers(samplePaletteStops(stops, flowState.layers.length));
+    renderPalettePreview(id);
+    const select = document.getElementById('palette-select');
+    if (select && select.value !== flowState.activePaletteId) {
+        select.value = flowState.activePaletteId;
+    }
+}
+
+/** Re-apply the active palette after the layer count changes (add / batch / delete). */
+function reapplyActivePalette() {
+    if (flowState.activePaletteId && getPaletteById(flowState.activePaletteId)) {
+        applyPaletteById(flowState.activePaletteId);
+    }
+}
+
+/** Clear palette selection back to "Custom" (used when a colour is edited by hand). */
+function clearActivePalette() {
+    flowState.activePaletteId = '';
+    const select = document.getElementById('palette-select');
+    if (select) select.value = '';
+    renderPalettePreview('');
+}
+
+/** Build the palette dropdown options (grouped) and wire its events. Idempotent. */
+function populatePaletteDropdown() {
+    const select = document.getElementById('palette-select');
+    if (!select || select.dataset.populated === 'true') return;
+
+    const groupLabels = { Monochrome: 'Monochrome (tints)', Gradient: 'Gradients', Multi: 'Multi-colour' };
+    ['Monochrome', 'Gradient', 'Multi'].forEach(group => {
+        const og = document.createElement('optgroup');
+        og.label = groupLabels[group] || group;
+        RIBBON_PALETTES.filter(p => p.group === group).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            og.appendChild(opt);
+        });
+        select.appendChild(og);
+    });
+
+    select.value = flowState.activePaletteId || '';
+    select.addEventListener('change', () => applyPaletteById(select.value));
+    select.dataset.populated = 'true';
+
+    // Clicking the preview strip flips the light↔dark / hue direction for quick play
+    const preview = document.getElementById('palette-preview');
+    if (preview) {
+        preview.addEventListener('click', () => {
+            if (!flowState.activePaletteId) return;
+            flowState.paletteReversed = !flowState.paletteReversed;
+            applyPaletteById(flowState.activePaletteId);
+        });
+    }
+    renderPalettePreview(flowState.activePaletteId || '');
+}
+
+/** Render the swatch-strip preview under the dropdown for a palette id. */
+function renderPalettePreview(id) {
+    const preview = document.getElementById('palette-preview');
+    if (!preview) return;
+    preview.innerHTML = '';
+    const palette = getPaletteById(id);
+    if (!palette) {
+        preview.classList.add('is-empty');
+        preview.title = '';
+        return;
+    }
+    preview.classList.remove('is-empty');
+    preview.title = 'Click to reverse direction';
+    const stops = flowState.paletteReversed ? [...palette.stops].reverse() : palette.stops;
+    // Show a smooth resample so the strip reads like the final blend
+    samplePaletteStops(stops, Math.max(8, stops.length)).forEach(c => {
+        const sw = document.createElement('span');
+        sw.className = 'palette-swatch';
+        sw.style.background = c;
+        preview.appendChild(sw);
+    });
+}
+
 /**
  * Shuffle array in place using Fisher-Yates algorithm
  * @param {Array} array - Array to shuffle
@@ -2257,6 +2457,9 @@ function deleteLayer(id) {
         renderLayerList();
         renderCanvas();
     }
+
+    // Keep an active palette spread evenly across the remaining layers
+    reapplyActivePalette();
 }
 
 /**
@@ -3002,6 +3205,12 @@ function renderLayerList() {
             layer.color = e.target.value;
             layer.settings = layer.settings || {};
             layer.settings.color = e.target.value;
+            // Re-bake already-generated path colours so the canvas repaints live
+            if (Array.isArray(layer.paths)) {
+                for (const p of layer.paths) p.color = e.target.value;
+            }
+            syncPathsFromLayers();
+            clearActivePalette(); // hand-picked colour → no longer a pure palette
             renderCanvas();
             // Statistics don't change when color changes, so no need to update
         });
@@ -5325,7 +5534,10 @@ function initLayers() {
     
     // Render the layer list UI
     renderLayerList();
-    
+
+    // Build + wire the colour palette picker
+    populatePaletteDropdown();
+
     // Initialize statistics
     updateStatistics();
 }
