@@ -10,10 +10,37 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'output', label: 'Output' },
 ]
 
+/** one honest sentence per mode — what rule builds the composition */
+const MODE_LOGIC: Record<StructureMode, string> = {
+  lattice:
+    'A thicket grown around the seat+back signature. The seat rests on carrier beams and posts; every free stick snaps to the grid and must LAP something already built — nothing floats.',
+  chair:
+    'The Red-and-Blue chair frame: four posts, side rails lapped on their inner faces, cross rails carrying the overhanging seat, arm rails resting on the post tops, a reclined back.',
+  buffet:
+    'The 1919 buffet: a symmetric stack — plinth · wide counter · shelf · top — on short posts between tiers, long protruding rails under the slabs, colour panels closing the rear bays.',
+  architecture:
+    'A Schröder-house corner: three slabs pinwheel around the core, wall planes stand flush with slab edges between storeys, a mast rises past the roof, a balustrade guards the cantilever.',
+  tower:
+    'A De Stijl high-rise study: floors clamped between four continuous posts. The cantilever rotates a quarter-turn per floor, colour panels close the bays, curb rails read as balconies.',
+  joinery:
+    'A strict woven cage on a 3D sub-grid: a beam on every grid line, each overrunning its outermost crossing by one constant section width; families lap face-to-face on separate planes.',
+}
+
 export default function Sidebar() {
   const p = useStore((s) => s.params)
   const set = useStore((s) => s.set)
   const [tab, setTab] = useState<Tab>('compose')
+
+  const m = p.structure
+  const asymmetrySlider = (
+    <Slider label="Asymmetry" value={p.asymmetry} min={0} max={1} step={0.01} onChange={(v) => set('asymmetry', v)} format={(v) => (v < 0.02 ? 'centred' : `${Math.round(v * 100)}%`)} />
+  )
+  const overrunSlider = (label = 'Overrun (joint ends)') => (
+    <Slider label={label} value={p.overrun} min={0} max={4} step={0.1} onChange={(v) => set('overrun', v)} format={(v) => v.toFixed(1)} />
+  )
+  const reclineSlider = (
+    <Slider label="Back recline" value={p.boardTilt} min={0} max={1} step={0.01} onChange={(v) => set('boardTilt', v)} format={(v) => (v < 0.02 ? 'upright' : `${Math.round(v * 100)}%`)} />
+  )
 
   return (
     <div className="flex h-full flex-col">
@@ -44,34 +71,83 @@ export default function Sidebar() {
                 options={[
                   { value: 'lattice', label: 'Lattice' },
                   { value: 'chair', label: 'Chair' },
+                  { value: 'buffet', label: 'Buffet' },
                   { value: 'architecture', label: 'Architecture' },
+                  { value: 'tower', label: 'Tower' },
+                  { value: 'joinery', label: 'Joinery' },
                 ]}
               />
-              <p className="text-[10px] leading-relaxed text-neutral-500">
-                <b>Lattice</b> — open thicket round the seat+back. <b>Chair</b> — Red-and-Blue chair. <b>Architecture</b> —
-                Schröder-house planes.
-              </p>
-              <Slider label="Board tilt / recline" value={p.boardTilt} min={0} max={1} step={0.01} onChange={(v) => set('boardTilt', v)} format={(v) => (v < 0.02 ? 'flat' : `${Math.round(v * 100)}%`)} />
-              <Slider label="Verticality" value={p.verticality} min={0} max={1} step={0.01} onChange={(v) => set('verticality', v)} format={(v) => (v < 0.4 ? 'horizontal' : v > 0.6 ? 'upright' : 'balanced')} />
-              <Slider label="Asymmetry" value={p.asymmetry} min={0} max={1} step={0.01} onChange={(v) => set('asymmetry', v)} format={(v) => (v < 0.02 ? 'centred' : `${Math.round(v * 100)}%`)} />
-              <Slider label="Signature ↔ free" value={p.dominance} min={0} max={1} step={0.01} onChange={(v) => set('dominance', v)} format={(v) => (v < 0.5 ? `free ${Math.round((1 - v) * 100)}%` : `signature ${Math.round(v * 100)}%`)} />
-              <Slider label="Beam density" value={p.beamCount} min={10} max={200} onChange={(v) => set('beamCount', v)} />
-              <Slider label="Overrun (cantilever)" value={p.overrun} min={0} max={4} step={0.1} onChange={(v) => set('overrun', v)} format={(v) => v.toFixed(1)} />
-              <Slider label="Extra colour boards" value={p.extraBoards} min={0} max={8} onChange={(v) => set('extraBoards', v)} />
+              <p className="text-[10px] leading-relaxed text-neutral-500">{MODE_LOGIC[m]}</p>
+
+              {m === 'lattice' && (
+                <>
+                  {reclineSlider}
+                  <Slider label="Verticality" value={p.verticality} min={0} max={1} step={0.01} onChange={(v) => set('verticality', v)} format={(v) => (v < 0.4 ? 'horizontal' : v > 0.6 ? 'upright' : 'balanced')} />
+                  {asymmetrySlider}
+                  <Slider label="Signature ↔ free" value={p.dominance} min={0} max={1} step={0.01} onChange={(v) => set('dominance', v)} format={(v) => (v < 0.5 ? `free ${Math.round((1 - v) * 100)}%` : `signature ${Math.round(v * 100)}%`)} />
+                  <Slider label="Beam density" value={p.beamCount} min={10} max={200} onChange={(v) => set('beamCount', v)} />
+                  {overrunSlider()}
+                  <Slider label="Resting colour boards" value={p.extraBoards} min={0} max={8} onChange={(v) => set('extraBoards', v)} />
+                </>
+              )}
+              {m === 'chair' && (
+                <>
+                  {reclineSlider}
+                  {asymmetrySlider}
+                  {overrunSlider('Rail overrun')}
+                </>
+              )}
+              {m === 'buffet' && (
+                <>
+                  {asymmetrySlider}
+                  {overrunSlider('Rail ends / post tips')}
+                  <Slider label="Rear colour panels" value={p.extraBoards} min={0} max={3} onChange={(v) => set('extraBoards', v)} />
+                </>
+              )}
+              {m === 'architecture' && (
+                <>
+                  {asymmetrySlider}
+                  <Slider label="Wall planes" value={p.extraBoards} min={0} max={4} onChange={(v) => set('extraBoards', v)} />
+                  <Slider label="Accent sticks" value={p.beamCount} min={10} max={200} onChange={(v) => set('beamCount', v)} format={(v) => `${Math.round(v * 0.12)}`} />
+                  {overrunSlider('Mast tip / rail overrun')}
+                </>
+              )}
+              {m === 'tower' && (
+                <>
+                  <Slider label="Floors" value={p.gridLinesY} min={2} max={6} onChange={(v) => set('gridLinesY', v)} />
+                  <Slider label="Infill colour panels" value={p.extraBoards} min={0} max={5} onChange={(v) => set('extraBoards', v)} />
+                  {asymmetrySlider}
+                  {overrunSlider('Post tips')}
+                </>
+              )}
+              {m === 'joinery' && (
+                <>
+                  <Slider label="Grid lines — X" value={p.gridLinesX} min={2} max={6} onChange={(v) => set('gridLinesX', v)} />
+                  <Slider label="Grid lines — Y (tiers)" value={p.gridLinesY} min={2} max={6} onChange={(v) => set('gridLinesY', v)} />
+                  <Slider label="Grid lines — Z (depth)" value={p.gridLinesZ} min={2} max={6} onChange={(v) => set('gridLinesZ', v)} />
+                  <Slider label="Joint overhang" value={p.jointOverhang} min={0.2} max={3} step={0.1} onChange={(v) => set('jointOverhang', v)} format={(v) => `${v.toFixed(1)}× section`} />
+                  <Slider label="Colour panels" value={p.gridPlates} min={0} max={8} onChange={(v) => set('gridPlates', v)} />
+                  <Slider label="Asymmetry (panel balance)" value={p.asymmetry} min={0} max={1} step={0.01} onChange={(v) => set('asymmetry', v)} format={(v) => (v < 0.02 ? 'centred' : `${Math.round(v * 100)}%`)} />
+                </>
+              )}
             </div>
             <Section title="More — grid & proportions" defaultOpen={false}>
               <Slider label="Grid — X lanes" value={p.gridX} min={3} max={16} onChange={(v) => set('gridX', v)} />
               <Slider label="Grid — Y lanes" value={p.gridY} min={3} max={18} onChange={(v) => set('gridY', v)} />
               <Slider label="Grid — Z (depth) lanes" value={p.gridZ} min={2} max={12} onChange={(v) => set('gridZ', v)} />
-              <Slider label="Beam length — min" value={p.beamLenMin} min={1} max={12} step={0.5} onChange={(v) => set('beamLenMin', Math.min(v, p.beamLenMax))} format={(v) => v.toFixed(1)} />
-              <Slider label="Beam length — max" value={p.beamLenMax} min={1} max={16} step={0.5} onChange={(v) => set('beamLenMax', Math.max(v, p.beamLenMin))} format={(v) => v.toFixed(1)} />
+              {m === 'lattice' && (
+                <>
+                  <Slider label="Beam length — min" value={p.beamLenMin} min={1} max={12} step={0.5} onChange={(v) => set('beamLenMin', Math.min(v, p.beamLenMax))} format={(v) => v.toFixed(1)} />
+                  <Slider label="Beam length — max" value={p.beamLenMax} min={1} max={16} step={0.5} onChange={(v) => set('beamLenMax', Math.max(v, p.beamLenMin))} format={(v) => v.toFixed(1)} />
+                </>
+              )}
               <Slider label="Cross-section" value={p.crossSection} min={0.04} max={0.6} step={0.01} onChange={(v) => set('crossSection', v)} format={(v) => v.toFixed(2)} />
               <Slider label="Board thickness" value={p.boardThickness} min={0.05} max={0.8} step={0.01} onChange={(v) => set('boardThickness', v)} format={(v) => v.toFixed(2)} />
             </Section>
           </>
         )}
 
-        {/* ── LOOK — viewpoint, depth, hatch, colour ─────────────────────── */}
+        {/* ── LOOK — viewpoint, light, depth, hatch, colour ───────────────── */}
         {tab === 'look' && (
           <>
             <div className="space-y-3 px-4 pt-3">
@@ -88,9 +164,7 @@ export default function Sidebar() {
               </button>
               <Slider label="Hidden lines (edges)" value={p.hiddenLine} min={0} max={100} onChange={(v) => set('hiddenLine', v)} format={(v) => (v <= 2 ? 'x-ray' : v >= 98 ? 'solid' : `depth ${v}`)} />
               <Slider label="Fill occlusion" value={p.occlusion} min={0} max={100} onChange={(v) => set('occlusion', v)} format={(v) => (v <= 2 ? 'x-ray' : v >= 98 ? 'solid' : `see-thru ${v}`)} />
-              <Slider label="Hatch spacing" value={p.hatchSpacing} min={0.4} max={4} step={0.1} onChange={(v) => set('hatchSpacing', v)} format={(v) => `${v.toFixed(1)} mm`} />
-              <Slider label="Depth-falloff" value={p.depthFalloff} min={0} max={2} step={0.05} onChange={(v) => set('depthFalloff', v)} format={(v) => v.toFixed(2)} />
-              <Toggle label="Cross-hatch" checked={p.crossHatch} onChange={(v) => set('crossHatch', v)} />
+              <Slider label="Hatch spacing (darkest)" value={p.hatchSpacing} min={0.2} max={4} step={0.05} onChange={(v) => set('hatchSpacing', v)} format={(v) => `${v.toFixed(2)} mm`} />
               <SelectRow<ColourStrategy>
                 label="Red/blue order"
                 value={p.colourStrategy}
@@ -106,6 +180,19 @@ export default function Sidebar() {
               )}
               <Toggle label="Yellow end-caps" checked={p.yellowCaps} onChange={(v) => set('yellowCaps', v)} />
             </div>
+            <Section title="Light & shade" defaultOpen>
+              <p className="text-[10px] leading-relaxed text-neutral-500">
+                One world light shades every face by which way it points — tops light, the lit flank mid, the far flank
+                dark. Tones snap to discrete bands so each x/y/z region reads as one exact grey.
+              </p>
+              <Slider label="Light azimuth" value={p.lightAzimuth} min={-180} max={180} onChange={(v) => set('lightAzimuth', v)} format={(v) => `${v}°`} />
+              <Slider label="Light elevation" value={p.lightElevation} min={5} max={85} onChange={(v) => set('lightElevation', v)} format={(v) => `${v}°`} />
+              <Slider label="Shade contrast" value={p.shadeContrast} min={0} max={1} step={0.01} onChange={(v) => set('shadeContrast', v)} format={(v) => (v < 0.02 ? 'flat' : `${Math.round(v * 100)}%`)} />
+              <Slider label="Tone bands" value={p.shadeLevels} min={2} max={8} onChange={(v) => set('shadeLevels', v)} />
+              <Toggle label="Lit faces = open paper" checked={p.litWhite} onChange={(v) => set('litWhite', v)} />
+              <Toggle label="Cross-hatch the shadow band" checked={p.crossHatch} onChange={(v) => set('crossHatch', v)} />
+              <Slider label="Depth-falloff (aerial)" value={p.depthFalloff} min={0} max={2} step={0.05} onChange={(v) => set('depthFalloff', v)} format={(v) => v.toFixed(2)} />
+            </Section>
             <Section title="More — hatch detail" defaultOpen={false}>
               <Slider label="Hatch angle — X faces" value={p.angleX} min={0} max={180} onChange={(v) => set('angleX', v)} format={(v) => `${v}°`} />
               <Slider label="Hatch angle — Y faces" value={p.angleY} min={0} max={180} onChange={(v) => set('angleY', v)} format={(v) => `${v}°`} />

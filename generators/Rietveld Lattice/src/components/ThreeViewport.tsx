@@ -4,6 +4,7 @@ import { Edges, OrbitControls } from '@react-three/drei'
 import { Euler, Matrix4 } from 'three'
 import type { BeamModel, Box, Mat3 } from '../types'
 import { PEN_HEX } from '../lib/palette'
+import { useStore } from '../store'
 
 function eulerOf(rot?: Mat3): [number, number, number] | undefined {
   if (!rot) return undefined
@@ -31,11 +32,21 @@ function BoxMesh({ box }: { box: Box }) {
 }
 
 export default function ThreeViewport({ model }: { model: BeamModel }) {
+  const lightAz = useStore((s) => s.params.lightAzimuth)
+  const lightEl = useStore((s) => s.params.lightElevation)
   const dist = useMemo(() => {
     const { min, max } = model.bounds
     const extent = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2], 4)
     return extent * 1.9
   }, [model])
+  // the SAME world light that tones the plotter hatch drives the 3D preview,
+  // so what you shade is what you see
+  const lightPos = useMemo<[number, number, number]>(() => {
+    const a = (lightAz * Math.PI) / 180
+    const e = (lightEl * Math.PI) / 180
+    const d = 30
+    return [Math.cos(e) * Math.sin(a) * d, Math.sin(e) * d, Math.cos(e) * Math.cos(a) * d]
+  }, [lightAz, lightEl])
 
   // react-three-fiber measures its container once on mount; if it mounts in a
   // transiently zero-sized box (e.g. a just-revealed tab), nudge a re-measure.
@@ -48,9 +59,9 @@ export default function ThreeViewport({ model }: { model: BeamModel }) {
     <div className="h-full w-full">
       <Canvas camera={{ position: [dist, dist * 0.78, dist], fov: 35 }} dpr={[1, 2]}>
         <color attach="background" args={['#e9e7e1']} />
-        <ambientLight intensity={0.85} />
-        <directionalLight position={[10, 18, 12]} intensity={1.1} />
-        <directionalLight position={[-12, 6, -8]} intensity={0.4} />
+        <ambientLight intensity={0.55} />
+        <directionalLight position={lightPos} intensity={1.4} />
+        <directionalLight position={[-lightPos[0], lightPos[1] * 0.4, -lightPos[2]]} intensity={0.25} />
         <group>
           {model.boxes.map((b) => (
             <BoxMesh key={b.id} box={b} />

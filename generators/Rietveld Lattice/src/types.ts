@@ -44,7 +44,7 @@ export type ColourStrategy = 'alternating' | 'weighted' | 'positional'
 export type PaperSize = 'A2' | 'A3' | 'A4' | 'A5'
 export type Orientation = 'portrait' | 'landscape'
 /** composition archetype, each derived from a Rietveld work */
-export type StructureMode = 'lattice' | 'chair' | 'architecture'
+export type StructureMode = 'lattice' | 'chair' | 'buffet' | 'architecture' | 'tower' | 'joinery'
 
 export interface Params {
   seed: number
@@ -62,6 +62,13 @@ export interface Params {
   extraBoards: number
   dominance: number // 0 = free lattice rules, 1 = signature boards rule
 
+  // joinery (woven cage) — strict ruled crossing-lattice
+  gridLinesX: number // number of sub-grid beam lanes across x (2..6)
+  gridLinesY: number // horizontal tiers up y (2..6)
+  gridLinesZ: number // depth lanes in z (2..6)
+  gridPlates: number // red/blue colour panels snapped into bays (0..8)
+  jointOverhang: number // overhang past each crossing, in section widths (the ~30mm rule)
+
   // composition
   structure: StructureMode
   boardTilt: number // 0 = flat/upright boards, 1 = strongly reclined (Red-Blue chair)
@@ -78,13 +85,22 @@ export interface Params {
   azimuth: number
   elevation: number
 
+  // shading — one world light; every face is toned by which way it points.
+  // A face's tone band = quantized Lambert of its world normal against the
+  // light, so all faces in the same X/Y/Z region share one exact tone.
+  lightAzimuth: number // deg, 0 = light from the front (+z), 90 = from the right (+x)
+  lightElevation: number // deg above the horizon; high = white tops
+  shadeContrast: number // 0 = flat uniform tone, 1 = maximum lit↔shadow spread
+  shadeLevels: number // discrete tone bands (2..8) — plotter-clean steps
+  litWhite: boolean // fully-lit BLACK faces drop their hatch → open paper
+
   // hatch
-  hatchSpacing: number // mm
+  hatchSpacing: number // mm — density of the DARKEST band; lit bands widen from it
   angleX: number // hatch angle for faces whose normal is the x axis (deg)
   angleY: number
   angleZ: number
-  crossHatch: boolean
-  depthFalloff: number // 0..1, widens far-face hatch spacing
+  crossHatch: boolean // second, perpendicular pass on the darkest band (shadow side)
+  depthFalloff: number // 0..1, widens far-face hatch spacing (aerial perspective)
 
   // depth / occlusion
   hiddenLine: number // edges: 0 = x-ray wireframe, 100 = solid (front hides back)

@@ -17,6 +17,13 @@ export const DEFAULT_PARAMS: Params = {
   extraBoards: 3,
   dominance: 0.5,
 
+  // joinery (woven cage)
+  gridLinesX: 3,
+  gridLinesY: 3,
+  gridLinesZ: 3,
+  gridPlates: 3,
+  jointOverhang: 1,
+
   // composition
   structure: 'lattice',
   boardTilt: 0.2,
@@ -33,13 +40,20 @@ export const DEFAULT_PARAMS: Params = {
   azimuth: 35,
   elevation: 28,
 
+  // shading (world light)
+  lightAzimuth: 15,
+  lightElevation: 66,
+  shadeContrast: 0.7,
+  shadeLevels: 5,
+  litWhite: true,
+
   // hatch
-  hatchSpacing: 0.5,
+  hatchSpacing: 0.3,
   angleX: 20,
   angleY: 80,
   angleZ: 140,
-  crossHatch: false,
-  depthFalloff: 0.8,
+  crossHatch: true,
+  depthFalloff: 0.2,
 
   // depth / occlusion
   hiddenLine: 100,

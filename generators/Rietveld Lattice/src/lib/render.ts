@@ -1,7 +1,7 @@
 import type { Axis, BeamModel, LineLayer, Params, PenColor, Polyline, RenderResult, Vec2, Vec3 } from '../types'
 import { boxEdges, boxFaces } from './geometry'
 import { makeProjector } from './projection'
-import { hatchPolygon, serpentine } from './hatch'
+import { connectedHatch, hatchPolygon } from './hatch'
 import { bboxOverlap, clipPolyline, convexOverlap, polyBBox, segInsideConvex, type BBox } from './occlusion'
 import { PEN_HEX, PEN_ORDER } from './palette'
 
@@ -42,6 +42,8 @@ interface SolidFace {
 interface FillFace extends SolidFace {
   color: PenColor
   hatchAxis: Axis
+  /** quantized light tone: 0 = facing the light … levels-1 = full shadow */
+  band: number
 }
 
 /** Affine depth plane through 3 projected corners [px, py, depth]; null if degenerate. */
@@ -67,6 +69,24 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
   const dh = Math.max(1, h - 2 * margin)
 
   const proj = makeProjector(p.azimuth, p.elevation)
+
+  // ── shading: one world light, applied by face orientation ─────────────────
+  // Every face is classified by where its WORLD normal points (its x/y/z
+  // region) and shaded with quantized Lambert: tone = 1 − max(0, n·L), snapped
+  // to a small number of discrete bands. All coplanar faces therefore share one
+  // exact tone — tops read light, the lit flank mid, the far flank dark —
+  // and tilted boards land on the in-between band they geometrically deserve.
+  const la = (p.lightAzimuth * Math.PI) / 180
+  const le = (p.lightElevation * Math.PI) / 180
+  const light: Vec3 = [Math.cos(le) * Math.sin(la), Math.sin(le), Math.cos(le) * Math.cos(la)]
+  const levels = Math.max(2, Math.min(8, Math.round(p.shadeLevels)))
+  const contrast = Math.max(0, Math.min(1, p.shadeContrast))
+  // spacing ratio between adjacent tone bands; contrast 0 → 1 (uniform tone)
+  const bandRatio = 1 + 1.1 * contrast
+  const shadeBand = (n: Vec3): number => {
+    const lam = Math.max(0, n[0] * light[0] + n[1] * light[1] + n[2] * light[2])
+    return Math.round((1 - lam) * (levels - 1))
+  }
 
   // ── fit the projected lattice into the drawable area (uniform scale) ──────
   let pminx = Infinity
@@ -138,7 +158,7 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
         } else if (box.kind === 'beam' && p.hatchBeams) {
           color = 'black'
         }
-        if (color) fillFaces.push({ ...solid, color, hatchAxis: f.axis })
+        if (color) fillFaces.push({ ...solid, color, hatchAxis: f.axis, band: shadeBand(f.normal) })
       }
     }
   }
@@ -227,30 +247,42 @@ export function renderModel(model: BeamModel, p: Params, opts: { edgesOnly?: boo
       z: (p.angleZ * Math.PI) / 180,
     }
     for (const ff of fillFaces) {
+      // tone band → spacing. The darkest band gets the user's hatchSpacing;
+      // each band toward the light widens it by ×bandRatio (a constant tone
+      // RATIO per step, so the ladder reads perceptually even on paper).
+      let band = ff.band
+      if (ff.color === 'black') {
+        // a fully-lit structural face may drop its hatch → open paper
+        if (p.litWhite && band === 0) continue
+      } else {
+        band = Math.max(band, 1) // colour must always read — never fully open
+      }
       const nd = (dMax - ff.depth) / dRange // 0 near, 1 far
-      const spacing = p.hatchSpacing * (1 + p.depthFalloff * nd)
+      const spacing = p.hatchSpacing * Math.pow(bandRatio, levels - 1 - band) * (1 + p.depthFalloff * nd)
       const angle = angleByAxis[ff.hatchAxis]
-
-      // connect each set of parallel hatch lines into one zig-zag stroke
-      const strokes: Polyline[] = [serpentine(hatchPolygon(ff.poly, angle, spacing))]
-      if (p.crossHatch) strokes.push(serpentine(hatchPolygon(ff.poly, angle + Math.PI / 2, spacing)))
 
       // boards are few faces but heavily crossed → use a larger occluder cap so
       // dense scenes never leak hatch through a dropped occluder
       const occ = isFinite(fillLayers)
         ? gatherOccluders(ff.depthMin, ff.bbox, ff.boxId, (sf) => convexOverlap(sf.poly, ff.poly), false, 96)
         : []
-      const dest = layerMap[ff.color]
-      for (const stroke of strokes) {
-        if (stroke.length < 2) continue
-        if (occ.length === 0) {
-          push(dest, stroke)
-        } else {
-          // the hatch lies on this face's plane → depth of any point comes from it
-          const depths = stroke.map((q) => ff.dA * q[0] + ff.dB * q[1] + ff.dC)
-          for (const pl of clipPolyline(stroke, depths, occ, fillLayers, depthEps)) push(dest, pl)
-        }
+      // visible straight pieces of any segment on this face, ordered a→b. The
+      // hatch lies on the face's own depth plane, so a point's depth is exact.
+      const clip = (a: Vec2, b: Vec2): Vec2[][] => {
+        if (occ.length === 0) return [[a, b]]
+        const da = ff.dA * a[0] + ff.dB * a[1] + ff.dC
+        const db = ff.dA * b[0] + ff.dB * b[1] + ff.dC
+        return clipPolyline([a, b], [da, db], occ, fillLayers, depthEps)
       }
+
+      // clip each hatch line, THEN re-link the visible pieces into as few pen
+      // strokes as the unoccluded region allows (no stray connector stubs)
+      const dest = layerMap[ff.color]
+      for (const pl of connectedHatch(hatchPolygon(ff.poly, angle, spacing), clip)) push(dest, pl)
+      // cross-hatch is a SHADOW device: only the darkest band gets the second,
+      // perpendicular pass — the shadow side goes truly deep, lit faces stay open
+      if (p.crossHatch && ff.band >= levels - 1)
+        for (const pl of connectedHatch(hatchPolygon(ff.poly, angle + Math.PI / 2, spacing), clip)) push(dest, pl)
     }
   }
 

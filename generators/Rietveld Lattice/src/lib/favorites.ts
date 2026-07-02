@@ -35,7 +35,7 @@ function db() {
 function paramsKey(p: Params): string {
   const s = Object.keys(p)
     .sort()
-    .map((k) => `${k}:${(p as Record<string, unknown>)[k]}`)
+    .map((k) => `${k}:${(p as unknown as Record<string, unknown>)[k]}`)
     .join('|')
   let h = 5381
   for (let i = 0; i < s.length; i++) h = (((h << 5) + h) + s.charCodeAt(i)) | 0
