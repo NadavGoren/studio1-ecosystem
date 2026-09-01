@@ -24,6 +24,13 @@
  * The wire format is positional and fixed-length: seven lines, one per field,
  * "—" for a value the order doesn't have. FIELDS and EMPTY below must match
  * `src/lib/shipSequence.ts` in the הזמנות גלויות app.
+ *
+ * NOT RUNNING ON THE FORM? The badge only appears once you paste, so silence
+ * proves nothing on its own. Open DevTools (⌥⌘I) on the form page and look for
+ * the "[studio1] sequential paste ready" line below. If it isn't there the
+ * script didn't load on that URL — add the URL's host as another @match above.
+ * Israel Post moves this form between hosts, and a form inside an iframe from
+ * a different domain needs that domain matched, not the page's.
  */
 
 (function () {
@@ -340,6 +347,9 @@
   function boot() {
     render(pendingRender !== null ? pendingRender : load());
     pendingRender = null;
+    // The only proof the script reached this page — the badge stays hidden
+    // until the first paste, so without this there is nothing to check.
+    console.log("[studio1] sequential paste ready ·", location.host);
   }
 
   if (document.body) boot();
