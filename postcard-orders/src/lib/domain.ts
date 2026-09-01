@@ -9,10 +9,17 @@
 /** Orders with this many postcards or more go דואר 24; fewer go דואר 72. */
 export const SERVICE_THRESHOLD = 3;
 
-/** Envelope/packaging weight in grams. NOT yet verified on a real scale. */
+/** Envelope/packaging weight in grams. Still NOT verified on a real scale. */
 export const PACKAGING_G = 12;
-/** Weight of a single postcard in grams. NOT yet verified on a real scale. */
-export const PER_CARD_G = 6;
+/**
+ * Weight of a single postcard in grams — measured, 2026-09-01. The 6g here
+ * before was a guess from the brief and was out by a factor of four.
+ *
+ * This is heavy enough to matter: at 25g a card, a two-card parcel comes to
+ * 62g and lands outside every band in TARIFF.post72, which stops at 50g. That
+ * is a gap in the table below, not a bug here — see the note on TARIFF.
+ */
+export const PER_CARD_G = 25;
 
 export type Service = "post24" | "post72";
 export type Kind = "mail" | "pickup";
@@ -30,6 +37,12 @@ export function weightG(qty: number): number {
 /**
  * Israel Post tariff, business rates incl. VAT, January 2026.
  * Bands are "up to N grams"; the first band whose ceiling the parcel fits under wins.
+ *
+ * INCOMPLETE, and now visibly so. post72 has only a 50g band, which a two-card
+ * parcel (62g at the measured card weight) already exceeds, so those orders
+ * display "מעל המדרגות" instead of a price. Israel Post does publish heavier
+ * bands; they are simply not in here yet. Do not guess them — a made-up tariff
+ * that looks like a real one is worse than an honest blank.
  */
 const TARIFF: Record<Service, { maxG: number; ils: number }[]> = {
   post72: [{ maxG: 50, ils: 4.7 }],

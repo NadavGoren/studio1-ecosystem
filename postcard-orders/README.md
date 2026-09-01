@@ -14,7 +14,7 @@ Hebrew RTL. Runs locally on port **6120**, deploys to Vercel for sharing.
 | Rule | Where |
 |---|---|
 | 1–2 postcards → דואר 72 · 3+ → דואר 24 | `SERVICE_THRESHOLD` in [src/lib/domain.ts](src/lib/domain.ts) |
-| Weight = 12g packaging + 6g per card | `PACKAGING_G`, `PER_CARD_G`, same file |
+| Weight = 12g packaging + 25g per card | `PACKAGING_G`, `PER_CARD_G`, same file |
 | Israel Post tariff bands (Jan 2026) | `TARIFF`, same file |
 | Status ladders, per order kind | `FLOW_MAIL` / `FLOW_PICKUP`, same file |
 
@@ -22,9 +22,15 @@ The 24/72 split keys off the **merged order quantity**, not the row count —
 Morning writes one row per product line, so an order with three designs is three
 rows sharing a מספר הזמנה. They are summed before classifying.
 
-> The weight constants are copied from the brief and **have not been checked on a
-> real scale**. They only affect the displayed weight and which tariff band shows;
-> they never affect the 24/72 split.
+> The per-card weight is **measured** (25g, 2026-09-01). The 12g packaging figure
+> is still the brief's guess. Neither affects the 24/72 split — only the displayed
+> weight and which tariff band shows.
+>
+> **The post72 tariff is incomplete.** It holds a single band, up to 50g, and a
+> two-card parcel weighs 62g — so those orders show `מעל המדרגות` rather than a
+> price. Israel Post publishes heavier bands; they are not in `TARIFF` yet. Add
+> the real numbers rather than guessing: a plausible-looking invented tariff is
+> worse than an honest blank.
 
 ## Statuses
 
