@@ -8,7 +8,7 @@ import LastImport from "./LastImport";
 import OrderDetail from "./OrderDetail";
 import OrdersTable from "./OrdersTable";
 import ShipDateChoice from "./ShipDateChoice";
-import { statusLabel, statusOptions, type Status } from "@/lib/domain";
+import { postageIls, statusLabel, statusOptions, type Status } from "@/lib/domain";
 import type { Order } from "@/types";
 
 type Sort = "order" | "city" | "status" | "qty";
@@ -121,10 +121,18 @@ export default function OrdersView({
     let mailCards = 0;
     let pickupCards = 0;
     let open = 0;
+    // Postage is counted over MAIL orders only, and divided by the same set.
+    // Averaging across pickups too would drag the figure toward zero and
+    // describe nothing: a collected order has no shipment to cost.
+    let postage = 0;
+    let shipments = 0;
     for (const o of orders) {
       cards += o.qty;
-      if (o.kind === "mail") mailCards += o.qty;
-      else pickupCards += o.qty;
+      if (o.kind === "mail") {
+        mailCards += o.qty;
+        postage += postageIls(o.qty);
+        shipments++;
+      } else pickupCards += o.qty;
       if (isOpen(o)) open++;
     }
     return {
@@ -137,6 +145,10 @@ export default function OrdersView({
       // the run is דואר 24, so rounding it to a whole number hides the thing
       // that makes the number worth showing.
       avg: orders.length ? cards / orders.length : 0,
+      // Every mail order will be posted, so this is the run's shipping cost,
+      // not only what has physically gone out so far.
+      postage,
+      postageAvg: shipments ? postage / shipments : 0,
     };
   }, [orders]);
 
@@ -316,6 +328,14 @@ export default function OrdersView({
         <div className="stat">
           <div className="v">{stats.avg.toFixed(1)}</div>
           <div className="l">גלויות בממוצע להזמנה</div>
+        </div>
+        <div className="stat money">
+          <div className="v">{stats.postage.toFixed(0)} ₪</div>
+          <div className="l">עלות המשלוחים</div>
+        </div>
+        <div className="stat money">
+          <div className="v">{stats.postageAvg.toFixed(2)} ₪</div>
+          <div className="l">משלוח בממוצע</div>
         </div>
         {/* Beside the totals rather than up in the header: these numbers are
             only as current as the CSV they came from, so the two belong in

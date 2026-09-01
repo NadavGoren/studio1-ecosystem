@@ -559,6 +559,11 @@ textarea.mynote {
 .stat.hero { background: var(--accent); border-color: var(--accent); }
 .stat.hero .v { color: var(--surface); font-size: 26px; }
 .stat.hero .l { color: var(--surface); opacity: .75; }
+/* Money reads as its own group without a new hue — the palette rule here is
+   that colour means workflow status and nothing else, so these are set apart
+   by surface, not by colour. */
+.stat.money { background: var(--surface-2); }
+.stat.money .v { font-size: 19px; }
 .stat.mail .v { color: var(--post24); }
 .stat.pickup .v { color: var(--pickup); }
 
@@ -768,6 +773,10 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
   .stat .l { font-size: 11px; margin-top: 0; }
   .stat.hero { order: -1; }
   .stat.hero .v { font-size: 15px; }
+  /* .stat.money .v carries an extra class and would otherwise outrank the
+     mobile size above, rendering the shipping figures larger than the headline
+     total. Money sits with the hero, not above it. */
+  .stat.money .v { font-size: 15px; }
 
   /* Search gets its own full-width row rather than fighting two selects for
      space — the placeholder was truncating before. */

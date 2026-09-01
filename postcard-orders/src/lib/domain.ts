@@ -44,31 +44,35 @@ export function classify(qty: number): Service {
 export const SERVICE_THRESHOLD = Math.floor(POST72_MAX_G / PER_CARD_G) + 1;
 
 /**
- * Israel Post tariff, business rates incl. VAT, January 2026.
- * Bands are "up to N grams"; the first band whose ceiling the parcel fits under wins.
+ * What a shipment actually costs, by postcard count.
  *
- * post72 needs only its 50g band: nothing heavier can reach this service,
- * because 50g is exactly what defines the service in the first place.
+ * These are Nadav's own figures from דואר בקליק (confirmed 2026-09-02), not a
+ * published price list — they are what actually leaves the account, which is
+ * the only thing worth averaging.
  *
- * post24 runs out at 350g, i.e. 14 cards. A larger order than that shows
- * "מעל המדרגות" rather than a price. Israel Post publishes heavier bands;
- * they are not in here, and should be copied from the price list rather than
- * guessed — an invented tariff that looks real is worse than an honest blank.
+ * Keyed on COUNT, not weight. The weight bands this replaced were copied from
+ * a brief and disagreed with reality at 4 and 5 cards; a lookup by the number
+ * you are holding is also how the cost is actually thought about.
+ *
+ * NOTE THE DIP: five cards cost LESS than four (15.70 vs 17.00). That is
+ * confirmed, not a typo, and it is not a mistake to be tidied away. Anything
+ * from five up stays at that same rate.
  */
-const TARIFF: Record<Service, { maxG: number; ils: number }[]> = {
-  post72: [{ maxG: 50, ils: 4.7 }],
-  post24: [
-    { maxG: 50, ils: 10.5 },
-    { maxG: 100, ils: 11.0 },
-    { maxG: 200, ils: 17.0 },
-    { maxG: 350, ils: 25.0 },
-  ],
+const POSTAGE_ILS: Record<number, number> = {
+  1: 4.7,
+  2: 4.7,
+  3: 11,
+  4: 17,
+  5: 15.7,
 };
 
-/** Postage cost for an order, or null if it is heavier than every known band. */
-export function postageIls(service: Service, grams: number): number | null {
-  const band = TARIFF[service].find((b) => grams <= b.maxG);
-  return band ? band.ils : null;
+/** At and above this count the rate stops changing. */
+const POSTAGE_FLAT_FROM = 5;
+
+/** Postage for an order of `qty` postcards. Pickup orders never reach this. */
+export function postageIls(qty: number): number {
+  if (qty <= 0) return 0;
+  return POSTAGE_ILS[qty] ?? POSTAGE_ILS[POSTAGE_FLAT_FROM];
 }
 
 /* ── Statuses ──────────────────────────────────────────────────────────────

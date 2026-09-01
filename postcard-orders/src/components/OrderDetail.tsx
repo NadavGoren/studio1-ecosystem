@@ -62,7 +62,9 @@ export default function OrderDetail({
 
   const isMail = order.kind === "mail";
   const grams = weightG(order.qty);
-  const postage = order.service ? postageIls(order.service, grams) : null;
+  // Postage is a lookup by postcard count now, so there is always an answer —
+  // no "מעל המדרגות" case left to render.
+  const postage = isMail ? postageIls(order.qty) : null;
   const lines = addressLines(order);
 
   return (
@@ -238,7 +240,7 @@ export default function OrderDetail({
           {isMail && (
             <>
               <dt>דמי משלוח</dt>
-              <dd>{postage === null ? "מעל המדרגות" : `${postage.toFixed(2)} ₪`}</dd>
+              <dd>{postage === null ? "—" : `${postage.toFixed(2)} ₪`}</dd>
             </>
           )}
           <dt>שולם</dt>

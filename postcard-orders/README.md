@@ -15,7 +15,7 @@ Hebrew RTL. Runs locally on port **6120**, deploys to Vercel for sharing.
 |---|---|
 | A postcard weighs 25g — nothing else counts | `PER_CARD_G` in [src/lib/domain.ts](src/lib/domain.ts) |
 | דואר 72 is capped at 50g; over it goes דואר 24 | `POST72_MAX_G`, same file |
-| Israel Post tariff bands (Jan 2026) | `TARIFF`, same file |
+| Delivery fee, by postcard count | `POSTAGE_ILS`, same file |
 | Status ladders, per order kind | `FLOW_MAIL` / `FLOW_PICKUP`, same file |
 
 **The 24/72 split is the weight rule, not a second rule that happens to agree
@@ -34,6 +34,34 @@ row per product line, so an order with three designs is three rows sharing a
 > `TARIFF.post24` runs out at 350g — 14 cards. A larger order shows
 > `מעל המדרגות` rather than a price. The heavier bands should be copied from the
 > Israel Post price list, never guessed.
+
+## Shipping cost
+
+Two figures sit with the totals: **עלות המשלוחים** (what the whole run costs to
+post) and **משלוח בממוצע**. Both count mail orders only and divide by the same
+set — averaging pickups in would drag the figure toward zero and describe
+nothing, since a collected order has no shipment to cost.
+
+Fees are Nadav's own figures from דואר בקליק, keyed on **postcard count**, not
+on weight bands:
+
+| Postcards | Fee |
+|---|---|
+| 1–2 | 4.70 ₪ |
+| 3 | 11.00 ₪ |
+| 4 | 17.00 ₪ |
+| 5 and up | 15.70 ₪ |
+
+> **Five costs less than four.** That is confirmed, not a typo, and not a bug to
+> be tidied away. The rate stops climbing at five.
+
+The weight-band table this replaced was copied from a price list and disagreed
+with reality at 4 and 5 cards. Weight is still shown per order, but it no longer
+decides the price — only the דואר 24/72 split still keys off it.
+
+The total covers every mail order, not only those already posted, so it reads as
+the run's shipping cost rather than a running tally of what has physically gone
+out.
 
 ## Best sellers
 
