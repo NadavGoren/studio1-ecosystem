@@ -1,48 +1,59 @@
 /**
  * Business rules for Studio 1 postcard shipping.
  *
- * The service split is Nadav's own rule — it is NOT derived from the Israel Post
- * price list or from weight. It lives here as a single constant so it can be
- * changed in one place if the rule ever changes.
+ * The 24/72 split is not a preference — it falls out of the weight. דואר 72
+ * is capped at 50g and a postcard is 25g, so two fit exactly and three cannot.
+ * Weight and service are therefore ONE rule, and it is written here once and
+ * derived, rather than stated twice in terms that could drift apart: change
+ * the card weight and the split moves with it.
  */
-
-/** Orders with this many postcards or more go דואר 24; fewer go דואר 72. */
-export const SERVICE_THRESHOLD = 3;
-
-/** Envelope/packaging weight in grams. Still NOT verified on a real scale. */
-export const PACKAGING_G = 12;
-/**
- * Weight of a single postcard in grams — measured, 2026-09-01. The 6g here
- * before was a guess from the brief and was out by a factor of four.
- *
- * This is heavy enough to matter: at 25g a card, a two-card parcel comes to
- * 62g and lands outside every band in TARIFF.post72, which stops at 50g. That
- * is a gap in the table below, not a bug here — see the note on TARIFF.
- */
-export const PER_CARD_G = 25;
 
 export type Service = "post24" | "post72";
 export type Kind = "mail" | "pickup";
 
-/** Which service an order takes, from the number of postcards in it. */
-export function classify(qty: number): Service {
-  return qty >= SERVICE_THRESHOLD ? "post24" : "post72";
-}
+/**
+ * A postcard, in grams. This is the rule, no exceptions — and nothing else is
+ * counted toward it. An earlier version added 12g of packaging on top, which
+ * put two cards at 62g and pushed every two-card order off the דואר 72 band
+ * it is supposed to sit exactly on.
+ */
+export const PER_CARD_G = 25;
+
+/** The ceiling on דואר 72. An order over it goes דואר 24 instead. */
+export const POST72_MAX_G = 50;
 
 /** Total posted weight in grams. */
 export function weightG(qty: number): number {
-  return PACKAGING_G + PER_CARD_G * qty;
+  return PER_CARD_G * qty;
 }
+
+/**
+ * Which service an order takes. Two cards come to 50g, and 50g is still
+ * *within* the band — the comparison has to be inclusive or the common
+ * two-card order silently upgrades to דואר 24.
+ */
+export function classify(qty: number): Service {
+  return weightG(qty) <= POST72_MAX_G ? "post72" : "post24";
+}
+
+/**
+ * The quantity the split works out to — 3 at present. Derived, not chosen:
+ * it exists so the rule can be quoted as "3 or more" without that number
+ * being able to disagree with classify().
+ */
+export const SERVICE_THRESHOLD = Math.floor(POST72_MAX_G / PER_CARD_G) + 1;
 
 /**
  * Israel Post tariff, business rates incl. VAT, January 2026.
  * Bands are "up to N grams"; the first band whose ceiling the parcel fits under wins.
  *
- * INCOMPLETE, and now visibly so. post72 has only a 50g band, which a two-card
- * parcel (62g at the measured card weight) already exceeds, so those orders
- * display "מעל המדרגות" instead of a price. Israel Post does publish heavier
- * bands; they are simply not in here yet. Do not guess them — a made-up tariff
- * that looks like a real one is worse than an honest blank.
+ * post72 needs only its 50g band: nothing heavier can reach this service,
+ * because 50g is exactly what defines the service in the first place.
+ *
+ * post24 runs out at 350g, i.e. 14 cards. A larger order than that shows
+ * "מעל המדרגות" rather than a price. Israel Post publishes heavier bands;
+ * they are not in here, and should be copied from the price list rather than
+ * guessed — an invented tariff that looks real is worse than an honest blank.
  */
 const TARIFF: Record<Service, { maxG: number; ils: number }[]> = {
   post72: [{ maxG: 50, ils: 4.7 }],

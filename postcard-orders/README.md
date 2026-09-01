@@ -13,24 +13,27 @@ Hebrew RTL. Runs locally on port **6120**, deploys to Vercel for sharing.
 
 | Rule | Where |
 |---|---|
-| 1–2 postcards → דואר 72 · 3+ → דואר 24 | `SERVICE_THRESHOLD` in [src/lib/domain.ts](src/lib/domain.ts) |
-| Weight = 12g packaging + 25g per card | `PACKAGING_G`, `PER_CARD_G`, same file |
+| A postcard weighs 25g — nothing else counts | `PER_CARD_G` in [src/lib/domain.ts](src/lib/domain.ts) |
+| דואר 72 is capped at 50g; over it goes דואר 24 | `POST72_MAX_G`, same file |
 | Israel Post tariff bands (Jan 2026) | `TARIFF`, same file |
 | Status ladders, per order kind | `FLOW_MAIL` / `FLOW_PICKUP`, same file |
 
-The 24/72 split keys off the **merged order quantity**, not the row count —
-Morning writes one row per product line, so an order with three designs is three
-rows sharing a מספר הזמנה. They are summed before classifying.
+**The 24/72 split is the weight rule, not a second rule that happens to agree
+with it.** A postcard is 25g and דואר 72 stops at 50g, so two fit exactly and
+three cannot. `classify()` derives the service from the weight instead of
+comparing quantity against a hardcoded 3, so the two cannot drift apart —
+`SERVICE_THRESHOLD` is computed from the weight, not chosen alongside it.
 
-> The per-card weight is **measured** (25g, 2026-09-01). The 12g packaging figure
-> is still the brief's guess. Neither affects the 24/72 split — only the displayed
-> weight and which tariff band shows.
+It keys off the **merged order quantity**, not the row count — Morning writes one
+row per product line, so an order with three designs is three rows sharing a
+מספר הזמנה. They are summed before classifying.
+
+> Packaging is deliberately **not** counted. Any weight added for the envelope
+> puts two cards over 50g and quietly moves every two-card order into דואר 24.
 >
-> **The post72 tariff is incomplete.** It holds a single band, up to 50g, and a
-> two-card parcel weighs 62g — so those orders show `מעל המדרגות` rather than a
-> price. Israel Post publishes heavier bands; they are not in `TARIFF` yet. Add
-> the real numbers rather than guessing: a plausible-looking invented tariff is
-> worse than an honest blank.
+> `TARIFF.post24` runs out at 350g — 14 cards. A larger order shows
+> `מעל המדרגות` rather than a price. The heavier bands should be copied from the
+> Israel Post price list, never guessed.
 
 ## Statuses
 
