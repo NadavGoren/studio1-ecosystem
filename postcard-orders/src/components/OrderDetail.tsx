@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import CopyButton from "./CopyButton";
+import SequenceCopy from "./SequenceCopy";
 import {
   postageIls,
   serviceLabel,
@@ -22,7 +23,8 @@ function addressLines(o: Order): string[] {
   return [street, extras.join(", "), [o.city, o.zip].filter(Boolean).join(" ")].filter(Boolean);
 }
 
-/** Everything a shipment needs, ready to paste into דואר בקליק. */
+/** The order as one readable block — for a message, a note, a phone call. The
+ *  form itself is filled from SequenceCopy, not from this. */
 function fullDetails(o: Order): string {
   return [o.customer, o.phone, ...addressLines(o)].filter(Boolean).join("\n");
 }
@@ -112,7 +114,7 @@ export default function OrderDetail({
         {!order.phone && !order.email && <div className="sub">אין פרטי קשר בקובץ</div>}
       </section>
 
-      {isMail ? (
+      {isMail && (
         <section>
           <h3>כתובת למשלוח</h3>
           {order.addrWarnings.length > 0 && (
@@ -138,8 +140,8 @@ export default function OrderDetail({
             <CopyButton value={lines.join("\n")} label="העתק כתובת" />
             <CopyButton
               value={fullDetails(order)}
-              label="העתק הכל לדואר בקליק"
-              title="שם, טלפון וכתובת מלאה"
+              label="העתק שם, טלפון וכתובת"
+              title="בלוק קריא אחד — לא למילוי הטופס"
             />
           </div>
           {order.addressRaw && (
@@ -149,7 +151,16 @@ export default function OrderDetail({
             </details>
           )}
         </section>
-      ) : (
+      )}
+
+      {isMail && (
+        <section>
+          <h3>מילוי טופס דואר בקליק</h3>
+          <SequenceCopy order={order} />
+        </section>
+      )}
+
+      {!isMail && (
         <section>
           <h3>איסוף עצמי</h3>
           <div className="addr">{order.pickupPoint || order.methodRaw}</div>

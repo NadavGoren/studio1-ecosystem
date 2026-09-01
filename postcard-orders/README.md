@@ -53,6 +53,44 @@ have none.
 
 ---
 
+## Filling the דואר בקליק form
+
+Open an order, hit **c** (or the **העתק לרצף** button). On the דואר בקליק form,
+press **Ctrl+V** in each field in turn — every paste inserts the *next* value,
+so you never go back and forth to copy again.
+
+Install [`tools/israelpost-sequence.user.js`](tools/israelpost-sequence.user.js)
+in [Tampermonkey](https://www.tampermonkey.net/) once. It runs on
+`israelpost.co.il` only.
+
+**There is no cross-origin storage anywhere in this.** The panel copies all
+seven fields as one seven-line block, and that whole block rides along on every
+paste event — so the userscript reads the list out of the clipboard each time
+and only has to remember how far down it has got. Two consequences worth
+knowing:
+
+- Copying a **different order resets the sequence by itself**, because the
+  payload changed. You almost never need the reset button.
+- A **single-line clipboard is left completely alone**, so ordinary copy-paste
+  on that site still behaves normally. Only a seven-line block is treated as a
+  sequence.
+
+A floating badge bottom-left shows which field is next **and the value it is
+about to paste** — that is how you catch a bad first/last-name split before it
+lands in the form. Its buttons step back (↑), skip a field (↓) and start over
+(↺, or Alt+Shift+R). After the seventh field it turns green and *swallows*
+further pastes rather than dumping the whole block into a field.
+
+Fields the order doesn't have are skipped, not pasted as blanks. The wire
+format is positional and fixed-length, so `SEQUENCE_FIELDS` and `EMPTY` in
+[src/lib/shipSequence.ts](src/lib/shipSequence.ts) and the `FIELDS`/`EMPTY`
+constants at the top of the userscript **must be changed together**.
+
+Without the userscript installed the copy button is still useful — it puts the
+whole order on the clipboard in form order.
+
+---
+
 ## Running locally
 
 ```bash
@@ -129,7 +167,10 @@ src/
   components/
     OrdersView.tsx   table, tabs, filters, sorting, keyboard nav
     OrderDetail.tsx  contact panel with the copy buttons
+    SequenceCopy.tsx the seven-field copy for the דואר בקליק form
     ImportDialog.tsx CSV drop zone and import report
+tools/
+  israelpost-sequence.user.js  Tampermonkey script for the other end of that
 ```
 
 ## Not included

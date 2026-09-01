@@ -338,6 +338,48 @@ tbody tr:last-child td { border-bottom: none; }
 .copy.done { color: var(--st-delivered); border-color: var(--st-delivered); }
 .copy.failed { color: var(--st-issue); border-color: var(--st-issue); }
 
+/* ── Sequence copy — the seven דואר בקליק fields, in form order ──────────── */
+.seqcopy {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.seqcopy:hover { background: var(--surface-2); }
+.seqcopy.done {
+  color: var(--st-delivered);
+  border-color: var(--st-delivered);
+  background: var(--st-delivered-bg);
+}
+.seqcopy.failed {
+  color: var(--st-issue);
+  border-color: var(--st-issue);
+  background: var(--st-issue-bg);
+}
+
+.seqhint { margin-top: 7px; font-size: 12px; color: var(--faint); }
+.seqhint kbd {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 5px;
+  color: var(--muted);
+}
+
+.seqpreview { margin-top: 9px; font-size: 12px; color: var(--faint); }
+.seqpreview summary { cursor: pointer; }
+.seqlist { margin: 7px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.seqlist li { display: flex; gap: 8px; align-items: baseline; }
+.seqlist .n { min-width: 12px; font-variant-numeric: tabular-nums; }
+.seqlist .k { min-width: 62px; }
+.seqlist .v { color: var(--text); overflow-wrap: anywhere; }
+.seqlist .v.empty { color: var(--faint); font-style: italic; }
+
 .addr { font-size: 15px; line-height: 1.65; }
 .addr .line2 { color: var(--muted); font-size: 13.5px; }
 
