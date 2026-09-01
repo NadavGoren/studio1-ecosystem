@@ -41,6 +41,13 @@ export interface Order {
   /** Our own workflow status — never overwritten by a re-import. */
   status: Status;
   statusAt: string | null;
+  /**
+   * The day the parcel actually went out, YYYY-MM-DD, or null if it hasn't.
+   * Separate from `statusAt` because that records when the button was pressed,
+   * and a Sunday post often isn't marked until Monday. Written only when the
+   * status is set to "shipped"; never cleared behind your back.
+   */
+  shippedOn: string | null;
   /** Free-text note Nadav or his partner add in the app. */
   note: string;
   updatedAt: string;

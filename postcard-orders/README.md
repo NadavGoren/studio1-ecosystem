@@ -16,6 +16,7 @@ Hebrew RTL. Runs locally on port **6120**, deploys to Vercel for sharing.
 | 1–2 postcards → דואר 72 · 3+ → דואר 24 | `SERVICE_THRESHOLD` in [src/lib/domain.ts](src/lib/domain.ts) |
 | Weight = 12g packaging + 6g per card | `PACKAGING_G`, `PER_CARD_G`, same file |
 | Israel Post tariff bands (Jan 2026) | `TARIFF`, same file |
+| Status ladders, per order kind | `FLOW_MAIL` / `FLOW_PICKUP`, same file |
 
 The 24/72 split keys off the **merged order quantity**, not the row count —
 Morning writes one row per product line, so an order with three designs is three
@@ -28,8 +29,34 @@ rows sharing a מספר הזמנה. They are summed before classifying.
 ## Statuses
 
 Mail orders: `חדש → ארוז → מדבקה הודפסה → נשלח → נמסר`
-Pickup orders: `חדש → מוכן לאיסוף → נאסף` — no label, never posted.
+Pickup orders: `חדש → מוכן לאיסוף → הודעה נשלחה → נאסף` — no label, never posted.
 Either can be flagged `בעיה / תקוע`.
+
+`הודעה נשלחה` is the SMS or WhatsApp telling a pickup customer their order is
+waiting. It is pickup-only: it never appears on the shipments table, and the
+mail ladder is unchanged.
+
+### The ship date
+
+`נשלח` is the one status that carries a date of its own, because the day a
+parcel went out and the day you got round to marking it are often not the same.
+It is kept separately from `statusAt` and can be backdated:
+
+- the one-click **← נשלח** button files it under **today**, which is what
+  marking a parcel as it goes out means;
+- picking **נשלח** from the dropdown, the detail panel, or the bulk bar asks
+  **היום / אתמול / תאריך אחר** first. A bulk change asks once for the whole
+  selection, not once per order.
+
+The date is written **only** on the way into `נשלח`, and never cleared by a
+later status — walking an order back to `ארוז` to fix a mistake does not lose
+the day it actually went out. Like statuses and notes, it survives a re-import.
+
+## When the CSV was last uploaded
+
+Shown at the end of the totals row — "עודכן לפני 3 שע׳" — because the cubes are
+only as current as the file behind them. It turns amber once the CSV is over a
+day old.
 
 ## Re-importing
 
@@ -123,6 +150,13 @@ In the project → **Storage** → **Create Database** → **Postgres** (Neon). 
 the free plan and connect it to the project. Vercel injects `DATABASE_URL`
 automatically; you never paste it anywhere. The `orders` table is created on
 first use — there is no migration step.
+
+> Adding a **column** later is not covered by that. `CREATE TABLE IF NOT EXISTS`
+> does nothing to a table that already exists, so every new column needs its own
+> `ALTER TABLE … ADD COLUMN IF NOT EXISTS` line in `SCHEMA` beside it — see
+> `shipped_on` in [src/lib/store/postgres.ts](src/lib/store/postgres.ts). Miss
+> it and dev looks fine, where the table is built fresh, while production 500s
+> on the first query that selects the column.
 
 ### 4. Set two environment variables
 

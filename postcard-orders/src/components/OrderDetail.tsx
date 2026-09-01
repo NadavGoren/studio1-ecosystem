@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import CopyButton from "./CopyButton";
 import SequenceCopy from "./SequenceCopy";
+import ShipDateChoice from "./ShipDateChoice";
 import {
   postageIls,
   serviceLabel,
+  shipDateLabel,
   statusLabel,
   statusOptions,
   weightG,
@@ -36,17 +38,19 @@ export default function OrderDetail({
   onClose,
 }: {
   order: Order;
-  onStatus: (id: string, status: Status) => void;
+  onStatus: (id: string, status: Status, shippedOn?: string | null) => void;
   onNote: (id: string, note: string) => void;
   onClose: () => void;
 }) {
   const [note, setNote] = useState(order.note);
+  const [askShipDate, setAskShipDate] = useState(false);
   const savedNote = useRef(order.note);
 
   // Switching order replaces the draft — the previous one is already persisted.
   useEffect(() => {
     setNote(order.note);
     savedNote.current = order.note;
+    setAskShipDate(false);
   }, [order.orderId, order.note]);
 
   function commitNote() {
@@ -85,12 +89,29 @@ export default function OrderDetail({
               type="button"
               className={`statusbtn${order.status === s ? ` st-${s}` : ""}`}
               aria-pressed={order.status === s}
-              onClick={() => onStatus(order.orderId, s)}
+              onClick={() => (s === "shipped" ? setAskShipDate(true) : onStatus(order.orderId, s))}
             >
               {statusLabel(s, order.kind)}
             </button>
           ))}
         </div>
+        {askShipDate && (
+          <ShipDateChoice
+            onPick={(day) => {
+              onStatus(order.orderId, "shipped", day);
+              setAskShipDate(false);
+            }}
+            onCancel={() => setAskShipDate(false)}
+          />
+        )}
+        {order.shippedOn && !askShipDate && (
+          <div className="shipdate-shown">
+            נשלח {shipDateLabel(order.shippedOn)}
+            <button type="button" onClick={() => setAskShipDate(true)}>
+              שינוי תאריך
+            </button>
+          </div>
+        )}
       </section>
 
       <section>

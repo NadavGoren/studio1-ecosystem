@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import CsvNag from "./CsvNag";
 import ImportDialog from "./ImportDialog";
+import LastImport from "./LastImport";
 import OrderDetail from "./OrderDetail";
 import OrdersTable from "./OrdersTable";
+import ShipDateChoice from "./ShipDateChoice";
 import { statusLabel, statusOptions, type Status } from "@/lib/domain";
 import type { Order } from "@/types";
 
@@ -18,16 +20,19 @@ function isOpen(o: Order): boolean {
 
 export default function OrdersView({
   initialOrders,
+  initialLastImportAt,
   loadError,
   store,
   authOff,
 }: {
   initialOrders: Order[];
+  initialLastImportAt: string | null;
   loadError: string | null;
   store: "postgres" | "file";
   authOff: boolean;
 }) {
   const [orders, setOrders] = useState(initialOrders);
+  const [lastImportAt, setLastImportAt] = useState(initialLastImportAt);
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | Status>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("order");
@@ -35,6 +40,7 @@ export default function OrdersView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [importOpen, setImportOpen] = useState(false);
+  const [bulkShipAsk, setBulkShipAsk] = useState(false);
   const [error, setError] = useState<string | null>(loadError);
 
   const refresh = useCallback(async () => {
@@ -43,6 +49,7 @@ export default function OrdersView({
       if (!res.ok) throw new Error();
       const body = await res.json();
       setOrders(body.orders as Order[]);
+      setLastImportAt(body.lastImportAt as string | null);
       setChecked(new Set());
       setError(null);
     } catch {
@@ -52,13 +59,20 @@ export default function OrdersView({
 
   /** Optimistic write across one or many orders; rolls back if the server says no. */
   const setStatuses = useCallback(
-    async (ids: string[], status: Status) => {
+    async (ids: string[], status: Status, shippedOn: string | null = null) => {
       if (!ids.length) return;
       const before = orders;
       const at = new Date().toISOString();
       const target = new Set(ids);
       setOrders((prev) =>
-        prev.map((o) => (target.has(o.orderId) ? { ...o, status, statusAt: at } : o))
+        prev.map((o) =>
+          target.has(o.orderId)
+            ? // Mirror the store's rule exactly: the ship date moves only on
+              // the way into "shipped", so the optimistic row can't show a
+              // date the server is about to leave alone.
+              { ...o, status, statusAt: at, ...(status === "shipped" ? { shippedOn } : null) }
+            : o
+        )
       );
       setChecked(new Set());
       try {
@@ -67,7 +81,7 @@ export default function OrdersView({
         const res = await fetch("/api/orders", {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ids, status }),
+          body: JSON.stringify({ ids, status, shippedOn }),
         });
         if (!res.ok) throw new Error();
         const { updated } = await res.json();
@@ -178,6 +192,12 @@ export default function OrdersView({
   // only the steps that are valid for every order in it.
   const bulkKind = chosen.every((o) => o.kind === "mail") ? "mail" : "pickup";
 
+  // The bar vanishes when the selection empties. Make sure it comes back on
+  // the status list rather than on a date question left over from last time.
+  useEffect(() => {
+    if (!chosen.length) setBulkShipAsk(false);
+  }, [chosen.length]);
+
   const toggleCheck = useCallback((id: string) => {
     setChecked((prev) => {
       const next = new Set(prev);
@@ -282,6 +302,12 @@ export default function OrdersView({
           <div className="v">{stats.open}</div>
           <div className="l">ממתינות לטיפול</div>
         </div>
+        {/* Beside the totals rather than up in the header: these numbers are
+            only as current as the CSV they came from, so the two belong in
+            the same glance. */}
+        <div className="statsmeta">
+          <LastImport iso={lastImportAt} />
+        </div>
       </div>
 
       <div className="filters">
@@ -302,6 +328,7 @@ export default function OrdersView({
           <option value="open">רק פתוחות</option>
           <option value="new">חדש</option>
           <option value="packed">ארוז / מוכן לאיסוף</option>
+          <option value="notified">הודעה נשלחה</option>
           <option value="label">מדבקה הודפסה</option>
           <option value="shipped">נשלח</option>
           <option value="delivered">נמסר / נאסף</option>
@@ -360,7 +387,7 @@ export default function OrdersView({
               onSelect={setSelectedId}
               onToggleCheck={toggleCheck}
               onToggleAll={toggleAll}
-              onStatus={(id, s) => setStatuses([id], s)}
+              onStatus={(id, s, shippedOn) => setStatuses([id], s, shippedOn)}
               emptyText={
                 orders.length === 0
                   ? "אין עדיין הזמנות. לחצי על ״ייבוא CSV״ כדי להעלות את הקובץ מ-Morning."
@@ -384,7 +411,7 @@ export default function OrdersView({
               onSelect={setSelectedId}
               onToggleCheck={toggleCheck}
               onToggleAll={toggleAll}
-              onStatus={(id, s) => setStatuses([id], s)}
+              onStatus={(id, s, shippedOn) => setStatuses([id], s, shippedOn)}
               emptyText={
                 orders.length === 0 ? "—" : "אין הזמנות איסוף שמתאימות לסינון."
               }
@@ -395,7 +422,7 @@ export default function OrdersView({
         {selected && (
           <OrderDetail
             order={selected}
-            onStatus={(id, status) => setStatuses([id], status)}
+            onStatus={(id, status, shippedOn) => setStatuses([id], status, shippedOn)}
             onNote={setNote}
             onClose={() => setSelectedId(null)}
           />
@@ -406,19 +433,38 @@ export default function OrdersView({
         <div className="bulkbar" role="region" aria-label="פעולות על הזמנות שנבחרו">
           <span className="n">{chosen.length} נבחרו</span>
           <span className="sep" />
-          {statusOptions(bulkKind).map((s) => (
-            <button
-              key={s}
-              className="btn sm"
-              onClick={() => setStatuses(chosen.map((o) => o.orderId), s)}
-            >
-              {statusLabel(s, bulkKind)}
-            </button>
-          ))}
-          <span className="sep" />
-          <button className="btn ghost sm" onClick={() => setChecked(new Set())}>
-            ביטול
-          </button>
+          {bulkShipAsk ? (
+            // One date for the whole batch — they went to the post office
+            // together, so asking once per order would be busywork.
+            <ShipDateChoice
+              count={chosen.length}
+              onPick={(day) => {
+                setStatuses(chosen.map((o) => o.orderId), "shipped", day);
+                setBulkShipAsk(false);
+              }}
+              onCancel={() => setBulkShipAsk(false)}
+            />
+          ) : (
+            <>
+              {statusOptions(bulkKind).map((s) => (
+                <button
+                  key={s}
+                  className="btn sm"
+                  onClick={() =>
+                    s === "shipped"
+                      ? setBulkShipAsk(true)
+                      : setStatuses(chosen.map((o) => o.orderId), s)
+                  }
+                >
+                  {statusLabel(s, bulkKind)}
+                </button>
+              ))}
+              <span className="sep" />
+              <button className="btn ghost sm" onClick={() => setChecked(new Set())}>
+                ביטול
+              </button>
+            </>
+          )}
         </div>
       )}
 

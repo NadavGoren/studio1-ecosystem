@@ -1,7 +1,7 @@
 "use client";
 
 import StatusControl from "./StatusControl";
-import { serviceLabel, type Status } from "@/lib/domain";
+import { serviceLabel, shipDateLabel, type Status } from "@/lib/domain";
 import type { Order } from "@/types";
 
 /**
@@ -27,7 +27,7 @@ export default function OrdersTable({
   onSelect: (id: string) => void;
   onToggleCheck: (id: string) => void;
   onToggleAll: (ids: string[], on: boolean) => void;
-  onStatus: (id: string, status: Status) => void;
+  onStatus: (id: string, status: Status, shippedOn?: string | null) => void;
   emptyText: string;
 }) {
   if (orders.length === 0) {
@@ -112,8 +112,15 @@ export default function OrdersTable({
                 <StatusControl
                   status={o.status}
                   kind={o.kind}
-                  onChange={(s) => onStatus(o.orderId, s)}
+                  onChange={(s, shippedOn) => onStatus(o.orderId, s, shippedOn)}
                 />
+                {/* Only once it has actually gone out — the whole point is
+                    being able to scan for "when did this leave". */}
+                {o.shippedOn && (o.status === "shipped" || o.status === "delivered") && (
+                  <div className="shipday" title={`נשלח ב-${o.shippedOn}`}>
+                    נשלח {shipDateLabel(o.shippedOn)}
+                  </div>
+                )}
               </td>
             </tr>
           ))}

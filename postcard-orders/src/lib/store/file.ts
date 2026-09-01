@@ -11,6 +11,7 @@ import type { Store } from "./types";
  */
 const DIR = path.join(process.cwd(), ".data");
 const FILE = path.join(DIR, "orders.json");
+const META_FILE = path.join(DIR, "meta.json");
 
 async function read(): Promise<Order[]> {
   try {
@@ -24,6 +25,20 @@ async function read(): Promise<Order[]> {
 async function write(orders: Order[]): Promise<void> {
   await fs.mkdir(DIR, { recursive: true });
   await fs.writeFile(FILE, JSON.stringify(orders, null, 2), "utf8");
+}
+
+async function readMeta(): Promise<{ lastImportAt: string | null }> {
+  try {
+    return JSON.parse(await fs.readFile(META_FILE, "utf8"));
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { lastImportAt: null };
+    throw e;
+  }
+}
+
+async function writeMeta(meta: { lastImportAt: string | null }): Promise<void> {
+  await fs.mkdir(DIR, { recursive: true });
+  await fs.writeFile(META_FILE, JSON.stringify(meta, null, 2), "utf8");
 }
 
 export const fileStore: Store = {
@@ -42,6 +57,7 @@ export const fileStore: Store = {
         // Our workflow fields survive the import untouched.
         status: prev?.status ?? o.status,
         statusAt: prev?.statusAt ?? null,
+        shippedOn: prev?.shippedOn ?? null,
         note: prev?.note ?? "",
         updatedAt: new Date().toISOString(),
       });
@@ -49,18 +65,21 @@ export const fileStore: Store = {
     await write([...byId.values()]);
   },
 
-  async setStatus(orderId, status: Status) {
+  // Same rule as the Postgres driver: shipped_on is written only on the way
+  // into "shipped", and never cleared by any other status.
+  async setStatus(orderId, status: Status, shippedOn = null) {
     const all = await read();
     const hit = all.find((o) => o.orderId === orderId);
     if (!hit) return null;
     hit.status = status;
     hit.statusAt = new Date().toISOString();
+    if (status === "shipped") hit.shippedOn = shippedOn;
     hit.updatedAt = hit.statusAt;
     await write(all);
     return hit;
   },
 
-  async setStatusMany(orderIds, status: Status) {
+  async setStatusMany(orderIds, status: Status, shippedOn = null) {
     const ids = new Set(orderIds);
     const all = await read();
     const at = new Date().toISOString();
@@ -69,6 +88,7 @@ export const fileStore: Store = {
       if (!ids.has(o.orderId)) continue;
       o.status = status;
       o.statusAt = at;
+      if (status === "shipped") o.shippedOn = shippedOn;
       o.updatedAt = at;
       n++;
     }
@@ -84,5 +104,13 @@ export const fileStore: Store = {
     hit.updatedAt = new Date().toISOString();
     await write(all);
     return hit;
+  },
+
+  async getLastImportAt() {
+    return (await readMeta()).lastImportAt;
+  },
+
+  async setLastImportAt(iso) {
+    await writeMeta({ lastImportAt: iso });
   },
 };

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isStatus } from "@/lib/domain";
+import { isDayIso, isStatus } from "@/lib/domain";
 import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  let body: { status?: unknown; note?: unknown };
+  let body: { status?: unknown; note?: unknown; shippedOn?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -24,7 +24,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if (!isStatus(body.status)) {
         return NextResponse.json({ error: "סטטוס לא מוכר" }, { status: 400 });
       }
-      order = await store.setStatus(id, body.status);
+      if (body.shippedOn !== undefined && body.shippedOn !== null && !isDayIso(body.shippedOn)) {
+        return NextResponse.json({ error: "תאריך משלוח לא תקין" }, { status: 400 });
+      }
+      order = await store.setStatus(id, body.status, (body.shippedOn as string | null) ?? null);
     }
     if (body.note !== undefined) {
       if (typeof body.note !== "string") {

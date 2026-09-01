@@ -25,6 +25,9 @@
   --st-packed: #a16207;   --st-packed-bg: #fdf5e3;
   --st-label: #c2410c;    --st-label-bg: #fdf0e8;
   --st-shipped: #6d28d9;  --st-shipped-bg: #f3ecfd;
+  /* Teal, kept clear of shipped's violet and delivered's green: on the pickup
+     table these three sit directly above one another. */
+  --st-notified: #0e7490; --st-notified-bg: #e4f4f8;
   --st-delivered: #15803d; --st-delivered-bg: #e9f6ec;
   --st-issue: #b91c1c;    --st-issue-bg: #fdecec;
 
@@ -53,6 +56,7 @@
     --st-packed: #e8b84b;   --st-packed-bg: #33290f;
     --st-label: #fb923c;    --st-label-bg: #3a2314;
     --st-shipped: #c4a5fb;  --st-shipped-bg: #2b1f45;
+    --st-notified: #5fd4ef; --st-notified-bg: #0e2f39;
     --st-delivered: #6ee79b; --st-delivered-bg: #143024;
     --st-issue: #f88a8a;    --st-issue-bg: #3a1a1a;
 
@@ -279,6 +283,7 @@ tbody tr:last-child td { border-bottom: none; }
 .st-packed { color: var(--st-packed); background: var(--st-packed-bg); }
 .st-label { color: var(--st-label); background: var(--st-label-bg); }
 .st-shipped { color: var(--st-shipped); background: var(--st-shipped-bg); }
+.st-notified { color: var(--st-notified); background: var(--st-notified-bg); }
 .st-delivered { color: var(--st-delivered); background: var(--st-delivered-bg); }
 .st-issue { color: var(--st-issue); background: var(--st-issue-bg); }
 
@@ -693,6 +698,7 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
 .pickmenu .dot.d-packed { background: var(--st-packed); }
 .pickmenu .dot.d-label { background: var(--st-label); }
 .pickmenu .dot.d-shipped { background: var(--st-shipped); }
+.pickmenu .dot.d-notified { background: var(--st-notified); }
 .pickmenu .dot.d-delivered { background: var(--st-delivered); }
 .pickmenu .dot.d-issue { background: var(--st-issue); }
 
@@ -843,3 +849,98 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
   .nag { margin: 10px 12px 0; padding: 9px 11px; flex-wrap: wrap; }
   .nag p { flex-basis: 100%; order: -1; font-size: 13px; }
 }
+
+/* ── Last import indicator ────────────────────────────────────────────────
+   Neutral by default; shifts to the same amber "attention" tone as the CSV
+   nag once the data is a day old, so staleness is visible without a second
+   banner shouting about it. */
+.lastimport {
+  font-size: 12px;
+  color: var(--faint);
+  white-space: nowrap;
+  flex: none;
+}
+.lastimport.stale {
+  color: var(--st-packed);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  /* It used to be safe to drop this on mobile because it lived in the header
+     and the CSV nag repeated it. Now it is the only readout, and the nag only
+     appears once the file is already stale — so it wraps to its own line
+     instead of disappearing. */
+  .statsmeta { margin-inline-start: 0; width: 100%; align-self: flex-start; }
+}
+
+/* ── Last-import readout, now sitting with the totals ─────────────────────
+   Pushed to the far end of the stats row: the cubes are only as current as
+   the CSV behind them, so the two want to be read in one glance. */
+.statsmeta {
+  margin-inline-start: auto;
+  align-self: flex-end;
+  padding-bottom: 4px;
+}
+
+/* ── Ship date ────────────────────────────────────────────────────────────
+   The day a parcel went out, asked for whenever נשלח is picked deliberately.
+   Reuses .pickmenu's box when it appears inside the status dropdown, so only
+   the innards need styling here. */
+.shipdate {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 10px;
+  min-width: 172px;
+}
+.shipdate-h { font-size: 11.5px; color: var(--faint); font-weight: 600; }
+.shipdate-h .n { color: var(--st-shipped); font-weight: 700; }
+.shipdate-opts { display: flex; gap: 5px; flex-wrap: wrap; }
+.shipdate-input {
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.shipdate-cancel {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 11.5px;
+  color: var(--faint);
+  text-decoration: underline;
+}
+.shipdate-cancel:hover { color: var(--text); }
+
+/* Inside the bulk bar the choice sits inline, not stacked. */
+.bulkbar .shipdate { flex-direction: row; align-items: center; padding: 0; min-width: 0; }
+
+/* Under the status pill in the table — this is the "when did this leave"
+   scan, so it stays quiet until there is actually a date to show. */
+.shipday {
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
+/* The same fact in the detail panel, where it is also editable. */
+.shipdate-shown {
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.shipdate-shown button {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 11.5px;
+  color: var(--faint);
+  text-decoration: underline;
+}
+.shipdate-shown button:hover { color: var(--text); }

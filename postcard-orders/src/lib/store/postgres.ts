@@ -1,7 +1,12 @@
-import { Pool } from "pg";
+import { Pool, types } from "pg";
 import type { Status } from "@/lib/domain";
 import type { Order } from "@/types";
 import type { Store } from "./types";
+
+// DATE (oid 1082) hands back the raw "YYYY-MM-DD" instead of a Date pinned to
+// midnight in the server's zone. Vercel runs UTC and we post from Israel, so
+// the default parser would shift a ship date back a day on the way out.
+types.setTypeParser(1082, (v: string) => v);
 
 /**
  * Production driver. Every write is a single atomic statement, so Nadav and his
@@ -57,8 +62,23 @@ CREATE TABLE IF NOT EXISTS orders (
   note_ship     TEXT NOT NULL DEFAULT '',
   status        TEXT NOT NULL DEFAULT 'new',
   status_at     TIMESTAMPTZ,
+  shipped_on    DATE,
   note          TEXT NOT NULL DEFAULT '',
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- CREATE TABLE IF NOT EXISTS does nothing to a table that already exists, so a
+-- column added after the first deploy needs saying twice. Every new column from
+-- here on must get a line here too, or production 500s on the first query that
+-- selects it while dev — where the table is created fresh — looks perfectly fine.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_on DATE;
+
+-- A tiny key/value table for app-level facts that aren't about any one order —
+-- currently just "when was the CSV last imported". A single row per key,
+-- upserted rather than ever inserted twice.
+CREATE TABLE IF NOT EXISTS app_meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
 );
 `;
 
@@ -106,10 +126,13 @@ function toOrder(r: any): Order {
     noteShip: r.note_ship,
     status: r.status,
     statusAt: r.status_at ? new Date(r.status_at).toISOString() : null,
+    shippedOn: r.shipped_on ?? null,
     note: r.note,
     updatedAt: new Date(r.updated_at).toISOString(),
   };
 }
+
+const LAST_IMPORT_KEY = "last_import_at";
 
 export const pgStore: Store = {
   async list() {
@@ -164,8 +187,9 @@ export const pgStore: Store = {
              note_order = EXCLUDED.note_order,
              note_ship = EXCLUDED.note_ship,
              updated_at = now()
-             -- status, status_at and note are deliberately NOT updated:
-             -- they are ours, and a re-import must never reset the workflow.
+             -- status, status_at, shipped_on and note are deliberately NOT
+             -- updated: they are ours, not Morning's, and a re-import must
+             -- never reset the workflow.
           `,
           [
             o.orderId, o.orderDate, o.sourceStatus, o.customer, o.phone, o.email,
@@ -185,23 +209,28 @@ export const pgStore: Store = {
     }
   },
 
-  async setStatus(orderId, status: Status) {
+  // shipped_on moves only on the way into "shipped". Any other status leaves
+  // whatever is there alone, so walking an order back and forward again can't
+  // erase the day it actually went out.
+  async setStatus(orderId, status: Status, shippedOn = null) {
     await ensureSchema();
     const { rows } = await getPool().query(
-      `UPDATE orders SET status = $2, status_at = now(), updated_at = now()
+      `UPDATE orders SET status = $2, status_at = now(), updated_at = now(),
+              shipped_on = CASE WHEN $2 = 'shipped' THEN $3::date ELSE shipped_on END
        WHERE order_id = $1 RETURNING *`,
-      [orderId, status]
+      [orderId, status, shippedOn]
     );
     return rows[0] ? toOrder(rows[0]) : null;
   },
 
-  async setStatusMany(orderIds, status: Status) {
+  async setStatusMany(orderIds, status: Status, shippedOn = null) {
     if (!orderIds.length) return 0;
     await ensureSchema();
     const { rowCount } = await getPool().query(
-      `UPDATE orders SET status = $2, status_at = now(), updated_at = now()
+      `UPDATE orders SET status = $2, status_at = now(), updated_at = now(),
+              shipped_on = CASE WHEN $2 = 'shipped' THEN $3::date ELSE shipped_on END
        WHERE order_id = ANY($1::text[])`,
-      [orderIds, status]
+      [orderIds, status, shippedOn]
     );
     return rowCount ?? 0;
   },
@@ -213,6 +242,23 @@ export const pgStore: Store = {
       [orderId, note]
     );
     return rows[0] ? toOrder(rows[0]) : null;
+  },
+
+  async getLastImportAt() {
+    await ensureSchema();
+    const { rows } = await getPool().query(`SELECT value FROM app_meta WHERE key = $1`, [
+      LAST_IMPORT_KEY,
+    ]);
+    return rows[0]?.value ?? null;
+  },
+
+  async setLastImportAt(iso) {
+    await ensureSchema();
+    await getPool().query(
+      `INSERT INTO app_meta (key, value) VALUES ($1, $2)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [LAST_IMPORT_KEY, iso]
+    );
   },
 };
 

@@ -51,13 +51,25 @@ export function postageIls(service: Service, grams: number): number | null {
  * "new" is the implicit state of a freshly imported order — nothing done yet.
  * "issue" is the escape hatch for anything stuck or wrong.
  */
-export const STATUSES = ["new", "packed", "label", "shipped", "delivered", "issue"] as const;
+export const STATUSES = [
+  "new",
+  "packed",
+  "label",
+  "shipped",
+  "notified",
+  "delivered",
+  "issue",
+] as const;
 export type Status = (typeof STATUSES)[number];
 
 /** The ladder a mail order climbs. */
 export const FLOW_MAIL: Status[] = ["new", "packed", "label", "shipped", "delivered"];
-/** Pickup orders never get a label and are never posted. */
-export const FLOW_PICKUP: Status[] = ["new", "packed", "delivered"];
+/**
+ * Pickup orders never get a label and are never posted. They do get a message
+ * once they're ready — that is the step between packing and collection, and
+ * the one that tells us whether the customer even knows to come.
+ */
+export const FLOW_PICKUP: Status[] = ["new", "packed", "notified", "delivered"];
 
 export function flowFor(kind: Kind): Status[] {
   return kind === "pickup" ? FLOW_PICKUP : FLOW_MAIL;
@@ -79,6 +91,7 @@ export function statusLabel(status: Status, kind: Kind): string {
     packed: "ארוז",
     label: "מדבקה הודפסה",
     shipped: "נשלח",
+    notified: "הודעה נשלחה",
     delivered: "נמסר",
     issue: "בעיה / תקוע",
   };
@@ -110,3 +123,38 @@ export const serviceLabel: Record<Service, string> = {
   post24: "דואר 24",
   post72: "דואר 72",
 };
+
+/* ── Ship date ─────────────────────────────────────────────────────────────
+ * The day a parcel actually went out, which is NOT the moment its status was
+ * clicked: a batch posted on Sunday afternoon often gets marked on Monday.
+ * That is why this is stored separately from `statusAt` and can be backdated.
+ *
+ * A plain YYYY-MM-DD calendar day on purpose — "which day did this go out"
+ * has no time of day, and giving it one only invites timezone bugs.
+ */
+
+/**
+ * The local calendar day `offsetDays` back from today, as YYYY-MM-DD.
+ * Assembled from local parts deliberately: toISOString() reports UTC, and
+ * Israel runs 2–3 hours ahead of it, so anything marked before ~03:00 would
+ * be filed under the previous day.
+ */
+export function dayIso(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() - offsetDays);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Guards the API boundary — a ship date only ever arrives as a bare day. */
+export function isDayIso(v: unknown): v is string {
+  return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+}
+
+/** How a ship date reads in the UI: היום / אתמול, else 03/09. */
+export function shipDateLabel(day: string): string {
+  if (day === dayIso(0)) return "היום";
+  if (day === dayIso(1)) return "אתמול";
+  const [y, m, d] = day.split("-");
+  return `${d}/${m}${y === String(new Date().getFullYear()) ? "" : `/${y.slice(2)}`}`;
+}

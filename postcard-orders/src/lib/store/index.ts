@@ -67,6 +67,7 @@ export async function importCsv(csvText: string): Promise<ImportReport> {
   }
 
   await store.upsertMany(incoming);
+  await store.setLastImportAt(new Date().toISOString());
 
   return {
     parsedRows: incoming.reduce((n, o) => n + o.items.length, 0),

@@ -181,6 +181,7 @@ export function ordersFromCsv(csvText: string): Order[] {
 
       status: "new",
       statusAt: null,
+      shippedOn: null,
       note: "",
       updatedAt: new Date().toISOString(),
     });
