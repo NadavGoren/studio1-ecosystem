@@ -751,13 +751,23 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
   .topbar .btn { padding: 7px 10px; font-size: 13px; }
   .devbadge { display: none; } /* diagnostic-only; not worth the space on a phone */
 
-  /* 4 secondary tiles read better as a tidy 2×2 than a 3-wide row with an
-     orphaned 4th tile stretched to fill its own line. */
-  .stats { padding: 12px 14px 0; gap: 8px; }
-  .stat { flex: 1 1 calc(50% - 4px); min-width: 0; padding: 9px 10px; }
-  .stat .v { font-size: 19px; }
-  .stat.hero { flex-basis: 100%; order: -1; }
-  .stat.hero .v { font-size: 24px; }
+  /* Chips, not tiles. Stacked 2-up cards pushed the first order ~450px down
+     the page, which defeats the point of a list you can scan. Value and label
+     on one line brings all five totals into about 70px. */
+  .stats { padding: 10px 14px 0; gap: 6px; }
+  .stat {
+    flex: 0 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 999px;
+  }
+  .stat .v { font-size: 14px; }
+  .stat .l { font-size: 11px; margin-top: 0; }
+  .stat.hero { order: -1; }
+  .stat.hero .v { font-size: 15px; }
 
   /* Search gets its own full-width row rather than fighting two selects for
      space — the placeholder was truncating before. */
@@ -769,47 +779,87 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
   .sectionhead { gap: 6px; }
   .sectionhead .seg { margin-inline-start: 0; flex-basis: 100%; order: 3; }
 
-  /* Table → card list. Headers are hidden and re-injected per cell via
-     data-label, so screen readers and sighted users both get the field name
-     without a scrollable grid. */
-  table, thead, tbody, tr, td { display: block; width: 100%; }
+  /* Table → compact list. One order is TWO tight lines, not a screenful:
+     name and status on top, the rest as one muted meta line under it. The
+     earlier version gave every cell its own labelled block, which read fine
+     but cost ~400px an order — you could see two. This fits seven. */
+  /* width:100% must NOT reach the td here: as flex items inside the row
+     below, full-width cells each claim their own line, which is exactly
+     the stacked layout this replaces. */
+  table, thead, tbody, tr { display: block; width: 100%; }
+  td { display: block; }
   thead { display: none; }
-  tbody tr {
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    margin: 9px;
-    padding: 2px 0;
-    background: var(--surface);
-  }
-  tbody tr:first-child { margin-top: 9px; }
-  tbody tr.done { opacity: .6; }
-  td { border-bottom: none !important; padding: 7px 12px; }
-  td.selcol {
-    position: absolute;
-    inset-inline-end: 8px;
-    top: 8px;
-    width: auto;
-    padding: 0;
-  }
-  tbody tr { position: relative; }
 
-  td.hide-sm { display: block; } /* the mobile card has room these columns didn't on a narrow row */
-  td:not(.selcol)::before {
-    content: attr(data-label);
-    display: block;
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    color: var(--faint);
-    margin-bottom: 2px;
+  tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 2px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
   }
-  /* Order number + status carry the card on their own; skip their labels. */
-  td.oidcell::before, td.statuscol::before { content: none; }
-  td.oidcell { padding-inline-end: 40px; } /* clears the checkbox */
-  .oid { font-size: 15px; }
-  td.statuscol { padding-top: 2px; padding-bottom: 10px; border-top: 1px solid var(--border); margin-top: 4px; }
-  .statuscell { flex-wrap: wrap; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr.done { opacity: .55; }
+  /* `tbody td` sets the desktop cell padding and outranks a bare `td`, so the
+     override has to match its specificity or every cell keeps 18px of
+     vertical padding it no longer needs. */
+  tbody td { border-bottom: none !important; padding: 0; vertical-align: baseline; }
+
+  /* Line one: pick, who, where it's up to. */
+  td.selcol { order: 1; flex: none; position: static; width: auto; inset: auto; }
+  td.namecell { order: 2; flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 4px; }
+  td.namecell .name {
+    font-weight: 600;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  td.statuscol { order: 3; flex: none; margin-inline-start: auto; }
+
+  /* A zero-height full-width flex item: the only way to force a wrap at a
+     chosen point while letting the cells after it flow inline together. */
+  tbody tr::after { content: ""; order: 4; flex-basis: 100%; height: 0; }
+
+  /* Line two, in reading order, separated by dots rather than labels. */
+  td.oidcell { order: 5; }
+  td.qtycell { order: 6; }
+  td.svccell { order: 7; }
+  /* Flex, not block: the separator is a ::before, and a block-level .city
+     inside it would push that dot onto a line of its own. */
+  td.destcell { order: 8; display: flex; align-items: baseline; min-width: 0; flex: 0 1 auto; }
+  td.datecell { display: none; } /* the panel has it; the list has no room */
+
+  td.oidcell, td.qtycell, td.svccell, td.destcell {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  /* Separator BEFORE each meta item except the first, so there is never a
+     trailing dot to wrap onto a line of its own. (::after on each item can't
+     do this: the status cell is the row's real last child, so :last-of-type
+     never lands on the end of the meta line.) */
+  td.qtycell::before, td.svccell::before, td.destcell::before {
+    content: "·";
+    color: var(--faint);
+    margin-inline-end: 8px;
+  }
+  td.destcell .city { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .oid { font-size: 12px; font-weight: 600; color: var(--text); }
+  td.qtycell .qty::after { content: " גלויות"; font-weight: 400; color: var(--muted); }
+  td.svccell .pill { padding: 0; background: none; font-size: 12px; }
+
+  /* Both status controls stay on line one; shrink them to make room. */
+  .statuscell { gap: 4px; }
+  .statuspill { padding: 3px 8px; font-size: 11.5px; }
+  .advance { padding: 3px 7px; font-size: 11.5px; }
+  .shipday { font-size: 10px; text-align: end; margin-top: 1px; }
+
+  tbody tr[aria-selected="true"] td { background: none; }
+  tbody tr[aria-selected="true"] { background: var(--surface-2); }
+  tbody tr[aria-selected="true"] td:first-child { box-shadow: none; }
+  tbody tr[aria-selected="true"] { box-shadow: inset -3px 0 0 var(--accent); }
 
   .detail {
     max-height: 85vh;

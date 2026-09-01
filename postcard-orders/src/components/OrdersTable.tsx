@@ -82,10 +82,10 @@ export default function OrdersTable({
               <td className="oidcell">
                 <span className="oid ltr">{o.orderId}</span>
               </td>
-              <td className="hide-sm" data-label="תאריך">
+              <td className="hide-sm datecell">
                 <span className="date ltr">{o.orderDate}</span>
               </td>
-              <td data-label="לקוח">
+              <td className="namecell">
                 <span className="name">{o.customer || "—"}</span>
                 {o.kind === "mail" && o.addrBlocking && (
                   <span className="warn" title={o.addrWarnings.join(" · ")}>
@@ -93,17 +93,17 @@ export default function OrdersTable({
                   </span>
                 )}
               </td>
-              <td data-label="כמות">
+              <td className="qtycell">
                 <span className="qty">{o.qty}</span>
               </td>
               {variant === "mail" && (
-                <td data-label="שירות">
+                <td className="svccell">
                   <span className={`pill ${o.service === "post24" ? "p24" : "p72"}`}>
                     {o.service ? serviceLabel[o.service] : "—"}
                   </span>
                 </td>
               )}
-              <td className="hide-sm" data-label={variant === "mail" ? "יעד" : "נקודת איסוף"}>
+              <td className="hide-sm destcell">
                 <span className="city">
                   {variant === "mail" ? o.city || "—" : o.pickupPoint || "—"}
                 </span>

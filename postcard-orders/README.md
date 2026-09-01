@@ -67,6 +67,25 @@ Shown at the end of the totals row — "עודכן לפני 3 שע׳" — becaus
 only as current as the file behind them. It turns amber once the CSV is over a
 day old.
 
+## On a phone
+
+The table becomes a list, not a stack of cards. One order is two tight lines —
+name, warning flag and status on top; `1042 · 4 גלויות · דואר 24 · תל אביב`
+underneath — so six or seven orders fit on screen instead of one and a half.
+
+Both status controls stay: the pill opens the full list, the ← button still
+advances one rung in a single tap.
+
+The totals are chips rather than tiles for the same reason. As stacked cards
+they pushed the first order about 450px down the page, which defeats the point
+of a list you can scan; the order date is dropped from the row and lives in the
+detail panel, which opens as a bottom sheet on tap.
+
+Two CSS traps are commented in `globals.css`, both of which silently restore the
+tall layout if disturbed: `width: 100%` must not reach the `td` (as flex items,
+full-width cells each take their own line), and the padding override has to be
+`tbody td`, not `td`, to match the specificity of the desktop rule.
+
 ## Re-importing
 
 Upload the updated CSV as often as you like. New orders are added, existing ones
