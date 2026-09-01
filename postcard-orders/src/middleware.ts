@@ -1,8 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { COOKIE, authConfigured, authDisabled, tokenValid } from "@/lib/auth";
 
-/** Paths reachable without a session — the login screen and the login endpoint. */
-const PUBLIC = ["/login", "/api/auth"];
+/**
+ * Paths reachable without a session — the login screen, the login endpoint,
+ * and the logo image the login screen itself displays. An explicit allowlist
+ * rather than "anything under /public" or "anything with an image extension":
+ * this app's /public exists only for the logo, and a narrow list can't
+ * accidentally expose some other file dropped in there later.
+ */
+const PUBLIC = ["/login", "/api/auth", "/logo.jpg"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
