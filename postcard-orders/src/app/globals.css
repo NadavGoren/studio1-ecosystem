@@ -1010,6 +1010,11 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
    list for the space that was just won back. */
 .sellers {
   margin: 10px 20px 0;
+  /* A card, not a banner. Stretched across a desktop the five short rows leave
+     a metre of empty bar and read as a section of the page rather than one
+     figure you glance at. On a phone the mobile block lifts this again, where
+     full width IS card width. */
+  max-width: 430px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1076,6 +1081,6 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
 .sellers .n { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 26px; text-align: end; }
 
 @media (max-width: 640px) {
-  .sellers { margin: 8px 14px 0; padding: 8px 11px; }
+  .sellers { margin: 8px 14px 0; padding: 8px 11px; max-width: none; }
   .sellers li { grid-template-columns: 12px minmax(52px, 108px) 1fr auto; gap: 7px; font-size: 12px; }
 }

@@ -78,6 +78,10 @@ is the least useful part of a ranked list, so the shared run is stripped and
 only the distinguishing word is shown. It is only cut at a separator, never
 mid-word, and the full name stays on hover.
 
+Sized as a card (430px) rather than stretched across the page — five short rows
+spread over a desktop width read as a section of the page rather than one figure
+you glance at. On a phone that cap lifts, where full width *is* card width.
+
 Open by default on a desktop, folded on a phone — expanded it costs ~155px
 there, which takes the order list from seven rows on screen down to three. The
 summary line still carries the top seller while folded.
