@@ -60,6 +60,22 @@ export const fileStore: Store = {
     return hit;
   },
 
+  async setStatusMany(orderIds, status: Status) {
+    const ids = new Set(orderIds);
+    const all = await read();
+    const at = new Date().toISOString();
+    let n = 0;
+    for (const o of all) {
+      if (!ids.has(o.orderId)) continue;
+      o.status = status;
+      o.statusAt = at;
+      o.updatedAt = at;
+      n++;
+    }
+    await write(all);
+    return n;
+  },
+
   async setNote(orderId, note) {
     const all = await read();
     const hit = all.find((o) => o.orderId === orderId);

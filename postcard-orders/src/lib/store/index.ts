@@ -45,6 +45,7 @@ export async function importCsv(csvText: string): Promise<ImportReport> {
   let created = 0;
   let updated = 0;
   let unchanged = 0;
+  let statusesKept = 0;
   const serviceChanges: ImportReport["serviceChanges"] = [];
 
   for (const o of incoming) {
@@ -53,6 +54,9 @@ export async function importCsv(csvText: string): Promise<ImportReport> {
       created++;
       continue;
     }
+    // Worth stating outright in the report: this is the guarantee Nadav relies on
+    // every time he re-uploads, and it should be visible rather than assumed.
+    if (prev.status !== "new") statusesKept++;
     if (prev.service !== o.service) {
       // Worth surfacing: an order that grew past 3 cards changes post service,
       // and may already have been packed or labelled under the old one.
@@ -71,6 +75,7 @@ export async function importCsv(csvText: string): Promise<ImportReport> {
     updated,
     unchanged,
     serviceChanges,
+    statusesKept,
     problems: incoming.filter((o) => o.kind === "mail" && o.addrBlocking).length,
   };
 }

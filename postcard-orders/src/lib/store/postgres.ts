@@ -195,6 +195,17 @@ export const pgStore: Store = {
     return rows[0] ? toOrder(rows[0]) : null;
   },
 
+  async setStatusMany(orderIds, status: Status) {
+    if (!orderIds.length) return 0;
+    await ensureSchema();
+    const { rowCount } = await getPool().query(
+      `UPDATE orders SET status = $2, status_at = now(), updated_at = now()
+       WHERE order_id = ANY($1::text[])`,
+      [orderIds, status]
+    );
+    return rowCount ?? 0;
+  },
+
   async setNote(orderId, note) {
     await ensureSchema();
     const { rows } = await getPool().query(

@@ -98,6 +98,13 @@ export default function ImportDialog({
               <dt>ללא שינוי</dt>
               <dd>{report.unchanged}</dd>
             </dl>
+            {/* State the guarantee outright — it is the thing Nadav relies on every
+                time he re-uploads, and silence about it reads as risk. */}
+            <div className="kept">
+              {report.statusesKept > 0
+                ? `${report.statusesKept} הזמנות שכבר סימנת שמרו על הסטטוס וההערות שלהן.`
+                : "הסטטוסים וההערות שסימנת נשמרים תמיד — ייבוא לא מאפס אותם."}
+            </div>
             {report.problems > 0 && (
               <div className="flag">
                 {report.problems} הזמנות עם כתובת בעייתית — מסומנות ברשימה ב־⚠

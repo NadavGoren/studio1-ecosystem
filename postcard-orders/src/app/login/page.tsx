@@ -37,7 +37,7 @@ export default function LoginPage() {
     <div className="login">
       <form onSubmit={submit}>
         <h1>הזמנות גלויות</h1>
-        <p>Studio 1 · ראש השנה</p>
+        <p>עדי כפרי X נדב גורן</p>
         <input
           type="password"
           value={password}

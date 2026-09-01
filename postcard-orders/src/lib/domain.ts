@@ -89,6 +89,18 @@ export function isStatus(v: unknown): v is Status {
   return typeof v === "string" && (STATUSES as readonly string[]).includes(v);
 }
 
+/**
+ * The next rung up this order's ladder, or null when there is nowhere further.
+ * Returns null for "issue" too — a stuck order needs a decision, not a nudge,
+ * so the UI sends that case to the full picker instead.
+ */
+export function nextStatus(current: Status, kind: Kind): Status | null {
+  const flow = flowFor(kind);
+  const at = flow.indexOf(current);
+  if (at === -1 || at === flow.length - 1) return null;
+  return flow[at + 1];
+}
+
 /** An order counts as "done" once it has reached the end of its own ladder. */
 export function isDone(status: Status, kind: Kind): boolean {
   return status === "delivered" && flowFor(kind).includes("delivered");

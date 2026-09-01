@@ -54,5 +54,7 @@ export interface ImportReport {
   unchanged: number;
   /** Orders whose quantity changed such that they flip between דואר 24 and דואר 72. */
   serviceChanges: { orderId: string; from: Service | null; to: Service | null }[];
+  /** Already-tagged orders whose status came through the import untouched. */
+  statusesKept: number;
   problems: number;
 }
