@@ -1,0 +1,9 @@
+{
+  "id": "postcard-orders",
+  "name": "הזמנות גלויות",
+  "group": "Utilities",
+  "kind": "server",
+  "cmd": ["npm", "run", "dev"],
+  "port": 6120,
+  "order": 20
+}
