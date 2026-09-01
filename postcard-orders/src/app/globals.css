@@ -11,17 +11,20 @@
   --accent: #1b1b1a;
   --focus: #3b6ef5;
 
-  --post24: #c2410c;
-  --post24-bg: #fdf0e8;
-  --post72: #1d4ed8;
-  --post72-bg: #eaf0fe;
-  --pickup: #4d7c2f;
-  --pickup-bg: #eef5e7;
+  /* Service type (24h / 72h / pickup) is deliberately colorless — a plain
+     neutral tag, same treatment as the "new" status. Color is reserved
+     entirely for workflow status, so a colored badge always means one thing. */
+  --post24: #6f6f6a;
+  --post24-bg: #f0f0ec;
+  --post72: #6f6f6a;
+  --post72-bg: #f0f0ec;
+  --pickup: #6f6f6a;
+  --pickup-bg: #f0f0ec;
 
   --st-new: #8a8a84;      --st-new-bg: #f0f0ec;
   --st-packed: #a16207;   --st-packed-bg: #fdf5e3;
-  --st-label: #6d28d9;    --st-label-bg: #f3ecfd;
-  --st-shipped: #1d4ed8;  --st-shipped-bg: #eaf0fe;
+  --st-label: #c2410c;    --st-label-bg: #fdf0e8;
+  --st-shipped: #6d28d9;  --st-shipped-bg: #f3ecfd;
   --st-delivered: #15803d; --st-delivered-bg: #e9f6ec;
   --st-issue: #b91c1c;    --st-issue-bg: #fdecec;
 
@@ -42,14 +45,14 @@
     --border-strong: #43434d;
     --accent: #ededf0;
 
-    --post24: #fb923c; --post24-bg: #3a2314;
-    --post72: #93b4fd; --post72-bg: #1b2542;
-    --pickup: #a3d977; --pickup-bg: #22321a;
+    --post24: #a0a0a8; --post24-bg: #2a2a31;
+    --post72: #a0a0a8; --post72-bg: #2a2a31;
+    --pickup: #a0a0a8; --pickup-bg: #2a2a31;
 
     --st-new: #9a9aa2;      --st-new-bg: #2a2a31;
     --st-packed: #e8b84b;   --st-packed-bg: #33290f;
-    --st-label: #c4a5fb;    --st-label-bg: #2b1f45;
-    --st-shipped: #93b4fd;  --st-shipped-bg: #1b2542;
+    --st-label: #fb923c;    --st-label-bg: #3a2314;
+    --st-shipped: #c4a5fb;  --st-shipped-bg: #2b1f45;
     --st-delivered: #6ee79b; --st-delivered-bg: #143024;
     --st-issue: #f88a8a;    --st-issue-bg: #3a1a1a;
 
