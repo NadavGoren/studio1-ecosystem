@@ -79,13 +79,13 @@ export default function OrdersTable({
                   aria-label={`בחירת הזמנה ${o.orderId}`}
                 />
               </td>
-              <td>
+              <td className="oidcell">
                 <span className="oid ltr">{o.orderId}</span>
               </td>
-              <td className="hide-sm">
+              <td className="hide-sm" data-label="תאריך">
                 <span className="date ltr">{o.orderDate}</span>
               </td>
-              <td>
+              <td data-label="לקוח">
                 <span className="name">{o.customer || "—"}</span>
                 {o.kind === "mail" && o.addrBlocking && (
                   <span className="warn" title={o.addrWarnings.join(" · ")}>
@@ -93,22 +93,22 @@ export default function OrdersTable({
                   </span>
                 )}
               </td>
-              <td>
+              <td data-label="כמות">
                 <span className="qty">{o.qty}</span>
               </td>
               {variant === "mail" && (
-                <td>
+                <td data-label="שירות">
                   <span className={`pill ${o.service === "post24" ? "p24" : "p72"}`}>
                     {o.service ? serviceLabel[o.service] : "—"}
                   </span>
                 </td>
               )}
-              <td className="hide-sm">
+              <td className="hide-sm" data-label={variant === "mail" ? "יעד" : "נקודת איסוף"}>
                 <span className="city">
                   {variant === "mail" ? o.city || "—" : o.pickupPoint || "—"}
                 </span>
               </td>
-              <td>
+              <td className="statuscol">
                 <StatusControl
                   status={o.status}
                   kind={o.kind}

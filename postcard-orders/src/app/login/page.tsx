@@ -36,8 +36,9 @@ export default function LoginPage() {
   return (
     <div className="login">
       <form onSubmit={submit}>
+        <img className="loginmark" src="/logo.jpg" alt="עדי כפרי X נדב גורן" width={72} height={72} />
         <h1>הזמנות גלויות</h1>
-        <p>עדי כפרי X נדב גורן</p>
+        <p>ראש השנה</p>
         <input
           type="password"
           value={password}

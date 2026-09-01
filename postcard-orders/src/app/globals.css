@@ -660,3 +660,141 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
   font-weight: 600;
   margin-bottom: 8px;
 }
+
+/* ── Logo badge ────────────────────────────────────────────────────────────
+   The source file is a flat JPG — a circular mark on a white square. Framing
+   it in its own white disc with a hairline ring makes that intentional (a
+   seal/badge) instead of a stray white box, and it reads the same in both
+   themes regardless of what colour sits behind it. */
+.brandrow { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brandmark {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .02);
+  object-fit: cover;
+  display: block;
+}
+.loginmark {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  display: block;
+  margin: 0 auto 14px;
+}
+
+/* ── Mobile ───────────────────────────────────────────────────────────────
+   Below 640px the table stops trying to be a table: each order becomes a
+   card, its own columns given up for stacked rows so nothing is truncated
+   or requires side-scrolling to read. */
+@media (max-width: 640px) {
+  .topbar { padding: 0 14px; gap: 8px; }
+  .brand { font-size: 14px; }
+  .brandmark { width: 32px; height: 32px; }
+  .topbar .btn { padding: 7px 10px; font-size: 13px; }
+  .devbadge { display: none; } /* diagnostic-only; not worth the space on a phone */
+
+  /* 4 secondary tiles read better as a tidy 2×2 than a 3-wide row with an
+     orphaned 4th tile stretched to fill its own line. */
+  .stats { padding: 12px 14px 0; gap: 8px; }
+  .stat { flex: 1 1 calc(50% - 4px); min-width: 0; padding: 9px 10px; }
+  .stat .v { font-size: 19px; }
+  .stat.hero { flex-basis: 100%; order: -1; }
+  .stat.hero .v { font-size: 24px; }
+
+  /* Search gets its own full-width row rather than fighting two selects for
+     space — the placeholder was truncating before. */
+  .filters { padding: 10px 14px; gap: 8px; }
+  .search { flex-basis: 100%; max-width: none; order: -1; }
+  .filters select.control { flex: 1 1 calc(50% - 4px); min-width: 0; }
+
+  .main { padding: 0 12px 90px; } /* clears the fixed bulk bar */
+  .sectionhead { gap: 6px; }
+  .sectionhead .seg { margin-inline-start: 0; flex-basis: 100%; order: 3; }
+
+  /* Table → card list. Headers are hidden and re-injected per cell via
+     data-label, so screen readers and sighted users both get the field name
+     without a scrollable grid. */
+  table, thead, tbody, tr, td { display: block; width: 100%; }
+  thead { display: none; }
+  tbody tr {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 9px;
+    padding: 2px 0;
+    background: var(--surface);
+  }
+  tbody tr:first-child { margin-top: 9px; }
+  tbody tr.done { opacity: .6; }
+  td { border-bottom: none !important; padding: 7px 12px; }
+  td.selcol {
+    position: absolute;
+    inset-inline-end: 8px;
+    top: 8px;
+    width: auto;
+    padding: 0;
+  }
+  tbody tr { position: relative; }
+
+  td.hide-sm { display: block; } /* the mobile card has room these columns didn't on a narrow row */
+  td:not(.selcol)::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 2px;
+  }
+  /* Order number + status carry the card on their own; skip their labels. */
+  td.oidcell::before, td.statuscol::before { content: none; }
+  td.oidcell { padding-inline-end: 40px; } /* clears the checkbox */
+  .oid { font-size: 15px; }
+  td.statuscol { padding-top: 2px; padding-bottom: 10px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .statuscell { flex-wrap: wrap; }
+
+  .detail {
+    max-height: 85vh;
+    inset-inline: 0;
+  }
+
+  .bulkbar { padding: 7px 12px; gap: 6px; }
+  .bulkbar .btn.sm { padding: 5px 9px; font-size: 12px; }
+}
+
+/* ── CSV reminder banner ──────────────────────────────────────────────────
+   Reuses the app's existing amber "attention" tone (--st-packed) rather than
+   a new hue, so it reads as part of this app and not a bolted-on alert box. */
+.nag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 20px 0;
+  padding: 10px 14px;
+  background: var(--st-packed-bg);
+  border: 1px solid color-mix(in srgb, var(--st-packed) 30%, transparent);
+  border-radius: var(--radius);
+}
+.nag-emoji { font-size: 17px; flex: none; }
+.nag p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--st-packed);
+}
+.nag .btn.primary { flex: none; }
+.nag .btn.ghost { flex: none; padding: 6px 8px; }
+
+@media (max-width: 640px) {
+  .nag { margin: 10px 12px 0; padding: 9px 11px; flex-wrap: wrap; }
+  .nag p { flex-basis: 100%; order: -1; font-size: 13px; }
+}

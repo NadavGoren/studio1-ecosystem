@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import CsvNag from "./CsvNag";
 import ImportDialog from "./ImportDialog";
 import OrderDetail from "./OrderDetail";
 import OrdersTable from "./OrdersTable";
@@ -181,12 +182,16 @@ export default function OrdersView({
     setChecked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else {
+        next.add(id);
+        setSelectedId(null); // bulk mode and single-order review don't mix
+      }
       return next;
     });
   }, []);
 
   const toggleAll = useCallback((ids: string[], on: boolean) => {
+    if (on) setSelectedId(null);
     setChecked((prev) => {
       const next = new Set(prev);
       for (const id of ids) {
@@ -224,9 +229,12 @@ export default function OrdersView({
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">
-          הזמנות גלויות
-          <small>עדי כפרי X נדב גורן · ראש השנה</small>
+        <div className="brandrow">
+          <img className="brandmark" src="/logo.jpg" alt="עדי כפרי X נדב גורן" width={40} height={40} />
+          <div className="brand">
+            הזמנות גלויות
+            <small>ראש השנה</small>
+          </div>
         </div>
         {store === "file" && (
           <span className="devbadge" title="אין חיבור למסד נתונים — הנתונים נשמרים מקומית בלבד">
@@ -250,6 +258,8 @@ export default function OrdersView({
           </button>
         )}
       </header>
+
+      <CsvNag onImport={() => setImportOpen(true)} />
 
       <div className="stats">
         <div className="stat hero">
