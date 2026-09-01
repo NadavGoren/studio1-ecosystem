@@ -994,3 +994,79 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
   text-decoration: underline;
 }
 .shipdate-shown button:hover { color: var(--text); }
+
+/* ── Best sellers ─────────────────────────────────────────────────────────
+   Sits under the totals it is consistent with: both count every order, not
+   the filtered view. Collapsible, because on a phone it competes with the
+   list for the space that was just won back. */
+.sellers {
+  margin: 10px 20px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 14px;
+}
+.sellers summary {
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  list-style: none;
+}
+.sellers summary::-webkit-details-marker { display: none; }
+.sellers summary::before {
+  content: "▾";
+  color: var(--faint);
+  font-size: 10px;
+  transition: transform .15s;
+}
+.sellers:not([open]) summary::before { transform: rotate(90deg); }
+.sellers .h {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--faint);
+}
+/* The headline stays readable while collapsed — the one fact worth a glance. */
+.sellers .lead { font-size: 12.5px; color: var(--muted); }
+.sellers[open] .lead { display: none; }
+
+.sellers ol {
+  list-style: none;
+  margin: 9px 0 2px;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+.sellers li {
+  display: grid;
+  grid-template-columns: 14px minmax(64px, 150px) 1fr auto;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+}
+.sellers .rank { color: var(--faint); font-variant-numeric: tabular-nums; }
+.sellers .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sellers .bar {
+  height: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.sellers .bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  min-width: 2px;
+}
+.sellers li:first-child .bar i { background: var(--st-packed); }
+.sellers .n { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 26px; text-align: end; }
+
+@media (max-width: 640px) {
+  .sellers { margin: 8px 14px 0; padding: 8px 11px; }
+  .sellers li { grid-template-columns: 12px minmax(52px, 108px) 1fr auto; gap: 7px; font-size: 12px; }
+}

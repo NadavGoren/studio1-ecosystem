@@ -35,6 +35,29 @@ row per product line, so an order with three designs is three rows sharing a
 > `מעל המדרגות` rather than a price. The heavier bands should be copied from the
 > Israel Post price list, never guessed.
 
+## Best sellers
+
+Under the totals: every design ranked by how many postcards of it were sold,
+with a share bar. Counts postcards, not orders — an order of four rimonim
+contributes four — so **these numbers add up to exactly the סה״כ גלויות figure
+above** and the two cannot drift apart.
+
+Like the totals, it reads every order, not the filtered view: "what sold best"
+is a fact about the run, not about what happens to be on screen.
+
+Morning's product names share a long prefix (`גלויית שנה טובה — רימון`), which
+is the least useful part of a ranked list, so the shared run is stripped and
+only the distinguishing word is shown. It is only cut at a separator, never
+mid-word, and the full name stays on hover.
+
+Open by default on a desktop, folded on a phone — expanded it costs ~155px
+there, which takes the order list from seven rows on screen down to three. The
+summary line still carries the top seller while folded.
+
+`גלויות בממוצע להזמנה` sits with the other totals. One decimal, deliberately:
+the difference between 3.0 and 3.4 is the difference in how much of the run is
+דואר 24.
+
 ## Statuses
 
 Mail orders: `חדש → ארוז → מדבקה הודפסה → נשלח → נמסר`

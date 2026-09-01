@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import BestSellers from "./BestSellers";
 import CsvNag from "./CsvNag";
 import ImportDialog from "./ImportDialog";
 import LastImport from "./LastImport";
@@ -126,7 +127,17 @@ export default function OrdersView({
       else pickupCards += o.qty;
       if (isOpen(o)) open++;
     }
-    return { cards, mailCards, pickupCards, orders: orders.length, open };
+    return {
+      cards,
+      mailCards,
+      pickupCards,
+      orders: orders.length,
+      open,
+      // One decimal: the difference between 3.0 and 3.4 decides how much of
+      // the run is דואר 24, so rounding it to a whole number hides the thing
+      // that makes the number worth showing.
+      avg: orders.length ? cards / orders.length : 0,
+    };
   }, [orders]);
 
   /* ── Search + status filter, applied to both tables alike ─────────────── */
@@ -302,6 +313,10 @@ export default function OrdersView({
           <div className="v">{stats.open}</div>
           <div className="l">ממתינות לטיפול</div>
         </div>
+        <div className="stat">
+          <div className="v">{stats.avg.toFixed(1)}</div>
+          <div className="l">גלויות בממוצע להזמנה</div>
+        </div>
         {/* Beside the totals rather than up in the header: these numbers are
             only as current as the CSV they came from, so the two belong in
             the same glance. */}
@@ -309,6 +324,8 @@ export default function OrdersView({
           <LastImport iso={lastImportAt} />
         </div>
       </div>
+
+      <BestSellers orders={orders} />
 
       <div className="filters">
         <input
