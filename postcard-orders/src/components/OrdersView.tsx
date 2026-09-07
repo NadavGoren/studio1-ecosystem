@@ -357,9 +357,18 @@ export default function OrdersView({
               download={importFile.filename}
               title={`${importFile.filename} · ${Math.max(1, Math.round(importFile.bytes / 1024))} KB`}
             >
-              הורדת הקובץ
+              הקובץ שהועלה
             </a>
           )}
+          {/* Built from the database rather than stored, so unlike the link
+              beside it this one always has something to give. */}
+          <a
+            className="dlcsv"
+            href="/api/orders/export"
+            title="כל ההזמנות כפי שהן במערכת עכשיו, כולל סטטוס והערות"
+          >
+            ייצוא הנתונים
+          </a>
         </div>
       </div>
 

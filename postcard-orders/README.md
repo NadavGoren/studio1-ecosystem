@@ -141,6 +141,39 @@ tall layout if disturbed: `width: 100%` must not reach the `td` (as flex items,
 full-width cells each take their own line), and the padding override has to be
 `tbody td`, not `td`, to match the specificity of the desktop rule.
 
+## Getting a CSV out
+
+Two links sit next to the "עודכן לפני…" line, and they are not the same thing:
+
+| Link | What it gives you |
+|---|---|
+| **הקובץ שהועלה** | The exact file Morning produced, byte for byte |
+| **ייצוא הנתונים** | The database as it is now — status, ship date, our notes, postage |
+
+The first needs an upload to have been stored, so it is absent until one has.
+The second is built from the orders table and therefore always works.
+
+### ייצוא הנתונים
+
+Shaped like a Morning export on purpose — its exact column names, one row per
+product line — so **the file can be fed straight back through the importer**.
+That makes it a usable backup rather than only a report. Verified: exporting and
+re-importing into an empty database returns every Morning-derived field
+identically.
+
+The app's own columns (שירות, דמי משלוח, סטטוס טיפול, תאריך שליחה, הערה שלנו) are
+appended after Morning's. The importer looks columns up by name and ignores ones
+it does not know, so they ride along harmlessly.
+
+> **It is not a full restore.** Those five columns come back as defaults on a
+> re-import, because the importer deliberately ignores them — the same rule that
+> stops a re-import resetting your workflow also stops it restoring one. The
+> order data returns; the statuses do not.
+
+The order total lands on the first line of each order and 0 on the rest, because
+Morning's `סה"כ כולל מע"מ` is a LINE total that the importer sums — repeating it
+per line would multiply it.
+
 ## Downloading the CSV back
 
 **הורדת הקובץ**, next to the "עודכן לפני…" line — it hands back the exact file
