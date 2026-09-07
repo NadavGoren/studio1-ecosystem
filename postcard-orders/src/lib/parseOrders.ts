@@ -183,6 +183,7 @@ export function ordersFromCsv(csvText: string): Order[] {
       noteOrder: cell(r, "noteOrder"),
       noteShip: cell(r, "noteShip"),
 
+      manual: false,
       status: "new",
       statusAt: null,
       shippedOn: null,

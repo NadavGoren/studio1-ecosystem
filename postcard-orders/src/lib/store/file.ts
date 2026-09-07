@@ -57,9 +57,13 @@ export const fileStore: Store = {
     const byId = new Map(existing.map((o) => [o.orderId, o]));
     for (const o of incoming) {
       const prev = byId.get(o.orderId);
+      // Same guard as the Postgres driver: an import never overwrites an order
+      // that was entered by hand.
+      if (prev?.manual) continue;
       byId.set(o.orderId, {
         ...o,
         // Our workflow fields survive the import untouched.
+        manual: false,
         status: prev?.status ?? o.status,
         statusAt: prev?.statusAt ?? null,
         shippedOn: prev?.shippedOn ?? null,
@@ -72,6 +76,17 @@ export const fileStore: Store = {
 
   // Same rule as the Postgres driver: shipped_on is written only on the way
   // into "shipped", and never cleared by any other status.
+  async createOrder(o) {
+    const all = await read();
+    // Same contract as the Postgres driver: a taken number is refused, never
+    // overwritten.
+    if (all.some((x) => x.orderId === o.orderId)) return null;
+    const created = { ...o, manual: true };
+    all.push(created);
+    await write(all);
+    return created;
+  },
+
   async setStatus(orderId, status: Status, shippedOn = null) {
     const all = await read();
     const hit = all.find((o) => o.orderId === orderId);

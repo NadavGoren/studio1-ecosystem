@@ -38,6 +38,14 @@ export interface Order {
   noteOrder: string;
   noteShip: string;
 
+  /**
+   * Entered by hand rather than read out of a Morning CSV — a phone order, a
+   * DM, someone catching us at a market. Never touched by an import: it isn't
+   * in the file, and even if its order number turned up in one, the upsert
+   * refuses to overwrite it.
+   */
+  manual: boolean;
+
   /** Our own workflow status — never overwritten by a re-import. */
   status: Status;
   statusAt: string | null;

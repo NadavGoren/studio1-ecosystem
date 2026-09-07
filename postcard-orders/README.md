@@ -141,6 +141,36 @@ tall layout if disturbed: `width: 100%` must not reach the `td` (as flex items,
 full-width cells each take their own line), and the padding override has to be
 `tbody td`, not `td`, to match the specificity of the desktop rule.
 
+## Manual orders
+
+**הזמנה ידנית** in the header, for anything that did not come through the site —
+a phone order, a DM, a market sale. Name and quantity are the only required
+fields; everything else can be filled in later from the detail panel.
+
+**An import never touches one.** Two independent reasons, so this does not rest
+on a single line of code:
+
+1. `upsertMany` only inserts and updates the order numbers present in the CSV.
+   It has never deleted anything, so an order absent from the file is simply
+   left alone.
+2. The upsert additionally refuses to overwrite a row with `manual = true`, so
+   even a genuine order-number collision cannot replace one. Verified: creating
+   `1042` by hand and then importing a CSV that also contains `1042` leaves the
+   hand-entered one untouched.
+
+Numbers are `M-1`, `M-2`, … — prefixed so they can never be confused with, or
+collide with, a Morning number, which is always digits. You can type your own
+instead; a number already in use is rejected rather than overwriting.
+
+The address is asked for in parts (רחוב / מספר / עיר / מיקוד) and then composed
+into Morning's own one-line format and run through the same parser the importer
+uses. So a manual order gets the identical ⚠ warnings an imported one would,
+without the address rules being written twice — and without anyone having to
+guess that Morning puts the city *after* the postcode.
+
+Rows carry a `ידני` tag, and the new order's panel opens on save: it sorts by its
+`M-n` number and would otherwise not be where the eye expects.
+
 ## Getting a CSV out
 
 Two links sit next to the "עודכן לפני…" line, and they are not the same thing:

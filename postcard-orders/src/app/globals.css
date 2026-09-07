@@ -479,6 +479,53 @@ textarea.mynote {
 
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
 
+/* ── Manual order form ────────────────────────────────────────────────────
+   Two fields to a row where they are short enough to share one, so the whole
+   thing stays inside one screen without scrolling. */
+.neworder .frow { display: flex; gap: 10px; flex-wrap: wrap; }
+.neworder .fld { display: flex; flex-direction: column; gap: 4px; margin-bottom: 11px; flex: 1 1 100%; }
+/* A field on its own line spans it; two in a .frow share it. Without this the
+   plain ones keep the 100% basis above and stack anyway. */
+.neworder .frow > .fld { flex: 1 1 140px; }
+.neworder .fld.grow { flex: 3 1 160px; }
+.neworder .fld.sm { flex: 1 1 90px; }
+.neworder .fld > span { font-size: 11.5px; font-weight: 600; color: var(--faint); }
+.neworder .fld input {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  width: 100%;
+}
+.neworder .fld small { font-size: 11px; color: var(--faint); }
+.neworder .kindseg { display: inline-flex; margin: 0 0 12px; }
+
+/* Neutral, like the service pills: colour in this app means workflow status,
+   and where an order came from is not a status. */
+.manualtag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-inline-start: 6px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  /* Stacked: two inputs side by side on a phone leaves neither wide enough to
+     read what you typed. */
+  /* `.neworder .frow > .fld` above is three selectors deep, so a two-selector
+     override loses to it and the plain fields would stay side by side while the
+     .grow/.sm ones stacked. Match its depth. */
+  .neworder .frow > .fld,
+  .neworder .fld,
+  .neworder .fld.grow,
+  .neworder .fld.sm { flex: 1 1 100%; }
+}
+
 /* ── Login ────────────────────────────────────────────────────────────────── */
 .login {
   min-height: 100vh;

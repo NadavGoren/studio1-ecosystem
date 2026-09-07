@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS orders (
   items         JSONB NOT NULL DEFAULT '[]'::jsonb,
   note_order    TEXT NOT NULL DEFAULT '',
   note_ship     TEXT NOT NULL DEFAULT '',
+  manual        BOOLEAN NOT NULL DEFAULT false,
   status        TEXT NOT NULL DEFAULT 'new',
   status_at     TIMESTAMPTZ,
   shipped_on    DATE,
@@ -72,6 +73,7 @@ CREATE TABLE IF NOT EXISTS orders (
 -- here on must get a line here too, or production 500s on the first query that
 -- selects it while dev — where the table is created fresh — looks perfectly fine.
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_on DATE;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS manual BOOLEAN NOT NULL DEFAULT false;
 
 -- A tiny key/value table for app-level facts that aren't about any one order —
 -- currently just "when was the CSV last imported". A single row per key,
@@ -124,6 +126,7 @@ function toOrder(r: any): Order {
     items: r.items ?? [],
     noteOrder: r.note_order,
     noteShip: r.note_ship,
+    manual: r.manual ?? false,
     status: r.status,
     statusAt: r.status_at ? new Date(r.status_at).toISOString() : null,
     shippedOn: r.shipped_on ?? null,
@@ -194,6 +197,10 @@ export const pgStore: Store = {
              -- status, status_at, shipped_on and note are deliberately NOT
              -- updated: they are ours, not Morning's, and a re-import must
              -- never reset the workflow.
+           WHERE orders.manual = false
+             -- A hand-entered order is never overwritten by an import, even if
+             -- its order number one day shows up in the CSV. Without this the
+             -- collision would silently replace it with Morning's version.
           `,
           [
             o.orderId, o.orderDate, o.sourceStatus, o.customer, o.phone, o.email,
@@ -216,6 +223,34 @@ export const pgStore: Store = {
   // shipped_on moves only on the way into "shipped". Any other status leaves
   // whatever is there alone, so walking an order back and forward again can't
   // erase the day it actually went out.
+  async createOrder(o) {
+    await ensureSchema();
+    // DO NOTHING, not DO UPDATE: a clash means the number is already taken and
+    // the caller needs to hear about it, not have the old order replaced.
+    const { rows } = await getPool().query(
+      `INSERT INTO orders (
+         order_id, order_date, source_status, customer, phone, email,
+         method_raw, kind, service, pickup_point, address_raw,
+         street, house, apartment, entrance, zip, city,
+         addr_warnings, addr_blocking, qty, total_ils, items,
+         note_order, note_ship, manual, status, note, updated_at
+       ) VALUES (
+         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
+         $18::jsonb,$19,$20,$21,$22::jsonb,$23,$24, true, $25, $26, now()
+       )
+       ON CONFLICT (order_id) DO NOTHING
+       RETURNING *`,
+      [
+        o.orderId, o.orderDate, o.sourceStatus, o.customer, o.phone, o.email,
+        o.methodRaw, o.kind, o.service, o.pickupPoint, o.addressRaw,
+        o.street, o.house, o.apartment, o.entrance, o.zip, o.city,
+        JSON.stringify(o.addrWarnings), o.addrBlocking, o.qty, o.totalIls,
+        JSON.stringify(o.items), o.noteOrder, o.noteShip, o.status, o.note,
+      ]
+    );
+    return rows[0] ? toOrder(rows[0]) : null;
+  },
+
   async setStatus(orderId, status: Status, shippedOn = null) {
     await ensureSchema();
     const { rows } = await getPool().query(

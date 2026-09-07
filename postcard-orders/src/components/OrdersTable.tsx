@@ -87,6 +87,9 @@ export default function OrdersTable({
               </td>
               <td className="namecell">
                 <span className="name">{o.customer || "—"}</span>
+                {/* Says where the row came from, and by extension why an
+                    import will never touch it. */}
+                {o.manual && <span className="manualtag" title="הוזנה ידנית">ידני</span>}
                 {o.kind === "mail" && o.addrBlocking && (
                   <span className="warn" title={o.addrWarnings.join(" · ")}>
                     ⚠

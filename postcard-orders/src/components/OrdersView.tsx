@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import BestSellers from "./BestSellers";
 import CsvNag from "./CsvNag";
 import ImportDialog from "./ImportDialog";
+import NewOrderDialog from "./NewOrderDialog";
 import LastImport from "./LastImport";
 import OrderDetail from "./OrderDetail";
 import OrdersTable from "./OrdersTable";
@@ -45,6 +46,7 @@ export default function OrdersView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [importOpen, setImportOpen] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
   const [bulkShipAsk, setBulkShipAsk] = useState(false);
   const [error, setError] = useState<string | null>(loadError);
 
@@ -291,6 +293,9 @@ export default function OrdersView({
         )}
         {authOff && <span className="devbadge">ללא סיסמה</span>}
         <div className="spacer" />
+        <button className="btn" onClick={() => setNewOpen(true)}>
+          הזמנה ידנית
+        </button>
         <button className="btn primary" onClick={() => setImportOpen(true)}>
           ייבוא CSV
         </button>
@@ -534,6 +539,20 @@ export default function OrdersView({
 
       {importOpen && (
         <ImportDialog onClose={() => setImportOpen(false)} onImported={refresh} />
+      )}
+
+      {newOpen && (
+        <NewOrderDialog
+          onClose={() => setNewOpen(false)}
+          onCreated={(order) => {
+            setNewOpen(false);
+            setOrders((prev) => [order, ...prev]);
+            // Open it straight away: a manual order sorts by its M-n number and
+            // will not be where the eye expects, so show it rather than leaving
+            // the user to hunt for what they just typed.
+            setSelectedId(order.orderId);
+          }}
+        />
       )}
     </div>
   );

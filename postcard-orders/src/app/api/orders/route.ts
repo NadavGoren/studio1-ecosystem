@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isDayIso, isStatus } from "@/lib/domain";
+import { NewOrderError, buildManualOrder, nextManualId, type NewOrderInput } from "@/lib/newOrder";
 import { getStore, storeKind } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -54,6 +55,41 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "עדכון נכשל" },
+      { status: 500 }
+    );
+  }
+}
+
+/** Create one hand-entered order — a phone order, a DM, a market sale. */
+export async function POST(req: Request) {
+  let body: NewOrderInput;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "bad request" }, { status: 400 });
+  }
+
+  try {
+    const store = getStore();
+    const existing = await store.list();
+    // A number the user typed wins; otherwise take the next free M-n.
+    const id = (body.orderId ?? "").trim() || nextManualId(existing);
+
+    const order = buildManualOrder(body, id);
+    const created = await store.createOrder(order);
+    if (!created) {
+      return NextResponse.json(
+        { error: `מספר הזמנה ${id} כבר קיים` },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json({ order: created });
+  } catch (e) {
+    if (e instanceof NewOrderError) {
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "שמירת ההזמנה נכשלה" },
       { status: 500 }
     );
   }

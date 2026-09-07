@@ -15,6 +15,12 @@ export interface Store {
    * an existing one is never cleared by a move to some other status — walking
    * an order back to ארוז to fix a typo must not lose the day it went out.
    */
+  /**
+   * Insert one hand-entered order. Rejects a duplicate order number rather than
+   * overwriting — this is the one write that creates an order out of nothing,
+   * and quietly replacing an existing one would lose real work.
+   */
+  createOrder(order: Order): Promise<Order | null>;
   setStatus(orderId: string, status: Status, shippedOn?: string | null): Promise<Order | null>;
   /**
    * Set one status across many orders in a SINGLE atomic operation.
