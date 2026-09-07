@@ -33,4 +33,17 @@ export interface Store {
   getLastImportAt(): Promise<string | null>;
   setLastImportAt(iso: string): Promise<void>;
   setNote(orderId: string, note: string): Promise<Order | null>;
+
+  /* ── The uploaded file itself ────────────────────────────────────────────
+   * Kept verbatim so the exact CSV can be handed back later. Deliberately not
+   * regenerated from the orders table: that would lose Morning's own columns
+   * and its one-row-per-product-line shape, and would silently be a different
+   * file from the one that came in.
+   */
+
+  /** Size and name only — enough to render a download button without pulling
+   *  a few hundred KB of CSV through a page render. */
+  getLastImportFileInfo(): Promise<{ filename: string; bytes: number } | null>;
+  getLastImportFile(): Promise<{ csv: string; filename: string } | null>;
+  setLastImportFile(csv: string, filename: string): Promise<void>;
 }

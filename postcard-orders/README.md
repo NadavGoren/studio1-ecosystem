@@ -141,6 +141,29 @@ tall layout if disturbed: `width: 100%` must not reach the `td` (as flex items,
 full-width cells each take their own line), and the padding override has to be
 `tbody td`, not `td`, to match the specificity of the desktop rule.
 
+## Downloading the CSV back
+
+**הורדת הקובץ**, next to the "עודכן לפני…" line — it hands back the exact file
+that was last imported, so it sits beside the sentence that says when that was.
+
+It is the **stored upload**, not a CSV regenerated from the orders table. A
+regenerated one would have different columns, lose Morning's one-row-per-product
+-line shape, and quietly not be the file that came in.
+
+- Saved **only after a parse succeeds**, so a rejected upload never replaces the
+  last file that worked.
+- The **UTF-8 BOM is preserved**. `file.text()` strips it per spec, so the route
+  decodes with `TextDecoder(..., { ignoreBOM: true })` instead; `parseCsv`
+  strips it on the way in, which is what makes keeping it safe. Without the BOM
+  Excel on Windows reads the file as the local codepage and every Hebrew name
+  becomes mojibake.
+- Hebrew filenames go out as RFC 5987 `filename*` with an ASCII fallback.
+- Behind the same session check as everything else — the file holds every
+  customer's address and phone number.
+
+> The button appears only once an import has stored a file. Uploads from before
+> this existed left nothing behind, so it stays hidden until the next one.
+
 ## Re-importing
 
 Upload the updated CSV as often as you like. New orders are added, existing ones

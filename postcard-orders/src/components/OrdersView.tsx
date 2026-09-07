@@ -22,18 +22,22 @@ function isOpen(o: Order): boolean {
 export default function OrdersView({
   initialOrders,
   initialLastImportAt,
+  initialImportFile,
   loadError,
   store,
   authOff,
 }: {
   initialOrders: Order[];
   initialLastImportAt: string | null;
+  /** The stored upload, or null until the next import saves one. */
+  initialImportFile: { filename: string; bytes: number } | null;
   loadError: string | null;
   store: "postgres" | "file";
   authOff: boolean;
 }) {
   const [orders, setOrders] = useState(initialOrders);
   const [lastImportAt, setLastImportAt] = useState(initialLastImportAt);
+  const [importFile, setImportFile] = useState(initialImportFile);
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | Status>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("order");
@@ -51,6 +55,7 @@ export default function OrdersView({
       const body = await res.json();
       setOrders(body.orders as Order[]);
       setLastImportAt(body.lastImportAt as string | null);
+      setImportFile(body.importFile as { filename: string; bytes: number } | null);
       setChecked(new Set());
       setError(null);
     } catch {
@@ -342,6 +347,19 @@ export default function OrdersView({
             the same glance. */}
         <div className="statsmeta">
           <LastImport iso={lastImportAt} />
+          {/* The file itself, byte for byte as Morning produced it. Absent
+              until an import has saved one — an upload from before this
+              existed left no file to hand back. */}
+          {importFile && (
+            <a
+              className="dlcsv"
+              href="/api/orders/import"
+              download={importFile.filename}
+              title={`${importFile.filename} · ${Math.max(1, Math.round(importFile.bytes / 1024))} KB`}
+            >
+              הורדת הקובץ
+            </a>
+          )}
         </div>
       </div>
 

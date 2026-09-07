@@ -37,7 +37,10 @@ function fingerprint(o: Order): string {
  * Import a Morning CSV: merge its rows into orders, write them, and report what
  * actually moved. Existing workflow statuses are preserved by the store layer.
  */
-export async function importCsv(csvText: string): Promise<ImportReport> {
+export async function importCsv(
+  csvText: string,
+  filename = "morning.csv"
+): Promise<ImportReport> {
   const incoming = ordersFromCsv(csvText);
   const store = getStore();
   const before = new Map((await store.list()).map((o) => [o.orderId, o]));
@@ -68,6 +71,9 @@ export async function importCsv(csvText: string): Promise<ImportReport> {
 
   await store.upsertMany(incoming);
   await store.setLastImportAt(new Date().toISOString());
+  // Kept verbatim, and only once the parse has succeeded — a file that failed
+  // to import must not replace the last one that worked.
+  await store.setLastImportFile(csvText, filename);
 
   return {
     parsedRows: incoming.reduce((n, o) => n + o.items.length, 0),

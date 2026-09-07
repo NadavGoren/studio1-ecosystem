@@ -133,6 +133,10 @@ function toOrder(r: any): Order {
 }
 
 const LAST_IMPORT_KEY = "last_import_at";
+// The raw upload lives in the same key/value table. Postgres TOASTs a value
+// this size out of the row, so it costs the other app_meta reads nothing.
+const CSV_KEY = "last_import_csv";
+const CSV_NAME_KEY = "last_import_name";
 
 export const pgStore: Store = {
   async list() {
@@ -242,6 +246,42 @@ export const pgStore: Store = {
       [orderId, note]
     );
     return rows[0] ? toOrder(rows[0]) : null;
+  },
+
+  async getLastImportFileInfo() {
+    await ensureSchema();
+    // octet_length, not the value itself: this runs on every page render and
+    // the file is not needed until someone actually clicks download.
+    const { rows } = await getPool().query(
+      `SELECT
+         (SELECT value FROM app_meta WHERE key = $2) AS filename,
+         (SELECT octet_length(value) FROM app_meta WHERE key = $1) AS bytes`,
+      [CSV_KEY, CSV_NAME_KEY]
+    );
+    const r = rows[0];
+    if (!r?.bytes) return null;
+    return { filename: r.filename || "morning.csv", bytes: Number(r.bytes) };
+  },
+
+  async getLastImportFile() {
+    await ensureSchema();
+    const { rows } = await getPool().query(
+      `SELECT key, value FROM app_meta WHERE key = ANY($1::text[])`,
+      [[CSV_KEY, CSV_NAME_KEY]]
+    );
+    const map = new Map(rows.map((r) => [r.key, r.value]));
+    const csv = map.get(CSV_KEY);
+    if (!csv) return null;
+    return { csv, filename: map.get(CSV_NAME_KEY) || "morning.csv" };
+  },
+
+  async setLastImportFile(csv, filename) {
+    await ensureSchema();
+    await getPool().query(
+      `INSERT INTO app_meta (key, value) VALUES ($1, $2), ($3, $4)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [CSV_KEY, csv, CSV_NAME_KEY, filename]
+    );
   },
 
   async getLastImportAt() {

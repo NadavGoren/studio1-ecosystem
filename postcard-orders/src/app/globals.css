@@ -924,14 +924,6 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
   font-weight: 600;
 }
 
-@media (max-width: 640px) {
-  /* It used to be safe to drop this on mobile because it lived in the header
-     and the CSV nag repeated it. Now it is the only readout, and the nag only
-     appears once the file is already stale — so it wraps to its own line
-     instead of disappearing. */
-  .statsmeta { margin-inline-start: 0; width: 100%; align-self: flex-start; }
-}
-
 /* ── Last-import readout, now sitting with the totals ─────────────────────
    Pushed to the far end of the stats row: the cubes are only as current as
    the CSV behind them, so the two want to be read in one glance. */
@@ -939,7 +931,21 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
   margin-inline-start: auto;
   align-self: flex-end;
   padding-bottom: 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
 }
+
+/* Sits with the "uploaded 3h ago" line rather than up beside ייבוא CSV: this
+   downloads THAT upload, so it belongs next to the sentence naming it. */
+.dlcsv {
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.dlcsv:hover { color: var(--text); }
 
 /* ── Ship date ────────────────────────────────────────────────────────────
    The day a parcel went out, asked for whenever נשלח is picked deliberately.
@@ -1083,4 +1089,31 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
 @media (max-width: 640px) {
   .sellers { margin: 8px 14px 0; padding: 8px 11px; max-width: none; }
   .sellers li { grid-template-columns: 12px minmax(52px, 108px) 1fr auto; gap: 7px; font-size: 12px; }
+}
+
+/* These override .statsmeta and .dlcsv above and carry the SAME specificity, so
+   they only win by sitting after them. They used to sit ~30 lines earlier, where
+   every declaration here silently lost — the link kept its underline and the
+   readout kept the desktop alignment. Keep this block last. */
+@media (max-width: 640px) {
+  /* It used to be safe to drop this on mobile because it lived in the header
+     and the CSV nag repeated it. Now it is the only readout, and the nag only
+     appears once the file is already stale — so it wraps to its own line
+     instead of disappearing. */
+  .statsmeta {
+    margin-inline-start: 0;
+    width: 100%;
+    align-self: flex-start;
+    align-items: center;
+  }
+  /* An 18px-tall underlined link is a fiddly thing to hit with a thumb, so on
+     a phone it becomes a chip like the totals beside it — same row, same
+     shape, a target you can actually land on. */
+  .dlcsv {
+    text-decoration: none;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    padding: 6px 12px;
+    background: var(--surface);
+  }
 }

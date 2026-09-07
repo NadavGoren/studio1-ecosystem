@@ -5,7 +5,11 @@ import type { Order, OrderItem } from "@/types";
 /** RFC 4180 CSV reader. Handles quoted fields, embedded commas, "" escapes, BOM. */
 export function parseCsv(input: string): string[][] {
   let text = input;
-  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1); // UTF-8 BOM from Morning
+  // Morning writes a UTF-8 BOM, and the upload route now deliberately keeps it
+  // so the stored copy round-trips byte for byte (Excel needs it to read
+  // Hebrew). Stripping it HERE is what lets that be safe — left in, it would
+  // ride along on the first header name and "מספר הזמנה" would never match.
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
 
   const rows: string[][] = [];
   let row: string[] = [];

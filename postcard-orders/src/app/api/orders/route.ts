@@ -9,8 +9,12 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const store = getStore();
-    const [orders, lastImportAt] = await Promise.all([store.list(), store.getLastImportAt()]);
-    return NextResponse.json({ orders, store: storeKind(), lastImportAt });
+    const [orders, lastImportAt, importFile] = await Promise.all([
+      store.list(),
+      store.getLastImportAt(),
+      store.getLastImportFileInfo(),
+    ]);
+    return NextResponse.json({ orders, store: storeKind(), lastImportAt, importFile });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "failed to load orders" },
