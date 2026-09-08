@@ -171,6 +171,17 @@ guess that Morning puts the city *after* the postcode.
 Rows carry a `ידני` tag, and the new order's panel opens on save: it sorts by its
 `M-n` number and would otherwise not be where the eye expects.
 
+### Deleting one
+
+**מחיקת ההזמנה** at the bottom of the detail panel, on manual orders only, behind
+a one-tap confirm.
+
+The store enforces it, not the UI: `deleteManualOrder` carries
+`AND manual = true`, so an imported order is refused (403) even if the request is
+made directly. That is not belt-and-braces for its own sake — deleting an
+imported order would *appear* to work and then undo itself on the next import,
+which is worse than refusing.
+
 ## Getting a CSV out
 
 Two links sit next to the "עודכן לפני…" line, and they are not the same thing:

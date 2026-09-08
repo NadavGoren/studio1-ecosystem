@@ -45,3 +45,23 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!order) return NextResponse.json({ error: "הזמנה לא נמצאה" }, { status: 404 });
   return NextResponse.json({ order });
 }
+
+/** Delete a hand-entered order. Imported ones are refused — see the store. */
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  try {
+    const ok = await getStore().deleteManualOrder(id);
+    if (!ok) {
+      return NextResponse.json(
+        { error: "אפשר למחוק רק הזמנות שהוזנו ידנית" },
+        { status: 403 }
+      );
+    }
+    return NextResponse.json({ deleted: id });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "המחיקה נכשלה" },
+      { status: 500 }
+    );
+  }
+}

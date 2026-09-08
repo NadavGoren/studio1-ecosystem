@@ -35,15 +35,18 @@ export default function OrderDetail({
   order,
   onStatus,
   onNote,
+  onDelete,
   onClose,
 }: {
   order: Order;
   onStatus: (id: string, status: Status, shippedOn?: string | null) => void;
   onNote: (id: string, note: string) => void;
+  onDelete: (id: string) => void;
   onClose: () => void;
 }) {
   const [note, setNote] = useState(order.note);
   const [askShipDate, setAskShipDate] = useState(false);
+  const [askDelete, setAskDelete] = useState(false);
   const savedNote = useRef(order.note);
 
   // Switching order replaces the draft — the previous one is already persisted.
@@ -51,6 +54,7 @@ export default function OrderDetail({
     setNote(order.note);
     savedNote.current = order.note;
     setAskShipDate(false);
+    setAskDelete(false);
   }, [order.orderId, order.note]);
 
   function commitNote() {
@@ -230,6 +234,29 @@ export default function OrderDetail({
           placeholder="למשל: התקשרתי, אין מענה"
         />
       </section>
+
+      {/* Manual orders only. An imported one would reappear on the next import,
+          so deleting it would only look like it worked — the store refuses it
+          too, this is not the only guard. */}
+      {order.manual && (
+        <section className="dangerzone">
+          {askDelete ? (
+            <div className="confirmdel">
+              <span>למחוק את ההזמנה?</span>
+              <button className="btn sm danger" onClick={() => onDelete(order.orderId)}>
+                כן, מחק
+              </button>
+              <button className="btn ghost sm" onClick={() => setAskDelete(false)}>
+                ביטול
+              </button>
+            </div>
+          ) : (
+            <button className="btn ghost sm deltrigger" onClick={() => setAskDelete(true)}>
+              מחיקת ההזמנה
+            </button>
+          )}
+        </section>
+      )}
 
       <section>
         <dl className="meta">

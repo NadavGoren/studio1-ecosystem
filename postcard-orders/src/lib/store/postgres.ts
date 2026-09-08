@@ -251,6 +251,17 @@ export const pgStore: Store = {
     return rows[0] ? toOrder(rows[0]) : null;
   },
 
+  async deleteManualOrder(orderId) {
+    await ensureSchema();
+    // The manual = true is the whole guard: without it this would happily
+    // delete an imported order, which would then come back on the next import.
+    const { rowCount } = await getPool().query(
+      `DELETE FROM orders WHERE order_id = $1 AND manual = true`,
+      [orderId]
+    );
+    return (rowCount ?? 0) > 0;
+  },
+
   async setStatus(orderId, status: Status, shippedOn = null) {
     await ensureSchema();
     const { rows } = await getPool().query(

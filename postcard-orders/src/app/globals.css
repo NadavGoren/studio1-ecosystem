@@ -502,6 +502,13 @@ textarea.mynote {
 
 /* Neutral, like the service pills: colour in this app means workflow status,
    and where an order came from is not a status. */
+.dangerzone { border-top: 1px solid var(--border); padding-top: 12px; }
+.deltrigger { color: var(--st-issue); }
+.deltrigger:hover { background: var(--st-issue-bg); color: var(--st-issue); }
+.confirmdel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.btn.danger { color: var(--st-issue); border-color: var(--st-issue); background: var(--st-issue-bg); }
+.btn.danger:hover { background: var(--st-issue-bg); border-color: var(--st-issue); opacity: .85; }
+
 .manualtag {
   font-size: 10px;
   font-weight: 600;

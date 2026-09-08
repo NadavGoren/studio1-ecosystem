@@ -21,6 +21,13 @@ export interface Store {
    * and quietly replacing an existing one would lose real work.
    */
   createOrder(order: Order): Promise<Order | null>;
+  /**
+   * Delete a hand-entered order. MUST refuse anything that came from a CSV —
+   * an imported order would just reappear on the next import, so deleting one
+   * only looks like it worked. Enforced here, not in the UI.
+   * Returns false when nothing was deleted.
+   */
+  deleteManualOrder(orderId: string): Promise<boolean>;
   setStatus(orderId: string, status: Status, shippedOn?: string | null): Promise<Order | null>;
   /**
    * Set one status across many orders in a SINGLE atomic operation.

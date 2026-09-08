@@ -87,6 +87,14 @@ export const fileStore: Store = {
     return created;
   },
 
+  async deleteManualOrder(orderId) {
+    const all = await read();
+    const keep = all.filter((o) => !(o.orderId === orderId && o.manual));
+    if (keep.length === all.length) return false;
+    await write(keep);
+    return true;
+  },
+
   async setStatus(orderId, status: Status, shippedOn = null) {
     const all = await read();
     const hit = all.find((o) => o.orderId === orderId);

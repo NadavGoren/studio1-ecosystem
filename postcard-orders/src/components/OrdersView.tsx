@@ -103,6 +103,24 @@ export default function OrdersView({
     [orders]
   );
 
+  const deleteOrder = useCallback(
+    async (id: string) => {
+      const before = orders;
+      // Optimistic, like every other write here: the row goes immediately and
+      // comes back if the server refuses.
+      setOrders((prev) => prev.filter((o) => o.orderId !== id));
+      setSelectedId(null);
+      try {
+        const res = await fetch(`/api/orders/${encodeURIComponent(id)}`, { method: "DELETE" });
+        if (!res.ok) throw new Error((await res.json()).error);
+      } catch (e) {
+        setOrders(before);
+        setError(e instanceof Error && e.message ? e.message : "המחיקה נכשלה");
+      }
+    },
+    [orders]
+  );
+
   const setNote = useCallback(
     async (id: string, note: string) => {
       const before = orders;
@@ -493,6 +511,7 @@ export default function OrdersView({
             order={selected}
             onStatus={(id, status, shippedOn) => setStatuses([id], status, shippedOn)}
             onNote={setNote}
+            onDelete={deleteOrder}
             onClose={() => setSelectedId(null)}
           />
         )}
