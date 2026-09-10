@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ComplaintPanel from "./ComplaintPanel";
 import CopyButton from "./CopyButton";
 import SequenceCopy from "./SequenceCopy";
 import ShipDateChoice from "./ShipDateChoice";
 import {
+  isComplaintOpen,
+  newComplaint,
   postageIls,
   serviceLabel,
   shipDateLabel,
   statusLabel,
   statusOptions,
   weightG,
+  type Complaint,
   type Status,
 } from "@/lib/domain";
 import type { Order } from "@/types";
@@ -35,12 +39,14 @@ export default function OrderDetail({
   order,
   onStatus,
   onNote,
+  onComplaint,
   onDelete,
   onClose,
 }: {
   order: Order;
   onStatus: (id: string, status: Status, shippedOn?: string | null) => void;
   onNote: (id: string, note: string) => void;
+  onComplaint: (id: string, complaint: Complaint | null) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
 }) {
@@ -117,6 +123,30 @@ export default function OrderDetail({
               שינוי תאריך
             </button>
           </div>
+        )}
+      </section>
+
+      {/* Under the status, not inside it: what we promised the customer has to
+          survive the order being walked back to ארוז for a resend. Always
+          reachable, because a complaint can arrive about an order sitting at
+          any rung — including one already marked נמסר. */}
+      <section>
+        <h3>
+          תלונה וטיפול
+          {isComplaintOpen(order.complaint) && <span className="copen">פתוח</span>}
+        </h3>
+        {order.complaint ? (
+          <ComplaintPanel
+            order={order}
+            onChange={(c) => onComplaint(order.orderId, c)}
+          />
+        ) : (
+          <button
+            className="btn ghost sm"
+            onClick={() => onComplaint(order.orderId, newComplaint())}
+          >
+            פתיחת תלונה — הגלויה לא הגיעה
+          </button>
         )}
       </section>
 

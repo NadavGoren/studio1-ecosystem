@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { isDayIso, isStatus } from "@/lib/domain";
+import { ComplaintError, isDayIso, isStatus, parseComplaint } from "@/lib/domain";
 import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Update one order's workflow status and/or our own free-text note. */
+/** Update one order's workflow status, our own free-text note, and/or the
+ *  complaint attached to it. Any combination in one request — reporting a
+ *  problem sets the status and opens the complaint together, and two round
+ *  trips could leave one of them applied and the other not. */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  let body: { status?: unknown; note?: unknown; shippedOn?: unknown };
+  let body: { status?: unknown; note?: unknown; shippedOn?: unknown; complaint?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -29,6 +32,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       }
       order = await store.setStatus(id, body.status, (body.shippedOn as string | null) ?? null);
     }
+    // Before the note, so a request carrying both ends on the note's row —
+    // which is what the client's optimistic copy already shows.
+    if (body.complaint !== undefined) {
+      order = await store.setComplaint(id, parseComplaint(body.complaint));
+    }
     if (body.note !== undefined) {
       if (typeof body.note !== "string") {
         return NextResponse.json({ error: "הערה חייבת להיות טקסט" }, { status: 400 });
@@ -36,6 +44,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       order = await store.setNote(id, body.note.slice(0, 2000));
     }
   } catch (e) {
+    // A malformed complaint is the caller's mistake, not a server fault, and
+    // its message is written to be read by the person who typed it.
+    if (e instanceof ComplaintError) {
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "עדכון נכשל" },
       { status: 500 }

@@ -110,6 +110,7 @@ export function buildManualOrder(input: NewOrderInput, orderId: string): Order {
     status: "new",
     statusAt: null,
     shippedOn: null,
+    complaint: null,
     note: (input.note ?? "").trim(),
     updatedAt: now.toISOString(),
   };

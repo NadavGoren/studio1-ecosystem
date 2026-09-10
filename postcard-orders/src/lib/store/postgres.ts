@@ -1,5 +1,5 @@
 import { Pool, types } from "pg";
-import type { Status } from "@/lib/domain";
+import type { Complaint, Status } from "@/lib/domain";
 import type { Order } from "@/types";
 import type { Store } from "./types";
 
@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS orders (
   status_at     TIMESTAMPTZ,
   shipped_on    DATE,
   note          TEXT NOT NULL DEFAULT '',
+  complaint     JSONB,
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -74,6 +75,10 @@ CREATE TABLE IF NOT EXISTS orders (
 -- selects it while dev — where the table is created fresh — looks perfectly fine.
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_on DATE;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS manual BOOLEAN NOT NULL DEFAULT false;
+-- One JSONB rather than five columns: a complaint is written and read as one
+-- record, and NULL says "no complaint" without five nullable columns having to
+-- agree with each other about it.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS complaint JSONB;
 
 -- A tiny key/value table for app-level facts that aren't about any one order —
 -- currently just "when was the CSV last imported". A single row per key,
@@ -131,6 +136,7 @@ function toOrder(r: any): Order {
     statusAt: r.status_at ? new Date(r.status_at).toISOString() : null,
     shippedOn: r.shipped_on ?? null,
     note: r.note,
+    complaint: r.complaint ?? null,
     updatedAt: new Date(r.updated_at).toISOString(),
   };
 }
@@ -194,9 +200,10 @@ export const pgStore: Store = {
              note_order = EXCLUDED.note_order,
              note_ship = EXCLUDED.note_ship,
              updated_at = now()
-             -- status, status_at, shipped_on and note are deliberately NOT
-             -- updated: they are ours, not Morning's, and a re-import must
-             -- never reset the workflow.
+             -- status, status_at, shipped_on, note and complaint are
+             -- deliberately NOT updated: they are ours, not Morning's, and a
+             -- re-import must never reset the workflow or forget that we owe
+             -- someone a refund.
            WHERE orders.manual = false
              -- A hand-entered order is never overwritten by an import, even if
              -- its order number one day shows up in the CSV. Without this the
@@ -283,6 +290,19 @@ export const pgStore: Store = {
       [orderIds, status, shippedOn]
     );
     return rowCount ?? 0;
+  },
+
+  async setComplaint(orderId, complaint: Complaint | null) {
+    await ensureSchema();
+    // The whole record in one statement, so the remedy and the amount can
+    // never be a write apart. status_at is left alone on purpose: a complaint
+    // is not a status change, and moving it would misdate the workflow.
+    const { rows } = await getPool().query(
+      `UPDATE orders SET complaint = $2::jsonb, updated_at = now()
+       WHERE order_id = $1 RETURNING *`,
+      [orderId, complaint === null ? null : JSON.stringify(complaint)]
+    );
+    return rows[0] ? toOrder(rows[0]) : null;
   },
 
   async setNote(orderId, note) {

@@ -116,6 +116,38 @@ The date is written **only** on the way into `נשלח`, and never cleared by a
 later status — walking an order back to `ארוז` to fix a mistake does not lose
 the day it actually went out. Like statuses and notes, it survives a re-import.
 
+## Complaints — "it never arrived"
+
+A parcel that did not turn up is a conversation, not a rung on the ladder, so a
+complaint is stored **beside** the status rather than as one of them.
+
+Picking `בעיה / תקוע` asks the follow-up question immediately — **מה סיכמנו עם
+הלקוח?** — with the three answers actually on offer:
+
+| Remedy | The checkbox that closes it |
+|---|---|
+| `זיכוי מלא` | `הזיכוי בוצע` — the money actually left the account |
+| `להמתין עוד כמה ימים` | `הגלויה הגיעה` |
+| `שליחה חוזרת` | `נשלח שוב` — a second parcel actually went out |
+
+`נחליט אחר כך` is there too, because sometimes an order is visibly stuck before
+anyone has spoken to the customer.
+
+The checkbox is the point of the whole thing. A remedy agreed and then forgotten
+is exactly the customer nobody comes back to, so until it is ticked the order
+carries a red badge under its status, counts in the **תלונות פתוחות** tile, and
+does **not** grey out — even if its status says `נמסר`.
+
+Because the complaint is its own layer, a resend can be walked back to `ארוז`
+and climb the mail ladder again — printing a fresh label, going out, getting a
+new ship date — while the promise stays attached to the order the whole way. A
+refund leaves the status exactly where it was.
+
+Each complaint also records the day the customer reported it, the refund amount
+(defaulting to the order total, editable for a partial), and what they said.
+`פתיחת תלונה` in the detail panel opens one on any order without touching its
+status. Like statuses and notes, complaints survive a re-import.
+
 ## When the CSV was last uploaded
 
 Shown at the end of the totals row — "עודכן לפני 3 שע׳" — because the cubes are
@@ -189,7 +221,7 @@ Two links sit next to the "עודכן לפני…" line, and they are not the sa
 | Link | What it gives you |
 |---|---|
 | **הקובץ שהועלה** | The exact file Morning produced, byte for byte |
-| **ייצוא הנתונים** | The database as it is now — status, ship date, our notes, postage |
+| **ייצוא הנתונים** | The database as it is now — status, ship date, our notes, postage, complaints |
 
 The first needs an upload to have been stored, so it is absent until one has.
 The second is built from the orders table and therefore always works.
@@ -202,14 +234,15 @@ That makes it a usable backup rather than only a report. Verified: exporting and
 re-importing into an empty database returns every Morning-derived field
 identically.
 
-The app's own columns (שירות, דמי משלוח, סטטוס טיפול, תאריך שליחה, הערה שלנו) are
-appended after Morning's. The importer looks columns up by name and ignores ones
-it does not know, so they ride along harmlessly.
+The app's own columns (שירות, דמי משלוח, סטטוס טיפול, תאריך שליחה, הערה שלנו, and
+the five תלונה — … columns) are appended after Morning's. The importer looks
+columns up by name and ignores ones it does not know, so they ride along
+harmlessly.
 
-> **It is not a full restore.** Those five columns come back as defaults on a
+> **It is not a full restore.** Those columns come back as defaults on a
 > re-import, because the importer deliberately ignores them — the same rule that
 > stops a re-import resetting your workflow also stops it restoring one. The
-> order data returns; the statuses do not.
+> order data returns; the statuses and complaints do not.
 
 The order total lands on the first line of each order and 0 on the rest, because
 Morning's `סה"כ כולל מע"מ` is a LINE total that the importer sums — repeating it
@@ -241,8 +274,8 @@ regenerated one would have different columns, lose Morning's one-row-per-product
 ## Re-importing
 
 Upload the updated CSV as often as you like. New orders are added, existing ones
-have their Morning fields refreshed, and **the statuses and notes you set are
-never touched**. The import report tells you what changed, and specifically
+have their Morning fields refreshed, and **the statuses, notes and complaints
+you set are never touched**. The import report tells you what changed, and specifically
 flags any order whose quantity changed enough to move it between דואר 24 and
 דואר 72 — worth seeing if you already packed it.
 
@@ -366,7 +399,8 @@ is a single atomic statement, so neither of you can silently overwrite the other
 ```
 src/
   lib/
-    domain.ts        business rules — the 24/72 threshold, weight, tariff, statuses
+    domain.ts        business rules — the 24/72 threshold, weight, tariff, statuses,
+                     complaints
     address.ts       free-text address → parts, with validation
     parseOrders.ts   CSV reader + Morning row merging
     auth.ts          shared-password cookie (Web Crypto, runs on Edge and Node)

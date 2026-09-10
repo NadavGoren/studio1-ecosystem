@@ -693,6 +693,14 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
 
 /* ── Status picker popover ────────────────────────────────────────────── */
 .pickwrap { position: relative; }
+/* Table rows paint in document order and a positioned descendant of a cell
+   does not escape that, so the cells of the rows BELOW were coming out on top
+   of an open menu — barely visible with the short status list, glaring once
+   the remedy question made the popover four rows tall. The ROW has to be the
+   thing lifted; raising the cell or the wrapper inside it does nothing. Only
+   while a menu is actually open, so no row permanently outranks its
+   neighbours. */
+tbody tr:has(.pickmenu) { position: relative; z-index: 50; }
 .pickmenu {
   position: absolute;
   top: calc(100% + 5px);
@@ -918,6 +926,7 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
   .statuspill { padding: 3px 8px; font-size: 11.5px; }
   .advance { padding: 3px 7px; font-size: 11.5px; }
   .shipday { font-size: 10px; text-align: end; margin-top: 1px; }
+  .cbadge { font-size: 10px; margin-top: 2px; }
 
   tbody tr[aria-selected="true"] td { background: none; }
   tbody tr[aria-selected="true"] { background: var(--surface-2); }
@@ -1005,13 +1014,17 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
    The day a parcel went out, asked for whenever נשלח is picked deliberately.
    Reuses .pickmenu's box when it appears inside the status dropdown, so only
    the innards need styling here. */
-.shipdate {
+.shipdate, .remedypick {
   display: flex;
   flex-direction: column;
   gap: 7px;
   padding: 9px 10px;
   min-width: 172px;
 }
+.remedypick { min-width: 210px; }
+.remedypick-h { font-size: 11.5px; color: var(--faint); font-weight: 600; }
+.remedypick-opts { display: flex; flex-direction: column; gap: 5px; align-items: stretch; }
+.remedypick-opts .statusbtn { text-align: start; }
 .shipdate-h { font-size: 11.5px; color: var(--faint); font-weight: 600; }
 .shipdate-h .n { color: var(--st-shipped); font-weight: 700; }
 .shipdate-opts { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -1171,3 +1184,111 @@ th.selcol, td.selcol { width: 34px; padding-inline-end: 0; }
     background: var(--surface);
   }
 }
+
+
+/* ── Complaints ───────────────────────────────────────────────────────────
+   A parcel that never arrived, and what we promised to do about it. This is
+   the one thing in the app that is about a person waiting rather than about a
+   parcel moving, so it gets the alarm colour and keeps it until it is settled.
+
+   Deliberately NOT a new hue: --st-issue is already "something is wrong here",
+   and a complaint is that same fact seen from the customer's side. */
+
+/* Which remedy was agreed, wherever it is shown as a pressed button. Three
+   tints borrowed from the status palette rather than three new ones — this
+   app's rule is that colour means state, and these are states. */
+.statusbtn.rem-refund { color: var(--st-label); background: var(--st-label-bg); }
+.statusbtn.rem-wait { color: var(--st-packed); background: var(--st-packed-bg); }
+.statusbtn.rem-resend { color: var(--st-shipped); background: var(--st-shipped-bg); }
+
+/* Under the status pill in the table. The open ones carry the alarm colour and
+   a filled dot; a settled one fades to the same quiet grey as the ship day,
+   because it is history now, not work. */
+.cbadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--st-issue);
+  margin-top: 3px;
+  white-space: nowrap;
+}
+.cbadge.done { color: var(--faint); font-weight: 500; }
+
+/* The panel's own heading tag. */
+.copen {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--st-issue);
+  background: var(--st-issue-bg);
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-inline-start: 7px;
+  vertical-align: middle;
+}
+
+.complaint { display: flex; flex-direction: column; gap: 10px; }
+.complaint .crow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.complaint .crow.stack { align-items: flex-start; flex-direction: column; gap: 6px; }
+.complaint .clbl { font-size: 11.5px; color: var(--faint); font-weight: 600; min-width: 68px; }
+.complaint .camount { width: 88px; text-align: end; font-variant-numeric: tabular-nums; }
+.complaint .cunit { color: var(--muted); }
+.complaint .clink {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 11.5px;
+  color: var(--faint);
+  text-decoration: underline;
+}
+.complaint .clink:hover { color: var(--text); }
+.complaint .cpending {
+  font-size: 12.5px;
+  color: var(--st-issue);
+  background: var(--st-issue-bg);
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-weight: 500;
+}
+
+/* The checkbox this whole feature exists for: did the money actually go out,
+   did the second parcel actually get posted. Big enough to hit without aiming
+   and loud enough to see unticked from across the table. */
+.cdone {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  border: 1px solid var(--st-issue);
+  background: var(--st-issue-bg);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+.cdone label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+/* No flex:1 on the label. The panel is ~290px wide and the label would eat
+   all of it, squeezing the date field beside it down to a stub — it needs a
+   real width, and wraps onto its own line when there isn't one. */
+.cdone .shipdate-input { min-width: 130px; }
+.cdone input { width: 18px; height: 18px; accent-color: var(--st-delivered); flex: none; }
+.cdone span { font-size: 13.5px; font-weight: 600; color: var(--st-issue); }
+.cdone .cwhen { font-size: 12px; color: var(--muted); }
+/* Once it is done the row stops shouting — it is a record, not a task. */
+.cdone.on { border-color: var(--st-delivered); background: var(--st-delivered-bg); }
+.cdone.on span { color: var(--st-delivered); }
+
+/* The totals-row tile. A button, because the only thing anyone wants to do on
+   seeing a number here is see WHICH orders it means. */
+button.stat {
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+}
+.stat.trouble.on { border-color: var(--st-issue); background: var(--st-issue-bg); }
+.stat.trouble.on .v { color: var(--st-issue); }
+.stat.trouble.on .l { color: var(--st-issue); opacity: .8; }
+.stat.trouble .of { color: var(--faint); font-weight: 500; }

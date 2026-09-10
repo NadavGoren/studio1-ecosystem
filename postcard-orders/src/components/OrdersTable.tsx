@@ -1,7 +1,14 @@
 "use client";
 
 import StatusControl from "./StatusControl";
-import { serviceLabel, shipDateLabel, type Status } from "@/lib/domain";
+import {
+  isComplaintOpen,
+  remedyShort,
+  serviceLabel,
+  shipDateLabel,
+  type Remedy,
+  type Status,
+} from "@/lib/domain";
 import type { Order } from "@/types";
 
 /**
@@ -18,6 +25,7 @@ export default function OrdersTable({
   onToggleCheck,
   onToggleAll,
   onStatus,
+  onIssue,
   emptyText,
 }: {
   orders: Order[];
@@ -28,6 +36,7 @@ export default function OrdersTable({
   onToggleCheck: (id: string) => void;
   onToggleAll: (ids: string[], on: boolean) => void;
   onStatus: (id: string, status: Status, shippedOn?: string | null) => void;
+  onIssue: (id: string, remedy: Remedy | null) => void;
   emptyText: string;
 }) {
   if (orders.length === 0) {
@@ -68,7 +77,12 @@ export default function OrdersTable({
             <tr
               key={o.orderId}
               aria-selected={o.orderId === selectedId}
-              className={o.status === "delivered" ? "done" : undefined}
+              // Greyed out only when there is genuinely nothing left to do.
+              // An order marked נמסר that the customer says never arrived is
+              // the one row that must NOT fade into the background.
+              className={
+                o.status === "delivered" && !isComplaintOpen(o.complaint) ? "done" : undefined
+              }
               onClick={() => onSelect(o.orderId)}
             >
               <td className="selcol" onClick={(e) => e.stopPropagation()}>
@@ -115,13 +129,30 @@ export default function OrdersTable({
                 <StatusControl
                   status={o.status}
                   kind={o.kind}
+                  remedy={o.complaint?.remedy ?? null}
                   onChange={(s, shippedOn) => onStatus(o.orderId, s, shippedOn)}
+                  onIssue={(r) => onIssue(o.orderId, r)}
                 />
                 {/* Only once it has actually gone out — the whole point is
                     being able to scan for "when did this leave". */}
                 {o.shippedOn && (o.status === "shipped" || o.status === "delivered") && (
                   <div className="shipday" title={`נשלח ב-${o.shippedOn}`}>
                     נשלח {shipDateLabel(o.shippedOn)}
+                  </div>
+                )}
+                {/* What we owe this customer, right under their status, so the
+                    open ones can be found by eye without opening anything. */}
+                {o.complaint && (
+                  <div
+                    className={`cbadge${o.complaint.doneOn ? " done" : ""}`}
+                    title={
+                      o.complaint.doneOn
+                        ? `בוצע ב-${o.complaint.doneOn}`
+                        : `דווח ב-${o.complaint.reportedOn}`
+                    }
+                  >
+                    {o.complaint.doneOn ? "✓ " : "● "}
+                    {o.complaint.remedy ? remedyShort[o.complaint.remedy] : "ללא החלטה"}
                   </div>
                 )}
               </td>

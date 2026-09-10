@@ -1,4 +1,4 @@
-import type { Kind, Service, Status } from "@/lib/domain";
+import type { Complaint, Kind, Service, Status } from "@/lib/domain";
 
 export interface OrderItem {
   name: string;
@@ -58,6 +58,15 @@ export interface Order {
   shippedOn: string | null;
   /** Free-text note Nadav or his partner add in the app. */
   note: string;
+
+  /**
+   * The customer said it never arrived, and what we agreed to do about it —
+   * null for the overwhelming majority of orders. Deliberately NOT a status:
+   * a resend goes back to ארוז and climbs the ladder again, and the promise
+   * to refund has to outlive that. Ours, so an import never touches it.
+   */
+  complaint: Complaint | null;
+
   updatedAt: string;
 }
 

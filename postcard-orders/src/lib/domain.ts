@@ -186,3 +186,113 @@ export function shipDateLabel(day: string): string {
   const [y, m, d] = day.split("-");
   return `${d}/${m}${y === String(new Date().getFullYear()) ? "" : `/${y.slice(2)}`}`;
 }
+
+/* ── Complaints ────────────────────────────────────────────────────────────
+ * A parcel that never arrived is not a status — it is a conversation, and it
+ * outlives whatever rung the order is sitting on. A resend has to go back to
+ * ארוז and climb the ladder again; a refund leaves the order exactly where it
+ * already was. Either way the promise we made the customer must survive the
+ * status moving, so a complaint is stored ALONGSIDE the status rather than as
+ * one of them, and only "we actually did the thing" closes it.
+ */
+
+export const REMEDIES = ["refund", "wait", "resend"] as const;
+export type Remedy = (typeof REMEDIES)[number];
+
+export function isRemedy(v: unknown): v is Remedy {
+  return typeof v === "string" && (REMEDIES as readonly string[]).includes(v);
+}
+
+/** What we offered the customer. */
+export const remedyLabel: Record<Remedy, string> = {
+  refund: "זיכוי מלא",
+  wait: "להמתין עוד כמה ימים",
+  resend: "שליחה חוזרת",
+};
+
+/** The same three, short enough to sit under a status pill in the table. */
+export const remedyShort: Record<Remedy, string> = {
+  refund: "זיכוי",
+  wait: "בהמתנה",
+  resend: "שליחה חוזרת",
+};
+
+/**
+ * What "done" means — which is a different act for each remedy: money left the
+ * account, a second parcel went out, or the wait simply ended well. One
+ * checkbox, three meanings, so three labels: a generic "טופל" would make the
+ * refunds list impossible to trust, and trusting it is the entire point.
+ */
+export const remedyDoneLabel: Record<Remedy, string> = {
+  refund: "הזיכוי בוצע",
+  wait: "הגלויה הגיעה",
+  resend: "נשלח שוב",
+};
+
+export interface Complaint {
+  /** The day the customer told us, YYYY-MM-DD. Editable — they often write
+   *  on Friday and get answered on Sunday. */
+  reportedOn: string;
+  /** null while the customer hasn't chosen yet — a real state, not a gap. */
+  remedy: Remedy | null;
+  /**
+   * The day we carried the remedy out, or null if we still owe it. This IS
+   * the done flag: a separate boolean beside a date can disagree with it, and
+   * then neither answers "who is still waiting for their money".
+   */
+  doneOn: string | null;
+  /** ₪ actually refunded. Only meaningful when the remedy is a refund. */
+  refundIls: number | null;
+  /** What the customer said, in their words. Ours goes in the order note. */
+  note: string;
+}
+
+/** An open complaint is one we still owe something on. */
+export function isComplaintOpen(c: Complaint | null | undefined): boolean {
+  return Boolean(c) && !c?.doneOn;
+}
+
+/** A fresh complaint, opened today. */
+export function newComplaint(remedy: Remedy | null = null): Complaint {
+  return { reportedOn: dayIso(0), remedy, doneOn: null, refundIls: null, note: "" };
+}
+
+export class ComplaintError extends Error {}
+
+/**
+ * Guards the API boundary. Every field here is typed by hand into a form, so
+ * each one is checked rather than trusted — and a bad one is the caller's
+ * mistake (400), not the server falling over.
+ */
+export function parseComplaint(v: unknown): Complaint | null {
+  if (v === null) return null;
+  if (typeof v !== "object") throw new ComplaintError("תלונה לא תקינה");
+  const c = v as Record<string, unknown>;
+
+  if (!isDayIso(c.reportedOn)) throw new ComplaintError("תאריך הדיווח לא תקין");
+
+  const remedy = c.remedy ?? null;
+  if (remedy !== null && !isRemedy(remedy)) throw new ComplaintError("פתרון לא מוכר");
+
+  const doneOn = c.doneOn ?? null;
+  if (doneOn !== null && !isDayIso(doneOn)) throw new ComplaintError("תאריך הביצוע לא תקין");
+
+  const refund = c.refundIls ?? null;
+  if (refund !== null && (typeof refund !== "number" || !Number.isFinite(refund) || refund < 0)) {
+    throw new ComplaintError("סכום הזיכוי לא תקין");
+  }
+
+  if (c.note !== undefined && typeof c.note !== "string") {
+    throw new ComplaintError("פירוט התלונה חייב להיות טקסט");
+  }
+
+  return {
+    reportedOn: c.reportedOn,
+    remedy: remedy as Remedy | null,
+    doneOn: doneOn as string | null,
+    // Agorot and no further: a refund is money, and a float that drifted
+    // through a form would print as 34.999999999 ₪ in the export.
+    refundIls: refund === null ? null : Math.round(refund * 100) / 100,
+    note: ((c.note as string) ?? "").slice(0, 2000),
+  };
+}

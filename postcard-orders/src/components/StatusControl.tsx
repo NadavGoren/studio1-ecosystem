@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import RemedyChoice from "./RemedyChoice";
 import ShipDateChoice from "./ShipDateChoice";
 import {
   dayIso,
@@ -8,6 +9,7 @@ import {
   statusLabel,
   statusOptions,
   type Kind,
+  type Remedy,
   type Status,
 } from "@/lib/domain";
 
@@ -20,25 +22,40 @@ import {
  * today without asking, because that is what marking a parcel as it goes out
  * means; choosing נשלח from the list instead asks which day, which is how you
  * catch up on a batch posted yesterday.
+ *
+ * בעיה asks its own follow-up in the same slot: what we agreed to do about it.
+ * A problem with no remedy against it is exactly the customer who gets missed,
+ * so the question is asked where the problem is logged rather than left for
+ * whoever opens the panel later.
  */
 export default function StatusControl({
   status,
   kind,
+  remedy,
   onChange,
+  onIssue,
 }: {
   status: Status;
   kind: Kind;
+  /** What was already agreed, so reopening the question shows the answer. */
+  remedy: Remedy | null;
   onChange: (next: Status, shippedOn?: string | null) => void;
+  /** Mark the order as a problem AND record the remedy in one go. */
+  onIssue: (remedy: Remedy | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [askDate, setAskDate] = useState(false);
+  const [askRemedy, setAskRemedy] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const next = nextStatus(status, kind);
 
   // Reopening the menu should always start on the status list, never on a
-  // date question left over from last time.
+  // follow-up question left over from last time.
   useEffect(() => {
-    if (!open) setAskDate(false);
+    if (!open) {
+      setAskDate(false);
+      setAskRemedy(false);
+    }
   }, [open]);
 
   useEffect(() => {
@@ -82,6 +99,15 @@ export default function StatusControl({
                 }}
                 onCancel={() => setAskDate(false)}
               />
+            ) : askRemedy ? (
+              <RemedyChoice
+                current={remedy}
+                onPick={(r) => {
+                  onIssue(r);
+                  setOpen(false);
+                }}
+                onCancel={() => setAskRemedy(false)}
+              />
             ) : (
               statusOptions(kind).map((s) => (
                 <button
@@ -90,10 +116,11 @@ export default function StatusControl({
                   role="menuitem"
                   aria-pressed={status === s}
                   onClick={() => {
-                    if (s === "shipped") {
-                      setAskDate(true);
-                      return; // menu stays open, swaps to the date question
-                    }
+                    // Both of these stay open and swap the menu's contents for
+                    // their follow-up question rather than closing on a
+                    // half-recorded answer.
+                    if (s === "shipped") return setAskDate(true);
+                    if (s === "issue") return setAskRemedy(true);
                     onChange(s);
                     setOpen(false);
                   }}

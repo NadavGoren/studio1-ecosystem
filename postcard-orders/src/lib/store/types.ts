@@ -1,4 +1,4 @@
-import type { Status } from "@/lib/domain";
+import type { Complaint, Status } from "@/lib/domain";
 import type { Order } from "@/types";
 
 export interface Store {
@@ -6,8 +6,9 @@ export interface Store {
   list(): Promise<Order[]>;
   /**
    * Insert new orders and refresh the Morning-derived fields of existing ones.
-   * MUST NOT touch `status`, `statusAt` or `note` — those are ours, not Morning's,
-   * and a re-import of an updated CSV has to leave the workflow untouched.
+   * MUST NOT touch `status`, `statusAt`, `note` or `complaint` — those are
+   * ours, not Morning's, and a re-import of an updated CSV has to leave the
+   * workflow untouched.
    */
   upsertMany(orders: Order[]): Promise<void>;
   /**
@@ -46,6 +47,15 @@ export interface Store {
   getLastImportAt(): Promise<string | null>;
   setLastImportAt(iso: string): Promise<void>;
   setNote(orderId: string, note: string): Promise<Order | null>;
+  /**
+   * Attach, update or clear an order's complaint. Passing null removes it —
+   * the complaint was opened by mistake, or on the wrong order.
+   *
+   * Writes the whole record in one statement rather than field by field: the
+   * remedy, the amount and the "we did it" date are one decision, and a
+   * half-applied one would show a refund marked paid with no sum against it.
+   */
+  setComplaint(orderId: string, complaint: Complaint | null): Promise<Order | null>;
 
   /* ── The uploaded file itself ────────────────────────────────────────────
    * Kept verbatim so the exact CSV can be handed back later. Deliberately not

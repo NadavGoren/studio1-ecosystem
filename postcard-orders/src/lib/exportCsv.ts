@@ -1,4 +1,4 @@
-import { postageIls, serviceLabel } from "@/lib/domain";
+import { postageIls, remedyLabel, serviceLabel } from "@/lib/domain";
 import { splitName } from "@/lib/shipSequence";
 import type { Order } from "@/types";
 
@@ -43,6 +43,14 @@ const OWN_COLUMNS = [
   "סטטוס טיפול",
   "תאריך שליחה",
   "הערה שלנו",
+  // The complaint, spread across its own columns rather than stuffed into one
+  // cell — the refunds actually paid have to be filterable in a spreadsheet,
+  // which is where that reckoning gets done.
+  "תלונה — תאריך דיווח",
+  "תלונה — סוכם",
+  "תלונה — בוצע בתאריך",
+  "תלונה — סכום זיכוי",
+  "תלונה — פירוט",
 ] as const;
 
 /** RFC 4180: quote only when it matters, and double an inner quote. */
@@ -87,6 +95,15 @@ export function ordersToCsv(orders: Order[]): string {
           o.status,
           o.shippedOn ?? "",
           o.note,
+          o.complaint?.reportedOn ?? "",
+          o.complaint?.remedy ? remedyLabel[o.complaint.remedy] : "",
+          o.complaint?.doneOn ?? "",
+          // Only against a refund: an amount left over from a remedy that was
+          // changed later would read here as money we paid, and we didn't.
+          o.complaint?.remedy === "refund" && o.complaint.refundIls !== null
+            ? o.complaint.refundIls.toFixed(2)
+            : "",
+          o.complaint?.note ?? "",
         ].map(cell).join(",")
       );
     });

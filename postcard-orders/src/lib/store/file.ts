@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { Status } from "@/lib/domain";
+import type { Complaint, Status } from "@/lib/domain";
 import type { Order } from "@/types";
 import type { Store } from "./types";
 
@@ -18,7 +18,11 @@ const CSV_FILE = path.join(DIR, "last-import.csv");
 
 async function read(): Promise<Order[]> {
   try {
-    return JSON.parse(await fs.readFile(FILE, "utf8")) as Order[];
+    const all = JSON.parse(await fs.readFile(FILE, "utf8")) as Order[];
+    // Rows written before complaints existed have no such key at all, and
+    // `undefined` would reach the client as a missing field rather than as
+    // "no complaint". Postgres gets the same treatment in toOrder().
+    return all.map((o) => ({ ...o, complaint: o.complaint ?? null }));
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw e;
@@ -68,6 +72,7 @@ export const fileStore: Store = {
         statusAt: prev?.statusAt ?? null,
         shippedOn: prev?.shippedOn ?? null,
         note: prev?.note ?? "",
+        complaint: prev?.complaint ?? null,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -152,6 +157,17 @@ export const fileStore: Store = {
     await fs.mkdir(DIR, { recursive: true });
     await fs.writeFile(CSV_FILE, csv, "utf8");
     await writeMeta({ ...(await readMeta()), lastImportName: filename });
+  },
+
+  async setComplaint(orderId, complaint: Complaint | null) {
+    const all = await read();
+    const hit = all.find((o) => o.orderId === orderId);
+    if (!hit) return null;
+    hit.complaint = complaint;
+    // Not statusAt: a complaint is not a status change.
+    hit.updatedAt = new Date().toISOString();
+    await write(all);
+    return hit;
   },
 
   async setNote(orderId, note) {

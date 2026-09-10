@@ -9,15 +9,31 @@ import LastImport from "./LastImport";
 import OrderDetail from "./OrderDetail";
 import OrdersTable from "./OrdersTable";
 import ShipDateChoice from "./ShipDateChoice";
-import { postageIls, statusLabel, statusOptions, type Status } from "@/lib/domain";
+import {
+  isComplaintOpen,
+  newComplaint,
+  postageIls,
+  statusLabel,
+  statusOptions,
+  type Complaint,
+  type Remedy,
+  type Status,
+} from "@/lib/domain";
 import type { Order } from "@/types";
 
 type Sort = "order" | "city" | "status" | "qty";
 type MailFilter = "all" | "post24" | "post72";
+/** The status dropdown also filters on the complaint layer, which is not a
+ *  status — hence its own two values rather than another Status. */
+type StatusFilter = "all" | "open" | "trouble" | "trouble-any" | Status;
 
-/** Anything not yet handed over still needs work — including stuck orders. */
+/**
+ * Anything not yet handed over still needs work — including stuck orders, and
+ * including an order marked נמסר that the customer then told us never arrived.
+ * A promise we have not kept is open work whatever the parcel did.
+ */
 function isOpen(o: Order): boolean {
-  return o.status !== "delivered";
+  return o.status !== "delivered" || isComplaintOpen(o.complaint);
 }
 
 export default function OrdersView({
@@ -39,7 +55,7 @@ export default function OrdersView({
   const [orders, setOrders] = useState(initialOrders);
   const [lastImportAt, setLastImportAt] = useState(initialLastImportAt);
   const [importFile, setImportFile] = useState(initialImportFile);
-  const [statusFilter, setStatusFilter] = useState<"all" | "open" | Status>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("order");
   const [mailFilter, setMailFilter] = useState<MailFilter>("all");
@@ -121,23 +137,64 @@ export default function OrdersView({
     [orders]
   );
 
-  const setNote = useCallback(
-    async (id: string, note: string) => {
+  /**
+   * One order, one PATCH, optimistic like everything else here — the row
+   * changes at once and is put back exactly as it was if the server refuses.
+   * `fields` is both what is sent and what is shown, so the two cannot drift.
+   */
+  const patchOne = useCallback(
+    async (id: string, fields: Partial<Order>, failMsg: string) => {
       const before = orders;
-      setOrders((prev) => prev.map((o) => (o.orderId === id ? { ...o, note } : o)));
+      setOrders((prev) => prev.map((o) => (o.orderId === id ? { ...o, ...fields } : o)));
       try {
         const res = await fetch(`/api/orders/${encodeURIComponent(id)}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ note }),
+          body: JSON.stringify(fields),
         });
-        if (!res.ok) throw new Error();
-      } catch {
+        if (!res.ok) throw new Error((await res.json()).error);
+      } catch (e) {
         setOrders(before);
-        setError("ההערה לא נשמרה");
+        setError(e instanceof Error && e.message ? e.message : failMsg);
       }
     },
     [orders]
+  );
+
+  const setNote = useCallback(
+    (id: string, note: string) => patchOne(id, { note }, "ההערה לא נשמרה"),
+    [patchOne]
+  );
+
+  const setComplaint = useCallback(
+    (id: string, complaint: Complaint | null) =>
+      patchOne(id, { complaint }, "רישום התלונה לא נשמר"),
+    [patchOne]
+  );
+
+  /**
+   * Logging a problem from the table: the status and what we agreed to do land
+   * in ONE request. Two would leave the order flagged with nothing said about
+   * it if the second failed — which is precisely the customer this feature
+   * exists to stop losing.
+   *
+   * An existing complaint keeps its reported date and its money: choosing a
+   * remedy again is a change of plan, not a new complaint.
+   */
+  const markIssue = useCallback(
+    (id: string, remedy: Remedy | null) => {
+      const order = orders.find((o) => o.orderId === id);
+      if (!order) return;
+      const base = order.complaint ?? newComplaint();
+      const complaint: Complaint = {
+        ...base,
+        remedy,
+        refundIls:
+          remedy === "refund" && base.refundIls === null ? order.totalIls : base.refundIls,
+      };
+      return patchOne(id, { status: "issue", complaint }, "השינוי לא נשמר");
+    },
+    [orders, patchOne]
   );
 
   /* ── Totals: the headline is how many postcards are spoken for ────────── */
@@ -146,6 +203,11 @@ export default function OrdersView({
     let mailCards = 0;
     let pickupCards = 0;
     let open = 0;
+    // Two figures, not one: the open count is the work left, and the total is
+    // why the tile is on screen at all — it stays put once the last one is
+    // settled instead of vanishing and taking the record with it.
+    let troubles = 0;
+    let troublesOpen = 0;
     // Postage is counted over MAIL orders only, and divided by the same set.
     // Averaging across pickups too would drag the figure toward zero and
     // describe nothing: a collected order has no shipment to cost.
@@ -159,6 +221,10 @@ export default function OrdersView({
         shipments++;
       } else pickupCards += o.qty;
       if (isOpen(o)) open++;
+      if (o.complaint) {
+        troubles++;
+        if (isComplaintOpen(o.complaint)) troublesOpen++;
+      }
     }
     return {
       cards,
@@ -166,6 +232,8 @@ export default function OrdersView({
       pickupCards,
       orders: orders.length,
       open,
+      troubles,
+      troublesOpen,
       // One decimal: the difference between 3.0 and 3.4 decides how much of
       // the run is דואר 24, so rounding it to a whole number hides the thing
       // that makes the number worth showing.
@@ -183,6 +251,10 @@ export default function OrdersView({
     let list = orders;
 
     if (statusFilter === "open") list = list.filter(isOpen);
+    // The complaint layer cuts across the status ladder — a refund still owed
+    // can be sitting on נשלח or on נמסר — so these filter on it, not on status.
+    else if (statusFilter === "trouble") list = list.filter((o) => isComplaintOpen(o.complaint));
+    else if (statusFilter === "trouble-any") list = list.filter((o) => o.complaint);
     else if (statusFilter !== "all") list = list.filter((o) => o.status === statusFilter);
 
     if (q) {
@@ -353,6 +425,23 @@ export default function OrdersView({
           <div className="v">{stats.open}</div>
           <div className="l">ממתינות לטיפול</div>
         </div>
+        {/* Only once there is something to say. In a good week this row is one
+            tile shorter, and that is the correct amount of alarm. */}
+        {stats.troubles > 0 && (
+          <button
+            className={`stat trouble${stats.troublesOpen ? " on" : ""}`}
+            onClick={() => setStatusFilter(stats.troublesOpen ? "trouble" : "trouble-any")}
+            title="הצגת התלונות בלבד"
+          >
+            <div className="v">{stats.troublesOpen}</div>
+            <div className="l">
+              תלונות פתוחות
+              {stats.troublesOpen < stats.troubles && (
+                <span className="of"> · {stats.troubles} בסך הכל</span>
+              )}
+            </div>
+          </button>
+        )}
         <div className="stat">
           <div className="v">{stats.avg.toFixed(1)}</div>
           <div className="l">גלויות בממוצע להזמנה</div>
@@ -408,11 +497,13 @@ export default function OrdersView({
         <select
           className="control"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
           aria-label="סינון לפי סטטוס"
         >
           <option value="all">כל הסטטוסים</option>
           <option value="open">רק פתוחות</option>
+          <option value="trouble">תלונות פתוחות</option>
+          <option value="trouble-any">כל התלונות</option>
           <option value="new">חדש</option>
           <option value="packed">ארוז / מוכן לאיסוף</option>
           <option value="notified">הודעה נשלחה</option>
@@ -475,6 +566,7 @@ export default function OrdersView({
               onToggleCheck={toggleCheck}
               onToggleAll={toggleAll}
               onStatus={(id, s, shippedOn) => setStatuses([id], s, shippedOn)}
+              onIssue={markIssue}
               emptyText={
                 orders.length === 0
                   ? "אין עדיין הזמנות. לחצי על ״ייבוא CSV״ כדי להעלות את הקובץ מ-Morning."
@@ -499,6 +591,7 @@ export default function OrdersView({
               onToggleCheck={toggleCheck}
               onToggleAll={toggleAll}
               onStatus={(id, s, shippedOn) => setStatuses([id], s, shippedOn)}
+              onIssue={markIssue}
               emptyText={
                 orders.length === 0 ? "—" : "אין הזמנות איסוף שמתאימות לסינון."
               }
@@ -511,6 +604,7 @@ export default function OrdersView({
             order={selected}
             onStatus={(id, status, shippedOn) => setStatuses([id], status, shippedOn)}
             onNote={setNote}
+            onComplaint={setComplaint}
             onDelete={deleteOrder}
             onClose={() => setSelectedId(null)}
           />
